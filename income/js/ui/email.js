@@ -269,7 +269,7 @@ function generateEmailContent() {
     return { subject, body };
 }
 
-async function sendEmail(emailContent) {
+/*async function sendEmail(emailContent) {
     try {
         const formData = new FormData();
         formData.append('action', 'sendEmail');
@@ -278,6 +278,67 @@ async function sendEmail(emailContent) {
         formData.append('body', emailContent.body);
         
         console.log('Enviando email...');
+        
+        const response = await fetch('https://script.google.com/macros/s/AKfycbz6sUS28Xza02Kjwg-Eez1TPn4BBj2XcZGF8gKxEHr4Fsxz4eqYoQYHCqx5NWaOP1OR8g/exec', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        console.log('Respuesta del servidor:', result);
+        
+        return result;
+    } catch (error) {
+        console.error('Error al enviar email:', error);
+        return { success: false, message: error.message };
+    }
+}*/
+
+async function sendEmail(emailContent) {
+    try {
+        const formData = new FormData();
+        formData.append('action', 'sendEmail');
+        
+        // Destinatarios principales (TO)
+        formData.append('to', [
+            'ceo@grupotdm.co',                                // Leonardo Manrique - CEO
+            'jairzuluaga@eltemplodelamoda.com.co',            // Jair Zuluaga - Gerencia - Comercial
+            'rzuluaga@grupotdm.co',                           // Ruben Zuluaga - Gerencia - Admninistrativa
+            'directorproduccion@tceluniverso.com',            // Esteban Correa - Director de Producción - Universo
+            'gerencia@tclosangeles.com'                       // Diana Quiceno - Gerencia - Angeles
+        ].join(','));
+        
+        // Destinatarios en copia (CC)
+        formData.append('cc', [
+            'planeadorproduccion@tceluniverso.com',           // Cesar Sanchez - Planeador de Producción
+            'auditorinterno@tceluniverso.com',                // Maribel Garcia - Auditor Interno
+            'gestorproduccionintima@tceluniverso.com',        // Kelly Zuluaga - Gestor - Íntima
+            'auxiliar3@tceluniverso.com',                     // Juan Zuluaga - Gestor - Especiales y Bogota
+            'produccionbasico@tceluniverso.com',              // Cesar Lopez - Gestor - Básico
+            'gestor1@tceluniverso.com',                       // Fabian Marin - Gestor Moda Fresca
+            'gestorproduccionurbano@tceluniverso.com',        // Maryi Gonzalez - Gestor - Urbano
+            'gestorproducciondeportivo@tceluniverso.com',     // Stefany Espinoza - Gestor - Deportivo
+            'coordinadorcorte@tceluniverso.com',              // Allison Mosquera - Coordinador - Corte
+            'coordinadorinsumos@tceluniverso.com',            // Sebastian Bonilla - Coordinador - Insumos
+            'analistadecompras@tceluniverso.com',             // Leidy - Compras Universo
+            'coordinadorinventario@tceluniverso.com',         // Edwar Jaimes - Coordinador - Inventario
+            'coordinadordespacho@tceluniverso.com',           // Edwar Jaimes - Coordinador - Despacho
+            'asistentedeproduccion@tclosangeles.com',         // Luis Villamizar - Gestor - Angeles
+            'asistenteadministrativo@tclosangeles.com'        // Lina Erazo - Asistente - Angeles
+        ].join(','));
+        
+        // Destinatarios en copia oculta (BCC)
+        formData.append('bcc', [
+            'coordinadorlogistico@eltemplodelamoda.com.co'    // Coordinador Logístico - Universo
+        ].join(','));
+        
+        formData.append('subject', emailContent.subject);
+        formData.append('body', emailContent.body);
+        
+        console.log('Enviando email...');
+        console.log('TO:', formData.get('to'));
+        console.log('CC:', formData.get('cc'));
+        console.log('BCC:', formData.get('bcc'));
         
         const response = await fetch('https://script.google.com/macros/s/AKfycbz6sUS28Xza02Kjwg-Eez1TPn4BBj2XcZGF8gKxEHr4Fsxz4eqYoQYHCqx5NWaOP1OR8g/exec', {
             method: 'POST',
