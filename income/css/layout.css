@@ -1,14 +1,14 @@
 /* Professional & Compact Dashboard Header (SaaS Style) */
 .dashboard-header {
     padding: 20px 32px;
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-    border: 1px solid var(--border-color);
+    /*background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);*/
+    /*border: 1px solid var(--border-color);*/
     position: sticky;
     top: 0;
     z-index: 1000;
     border-radius: var(--border-radius-lg);
     margin-bottom: 28px;
-    box-shadow: var(--box-shadow-lg);
+    /*box-shadow: var(--box-shadow-lg);*/
     display: flex;
     flex-direction: row;
     justify-content: space-between;

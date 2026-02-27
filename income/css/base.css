@@ -78,10 +78,10 @@ body {
 .info { color: var(--info-color); }
 .purple { color: var(--info-color); }
 
-/* Responsive adjustments for body zoom */
+/* Responsive adjustments for body zoom - Solo para visualización, no afecta captura */
 @media (max-width: 768px) {
-    body {
-        zoom: 0.7;
+    body:not(.capturing) {
+        zoom: 0.85;
     }
 }
 

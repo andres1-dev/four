@@ -32,10 +32,26 @@
     <link rel="stylesheet" href="css/components/trends.css">
     <link rel="stylesheet" href="css/components/loading.css">
     <link rel="stylesheet" href="css/components/pwa.css">
+    <link rel="stylesheet" href="css/components/particles.css">
+    <link rel="stylesheet" href="css/components/footer.css">
     <link rel="stylesheet" href="css/utils/animations.css">
 </head>
 
 <body>
+
+    <!-- Particles Background -->
+    <div class="particles-container">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
 
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay">
@@ -49,11 +65,7 @@
     <!-- Header -->
     <div class="dashboard-header">
         <h1 class="dashboard-title">
-            <div class="tooltip">
-                Ingresos de Marca Propia <i class="fas fa-info-circle"
-                    style="font-size: 16px; opacity: 0.6; cursor: help;"></i>
-                <span class="tooltiptext" style="width: 220px;">Andrés Mendoza © 2026</span>
-            </div>
+            Ingresos de Marca Propia
             <button id="updateReportBtn" class="update-btn-small" title="Actualizar Reporte" style="display: none;">
                 <i class="fas fa-sync-alt"></i>
             </button>
@@ -190,35 +202,35 @@
                     <div class="comparison-content">
                         <div class="comparison-grid">
                             <div class="comparison-item">
-                                <div class="comparison-label">Meta</div>
+                                <div class="comparison-label"><i class="fas fa-bullseye"></i> Meta</div>
                                 <div class="comparison-value" id="dia-metaAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Ingreso</div>
+                                <div class="comparison-label"><i class="fas fa-money-bill-wave"></i> Ingreso</div>
                                 <div class="comparison-value" id="dia-ingresoAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Porcentaje</div>
+                                <div class="comparison-label"><i class="fas fa-percent"></i> Porcentaje</div>
                                 <div class="comparison-value" id="dia-porcentajeAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Día del año</div>
+                                <div class="comparison-label"><i class="fas fa-calendar-day"></i> Día del año</div>
                                 <div class="comparison-value" id="dia-diaAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Promedio</div>
+                                <div class="comparison-label"><i class="fas fa-calculator"></i> Promedio</div>
                                 <div class="comparison-value" id="dia-averageAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Ponderado</div>
+                                <div class="comparison-label"><i class="fas fa-weight-hanging"></i> Ponderado</div>
                                 <div class="comparison-value" id="dia-weightedAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Desv. Estándar</div>
+                                <div class="comparison-label"><i class="fas fa-chart-bar"></i> Desv. Estándar</div>
                                 <div class="comparison-value" id="dia-desvestAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Máximo</div>
+                                <div class="comparison-label"><i class="fas fa-crown"></i> Máximo</div>
                                 <div class="comparison-value" id="dia-maxAnterior"></div>
                             </div>
                         </div>
@@ -341,35 +353,35 @@
                     <div class="comparison-content">
                         <div class="comparison-grid">
                             <div class="comparison-item">
-                                <div class="comparison-label">Meta</div>
+                                <div class="comparison-label"><i class="fas fa-bullseye"></i> Meta</div>
                                 <div class="comparison-value" id="mes-metaAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Ingreso</div>
+                                <div class="comparison-label"><i class="fas fa-money-bill-wave"></i> Ingreso</div>
                                 <div class="comparison-value" id="mes-ingresoAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Porcentaje</div>
+                                <div class="comparison-label"><i class="fas fa-percent"></i> Porcentaje</div>
                                 <div class="comparison-value" id="mes-porcentajeAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Días hábiles</div>
+                                <div class="comparison-label"><i class="fas fa-calendar-check"></i> Días hábiles</div>
                                 <div class="comparison-value" id="mes-habilAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Promedio</div>
+                                <div class="comparison-label"><i class="fas fa-calculator"></i> Promedio</div>
                                 <div class="comparison-value" id="mes-averageAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Ponderado</div>
+                                <div class="comparison-label"><i class="fas fa-weight-hanging"></i> Ponderado</div>
                                 <div class="comparison-value" id="mes-weightedAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Desv. Estándar</div>
+                                <div class="comparison-label"><i class="fas fa-chart-bar"></i> Desv. Estándar</div>
                                 <div class="comparison-value" id="mes-desvestAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Máximo</div>
+                                <div class="comparison-label"><i class="fas fa-crown"></i> Máximo</div>
                                 <div class="comparison-value" id="mes-maxAnterior"></div>
                             </div>
                         </div>
@@ -492,35 +504,35 @@
                     <div class="comparison-content">
                         <div class="comparison-grid">
                             <div class="comparison-item">
-                                <div class="comparison-label">Meta</div>
+                                <div class="comparison-label"><i class="fas fa-bullseye"></i> Meta</div>
                                 <div class="comparison-value" id="año-metaAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Ingreso</div>
+                                <div class="comparison-label"><i class="fas fa-money-bill-wave"></i> Ingreso</div>
                                 <div class="comparison-value" id="año-ingresoAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Porcentaje</div>
+                                <div class="comparison-label"><i class="fas fa-percent"></i> Porcentaje</div>
                                 <div class="comparison-value" id="año-porcentajeAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Diferencia</div>
+                                <div class="comparison-label"><i class="fas fa-balance-scale"></i> Diferencia</div>
                                 <div class="comparison-value" id="año-diferenciaAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Promedio</div>
+                                <div class="comparison-label"><i class="fas fa-calculator"></i> Promedio</div>
                                 <div class="comparison-value" id="año-averageAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Ponderado</div>
+                                <div class="comparison-label"><i class="fas fa-weight-hanging"></i> Ponderado</div>
                                 <div class="comparison-value" id="año-weightedAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Desv. Estándar</div>
+                                <div class="comparison-label"><i class="fas fa-chart-bar"></i> Desv. Estándar</div>
                                 <div class="comparison-value" id="año-desvestAnterior"></div>
                             </div>
                             <div class="comparison-item">
-                                <div class="comparison-label">Máximo</div>
+                                <div class="comparison-label"><i class="fas fa-crown"></i> Máximo</div>
                                 <div class="comparison-value" id="año-maxAnterior"></div>
                             </div>
                         </div>
@@ -577,23 +589,6 @@
                     </div>
                 </div>
 
-                <!-- Gráfico -->
-                <div class="chart-container">
-                    <div class="chart-toolbar">
-                        <span class="chart-title">Evolución Mensual Comparativa</span>
-                        <div class="chart-actions">
-                            <button class="chart-action-btn"
-                                onclick="exportChartAsImage('tendenciaChart', 'tendencia-financiera')">
-                                <i class="fas fa-download"></i> Exportar
-                            </button>
-                        </div>
-                    </div>
-                    <canvas id="tendenciaChart"></canvas>
-                    <div class="chart-footer">
-                        <span class="chart-note">Comparativa anual de ingresos</span>
-                    </div>
-                </div>
-
                 <!-- Análisis detallado -->
                 <div class="comparison-container">
                     <div class="comparison-header" onclick="toggleComparison(this)">
@@ -627,6 +622,23 @@
                                 <div class="comparison-description">Coeficiente de variación</div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Gráfico -->
+                <div class="chart-container">
+                    <div class="chart-toolbar">
+                        <span class="chart-title">Evolución Mensual Comparativa</span>
+                        <div class="chart-actions">
+                            <button class="chart-action-btn"
+                                onclick="exportChartAsImage('tendenciaChart', 'tendencia-financiera')">
+                                <i class="fas fa-download"></i> Exportar
+                            </button>
+                        </div>
+                    </div>
+                    <canvas id="tendenciaChart"></canvas>
+                    <div class="chart-footer">
+                        <span class="chart-note">Comparativa anual de ingresos</span>
                     </div>
                 </div>
             </div>
@@ -698,6 +710,14 @@
     <button id="installBtn" class="install-btn hidden pulse">
         <i class="fas fa-mobile-alt"></i> Instalar Aplicación
     </button>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        <div class="footer-content">
+            <div class="footer-line">Developed by <strong>Andrés Mendoza</strong> • © 2026</div>
+            <div class="footer-line footer-powered">Powered by <strong>GrupoTDM</strong></div>
+        </div>
+    </footer>
 
     <!-- Core Libraries -->
     <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
