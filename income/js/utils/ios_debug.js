@@ -113,7 +113,7 @@ function addDebugButton() {
         showDebugLog(`PWA Mode: ${env.isInStandaloneMode}`, 'info');
         showDebugLog(`Safari: ${env.isSafari}`, 'info');
         showDebugLog(`Platform: ${env.platform}`, 'info');
-        showDebugLog(`Versión del código: v14-share-api`, 'success');
+        showDebugLog(`Versión del código: v15-clipboard`, 'success');
         
         // Verificar soporte de Web Share API
         const hasShare = 'share' in navigator;

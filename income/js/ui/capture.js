@@ -105,17 +105,37 @@ async function captureAndDownloadCards() {
         // 7. Generar mensaje de texto
         const whatsappText = generateWhatsAppMessage();
         
-        // 8. Intentar compartir con Web Share API (incluye imagen)
+        // 8. Copiar mensaje al portapapeles
+        try {
+            await navigator.clipboard.writeText(whatsappText);
+            console.log('✓ Mensaje copiado al portapapeles');
+            if (loadingText) loadingText.textContent = "Mensaje copiado - Selecciona WhatsApp";
+        } catch (err) {
+            console.warn('No se pudo copiar al portapapeles:', err);
+        }
+        
+        // 9. Intentar compartir con Web Share API (incluye imagen)
         if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
             console.log('Usando Web Share API con imagen');
-            if (loadingText) loadingText.textContent = "Abriendo WhatsApp...";
+            if (loadingText) loadingText.textContent = "Abriendo menú de compartir...";
             
             try {
                 await navigator.share({
-                    text: whatsappText,
-                    files: [file]
+                    files: [file],
+                    title: 'Informe de Ingresos'
                 });
                 console.log('✓ Compartido exitosamente con imagen');
+                
+                // Mostrar instrucción al usuario con toast
+                showToast(`
+                    <strong>📋 Mensaje copiado al portapapeles</strong><br><br>
+                    En WhatsApp:<br>
+                    1. La imagen ya está adjunta ✅<br>
+                    2. Mantén presionado el campo de texto<br>
+                    3. Selecciona "Pegar"<br>
+                    4. Envía el mensaje 🚀
+                `, 8000);
+                
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     console.error('Error al compartir:', error);
@@ -150,6 +170,44 @@ function openAllCards() {
             if (indicator) indicator.classList.add('expanded');
         }
     });
+}
+
+// Función para mostrar notificación toast
+function showToast(message, duration = 5000) {
+    // Crear elemento toast si no existe
+    let toast = document.getElementById('custom-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'custom-toast';
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2563eb;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 100000;
+            max-width: 90%;
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.5;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        `;
+        document.body.appendChild(toast);
+    }
+    
+    // Actualizar mensaje y mostrar
+    toast.innerHTML = message;
+    toast.style.opacity = '1';
+    
+    // Ocultar después del tiempo especificado
+    setTimeout(() => {
+        toast.style.opacity = '0';
+    }, duration);
 }
 
 // WhatsApp message - matching backup.html exactly
