@@ -303,7 +303,6 @@ async function sendEmail(emailContent) {
         formData.append('to', [
             'ceo@grupotdm.co',                                // Leonardo Manrique - CEO
             'jairzuluaga@eltemplodelamoda.com.co',            // Jair Zuluaga - Gerencia - Comercial
-            'rzuluaga@grupotdm.co',                           // Ruben Zuluaga - Gerencia - Admninistrativa
             'directorproduccion@tceluniverso.com',            // Esteban Correa - Director de Producción - Universo
             'gerencia@tclosangeles.com'                       // Diana Quiceno - Gerencia - Angeles
         ].join(','));
@@ -320,7 +319,7 @@ async function sendEmail(emailContent) {
             'gestorproducciondeportivo@tceluniverso.com',     // Stefany Espinoza - Gestor - Deportivo
             'coordinadorcorte@tceluniverso.com',              // Allison Mosquera - Coordinador - Corte
             'coordinadorinsumos@tceluniverso.com',            // Sebastian Bonilla - Coordinador - Insumos
-            'analistadecompras@tceluniverso.com',             // Leidy - Compras - Universo
+            'analistadecompras@tceluniverso.com',             // Leidy - Coordinador - Compras
             'coordinadorinventario@tceluniverso.com',         // Fernanda Millan - Coordinador - Telas
             'coordinadordespacho@tceluniverso.com',           // Edwar Jaimes - Coordinador - Despacho
             'asistentedeproduccion@tclosangeles.com',         // Luis Villamizar - Gestor - Angeles
