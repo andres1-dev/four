@@ -265,9 +265,9 @@ function downloadImage(blob, fileName) {
 
 // Función para abrir WhatsApp solo con texto
 function openWhatsAppWithText(message) {
-    // URL sin número de teléfono - permite seleccionar contacto
+    const phoneNumber = "573168007979";
     const encodedMessage = encodeURIComponent(message);
-    const url = `https://wa.me/?text=${encodedMessage}`;
+    const url = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
 
     // Detectar si estamos en iOS
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
