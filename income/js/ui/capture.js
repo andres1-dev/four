@@ -100,12 +100,20 @@ async function captureAndDownloadCards() {
         link.click();
         
         // Subir a Drive
+        if (loadingText) loadingText.textContent = "Subiendo imagen a Drive...";
         const imageUrl = await uploadImageToDrive(imageData);
         console.log('URL final para WhatsApp:', imageUrl);
         
+        if (!imageUrl) {
+            console.warn('No se pudo obtener URL de imagen, enviando mensaje sin imagen');
+        }
+        
         // 6. Generar y abrir mensaje de WhatsApp
+        if (loadingText) loadingText.textContent = "Preparando mensaje de WhatsApp...";
         const whatsappMessage = generateWhatsAppMessage(imageUrl);
-        console.log('Mensaje generado (primeros 200 chars):', decodeURIComponent(whatsappMessage).substring(0, 200));
+        console.log('Mensaje completo generado:', decodeURIComponent(whatsappMessage));
+        console.log('Link ih3 incluido:', imageUrl ? 'SÍ' : 'NO');
+        
         openWhatsApp(whatsappMessage);
 
     } catch (e) {
@@ -210,50 +218,76 @@ Muestra Semanal (S${semanaActual}/S${semanaAnterior}) Gestión ${flechaGestion} 
     return encodeURIComponent(mensaje);
 }
 
-// Función para abrir WhatsApp - compatible con iOS
+// Función para abrir WhatsApp - compatible con iOS PWA
 function openWhatsApp(message) {
     const phoneNumber = "573168007979";
     const url = `https://wa.me/${phoneNumber}?text=${message}`;
 
-    // Solución universal que funciona en iOS
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.target = '_blank';
-    anchor.rel = 'noopener noreferrer';
+    // Detectar si estamos en iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
 
-    // Crear un evento de click confiable
-    const event = document.createEvent('MouseEvents');
-    event.initEvent('click', true, true);
+    console.log('Abriendo WhatsApp - iOS:', isIOS, 'PWA:', isInStandaloneMode);
+    console.log('URL completa:', decodeURIComponent(url));
 
-    // Disparar el evento
-    anchor.dispatchEvent(event);
-
-    // Forzar apertura en iOS si aún no funciona
-    setTimeout(() => {
-        window.location.href = url;
-    }, 500);
+    if (isIOS && isInStandaloneMode) {
+        // En iOS PWA, usar window.open es más confiable
+        try {
+            const newWindow = window.open(url, '_blank');
+            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                // Si window.open fue bloqueado, intentar con location
+                window.location.href = url;
+            }
+        } catch (e) {
+            console.error('Error abriendo WhatsApp:', e);
+            window.location.href = url;
+        }
+    } else {
+        // Para otros navegadores y plataformas
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.target = '_blank';
+        anchor.rel = 'noopener noreferrer';
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+    }
 }
 
 async function uploadImageToDrive(base64Image) {
     try {
         console.log('Subiendo imagen a Drive...');
+        console.log('Tamaño de imagen (base64):', base64Image.length, 'caracteres');
+        
         const response = await fetch('https://script.google.com/macros/s/AKfycbz6sUS28Xza02Kjwg-Eez1TPn4BBj2XcZGF8gKxEHr4Fsxz4eqYoQYHCqx5NWaOP1OR8g/exec', {
             method: 'POST',
-            body: base64Image
+            body: base64Image,
+            headers: {
+                'Content-Type': 'text/plain'
+            }
         });
         
-        const result = await response.json();
-        console.log('Respuesta de Drive:', result);
+        console.log('Respuesta HTTP status:', response.status);
         
-        if (result.status === "success") {
-            console.log('URL de imagen:', result.imageUrl);
+        if (!response.ok) {
+            console.error('Error HTTP:', response.status, response.statusText);
+            return null;
+        }
+        
+        const result = await response.json();
+        console.log('Respuesta completa de Drive:', JSON.stringify(result));
+        
+        if (result.status === "success" && result.imageUrl) {
+            console.log('✓ URL de imagen obtenida exitosamente:', result.imageUrl);
             return result.imageUrl;
         } else {
-            console.error("Error al subir la imagen:", result.message);
+            console.error("✗ Error al subir la imagen:", result.message || 'Sin URL en respuesta');
+            console.error("Objeto result completo:", result);
             return null;
         }
     } catch (error) {
-        console.error("Error en la petición:", error);
+        console.error("✗ Error en la petición a Drive:", error);
+        console.error("Detalles del error:", error.message, error.stack);
         return null;
     }
 }
