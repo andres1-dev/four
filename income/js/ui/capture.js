@@ -109,17 +109,6 @@ async function captureAndDownloadCards() {
         if (loadingText) loadingText.textContent = "Abriendo WhatsApp...";
         const whatsappText = generateWhatsAppMessage();
         openWhatsAppWithText(whatsappText);
-        
-        // 9. Mostrar instrucción al usuario
-        setTimeout(() => {
-            showToast(`
-                <strong>✅ Imagen descargada</strong><br><br>
-                En WhatsApp:<br>
-                1. Adjunta la imagen desde tu galería 📎<br>
-                2. El mensaje ya está escrito ✅<br>
-                3. Envía 🚀
-            `, 6000);
-        }, 1500);
 
     } catch (e) {
         console.error("Capture error:", e);
@@ -276,15 +265,15 @@ function downloadImage(blob, fileName) {
 
 // Función para abrir WhatsApp solo con texto
 function openWhatsAppWithText(message) {
-    const phoneNumber = "573168007979";
+    // URL sin número de teléfono - permite seleccionar contacto
     const encodedMessage = encodeURIComponent(message);
-    const url = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+    const url = `https://wa.me/?text=${encodedMessage}`;
 
     // Detectar si estamos en iOS
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
 
-    console.log('Abriendo WhatsApp con texto - iOS:', isIOS, 'PWA:', isInStandaloneMode);
+    console.log('Abriendo WhatsApp - iOS:', isIOS, 'PWA:', isInStandaloneMode);
 
     if (isIOS && isInStandaloneMode) {
         // En iOS PWA, usar window.open es más confiable
