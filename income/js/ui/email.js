@@ -320,8 +320,8 @@ async function sendEmail(emailContent) {
             'gestorproducciondeportivo@tceluniverso.com',     // Stefany Espinoza - Gestor - Deportivo
             'coordinadorcorte@tceluniverso.com',              // Allison Mosquera - Coordinador - Corte
             'coordinadorinsumos@tceluniverso.com',            // Sebastian Bonilla - Coordinador - Insumos
-            'analistadecompras@tceluniverso.com',             // Leidy - Compras Universo
-            'coordinadorinventario@tceluniverso.com',         // Edwar Jaimes - Coordinador - Inventario
+            'analistadecompras@tceluniverso.com',             // Leidy - Compras - Universo
+            'coordinadorinventario@tceluniverso.com',         // Fernanda Millan - Coordinador - Telas
             'coordinadordespacho@tceluniverso.com',           // Edwar Jaimes - Coordinador - Despacho
             'asistentedeproduccion@tclosangeles.com',         // Luis Villamizar - Gestor - Angeles
             'asistenteadministrativo@tclosangeles.com'        // Lina Erazo - Asistente - Angeles
