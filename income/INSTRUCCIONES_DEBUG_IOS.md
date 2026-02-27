@@ -3,72 +3,124 @@
 ## Problema Identificado
 El link ih3 (URL de la imagen en Drive) no aparece en el mensaje de WhatsApp cuando se envía desde iOS en modo PWA, pero funciona correctamente en PC.
 
-## Cambios Realizados
+**CAUSA RAÍZ ENCONTRADA:**
+- Error: `TypeError: Load failed` al subir imagen a Drive
+- La imagen es demasiado grande: ~8.8 MB en base64
+- iOS PWA tiene restricciones CORS más estrictas que bloquean la petición POST con base64 directo
 
-### 1. Función `openWhatsApp` Mejorada (js/ui/capture.js)
-- Detecta específicamente iOS y modo PWA
-- Usa `window.open()` en lugar de eventos sintéticos para iOS PWA
-- Fallback a `window.location.href` si `window.open` es bloqueado
-- Logs detallados para diagnóstico
+## Soluciones Implementadas
 
-### 2. Función `uploadImageToDrive` Mejorada (js/ui/capture.js)
-- Logs más detallados del proceso de subida
+### 1. Reducción del Tamaño de la Imagen
+- Cambio de PNG a JPEG (mejor compresión)
+- Calidad reducida en móviles: 0.7 (antes 1.0)
+- Esto reduce el tamaño de ~8.8 MB a ~2-3 MB
+
+### 2. Uso de FormData en lugar de Base64 Directo
+- FormData es más compatible con iOS PWA
+- Evita problemas de CORS
+- Convierte base64 a Blob antes de enviar
+
+### 3. Google Apps Script Actualizado
+- Ahora maneja tanto FormData (nuevo) como base64 (antiguo)
 - Mejor manejo de errores
-- Validación de la respuesta del servidor
-- Logs del tamaño de la imagen y estado HTTP
+- Hace los archivos públicos automáticamente
 
-### 3. Proceso de Captura Mejorado (js/ui/capture.js)
-- Indicador de progreso más detallado
-- Logs del mensaje completo generado
-- Verificación explícita de si el link ih3 está incluido
-- Manejo de caso cuando no se obtiene URL
+## PASOS CRÍTICOS PARA IMPLEMENTAR
 
-### 4. Herramienta de Debug para iOS (js/utils/ios_debug.js)
-- Botón flotante 🐛 en la esquina inferior derecha
-- Consola en pantalla para ver logs en iOS
-- Intercepta console.log, console.error y console.warn
-- Muestra información del entorno (iOS, PWA, Safari, etc.)
+### Paso 1: Actualizar Google Apps Script
 
-## Cómo Probar
+1. Ve a: https://script.google.com
+2. Abre tu proyecto actual
+3. Reemplaza TODO el código con el contenido del archivo `google-apps-script-actualizado.js`
+4. Guarda el proyecto (Ctrl+S o Cmd+S)
+5. **IMPORTANTE:** Haz clic en "Implementar" > "Administrar implementaciones"
+6. Haz clic en el ícono de lápiz (editar) en tu implementación actual
+7. En "Versión", selecciona "Nueva versión"
+8. Haz clic en "Implementar"
+9. Copia la nueva URL (debe ser la misma que antes)
 
-### Paso 1: Actualizar la PWA en iOS
+### Paso 2: Actualizar la PWA en iOS
+
 1. Abre Safari en tu iPhone/iPad
-2. Ve a la aplicación instalada
-3. Cierra completamente la app (desliza hacia arriba desde el dock)
-4. Vuelve a abrir la app
-5. Si no se actualiza automáticamente, desinstala y reinstala la PWA
+2. Ve a https://andres1-dev.github.io/four/income/
+3. Si ya tienes la PWA instalada:
+   - Cierra completamente la app (desliza hacia arriba desde el dock)
+   - Espera 5 segundos
+   - Vuelve a abrir la app
+4. Si no funciona, desinstala y reinstala la PWA:
+   - Mantén presionado el ícono de la app
+   - Selecciona "Eliminar app"
+   - Vuelve a Safari y reinstala desde el botón de compartir
 
-### Paso 2: Activar el Debug
-1. Abre la aplicación
-2. Verás un botón flotante 🐛 en la esquina inferior derecha
-3. Toca el botón para abrir la consola de debug
-4. Verás información del entorno (iOS, PWA Mode, etc.)
+### Paso 3: Probar el Envío
 
-### Paso 3: Intentar Enviar el Informe
-1. Toca el botón de WhatsApp o el botón de captura
-2. Ingresa la contraseña cuando se solicite
-3. Observa los logs en la consola de debug (panel negro en la parte inferior)
-
-### Paso 4: Revisar los Logs
-Busca estos mensajes clave en la consola:
+1. Abre la aplicación PWA en iOS
+2. Toca el botón 🐛 para ver la consola de debug
+3. Toca el botón de WhatsApp o captura
+4. Ingresa la contraseña
+5. Observa los logs - ahora deberías ver:
 
 ```
-✓ Mensajes de éxito:
+✓ Logs esperados de éxito:
 - "Subiendo imagen a Drive..."
-- "Tamaño de imagen (base64): XXXXX caracteres"
+- "Tamaño de imagen (base64): ~2000000 caracteres" (mucho menor que antes)
+- "Tamaño del blob: ~1500000 bytes"
 - "Respuesta HTTP status: 200"
-- "✓ URL de imagen obtenida exitosamente: [URL]"
+- "✓ URL de imagen obtenida exitosamente: https://lh3.googleusercontent.com/d/..."
 - "Link ih3 incluido: SÍ"
-- "Abriendo WhatsApp - iOS: true, PWA: true"
-
-✗ Mensajes de error a buscar:
-- "✗ Error al subir la imagen: [mensaje]"
-- "✗ Error en la petición a Drive: [error]"
-- "Link ih3 incluido: NO"
-- "No se pudo obtener URL de imagen"
+- "Abriendo WhatsApp - iOS: true PWA: true"
 ```
 
-## Posibles Causas del Problema
+### Paso 4: Verificar en WhatsApp
+
+El mensaje debe incluir:
+- Texto del informe
+- Link a la aplicación
+- **★ Resumen visual: https://lh3.googleusercontent.com/d/[ID]**
+
+## Cambios Técnicos Realizados
+
+## Cambios Técnicos Realizados
+
+### 1. Reducción de Tamaño de Imagen (js/ui/capture.js)
+```javascript
+// Antes: PNG con calidad 1.0 = ~8.8 MB
+const imageData = canvas.toDataURL('image/png', 1.0);
+
+// Ahora: JPEG con calidad 0.7 = ~2-3 MB
+const imageData = canvas.toDataURL('image/jpeg', 0.7);
+```
+
+### 2. Conversión a FormData (js/ui/capture.js)
+```javascript
+// Convertir base64 a Blob
+const byteCharacters = atob(base64Image);
+const byteArray = new Uint8Array(byteCharacters.length);
+const blob = new Blob([byteArray], { type: 'image/jpeg' });
+
+// Usar FormData (compatible con iOS)
+const formData = new FormData();
+formData.append('image', blob, 'reporte.jpg');
+formData.append('action', 'uploadImage');
+```
+
+### 3. Google Apps Script Actualizado
+- Maneja FormData con `e.parameters.image[0]`
+- Mantiene compatibilidad con base64 antiguo
+- Hace archivos públicos automáticamente
+- Mejor manejo de errores
+
+### 4. Función `openWhatsApp` Mejorada
+- Detecta iOS PWA específicamente
+- Usa `window.open()` en lugar de eventos sintéticos
+- Fallback a `window.location.href`
+
+### 5. Herramienta de Debug para iOS
+- Botón flotante 🐛
+- Consola en pantalla
+- Intercepta console.log/error/warn
+
+## Posibles Causas del Problema (Actualizadas)
 
 ### 1. La imagen NO se está subiendo a Drive
 **Síntomas:**

@@ -90,13 +90,14 @@ async function captureAndDownloadCards() {
         });
 
         // 5. Obtener imagen y subir a Drive
-        const imageQuality = isMobile ? 1.0 : 0.9;
-        const imageData = canvas.toDataURL('image/png', imageQuality).split(',')[1];
+        // Reducir calidad en móviles para disminuir tamaño
+        const imageQuality = isMobile ? 0.7 : 0.85;
+        const imageData = canvas.toDataURL('image/jpeg', imageQuality).split(',')[1];
         
         // Descargar archivo PNG
         const link = document.createElement('a');
-        link.href = 'data:image/png;base64,' + imageData;
-        link.download = `Informe_Ingresos_${formatDate(new Date()).replace(/\//g, '-')}.png`;
+        link.href = 'data:image/jpeg;base64,' + imageData;
+        link.download = `Informe_Ingresos_${formatDate(new Date()).replace(/\//g, '-')}.jpg`;
         link.click();
         
         // Subir a Drive
@@ -259,12 +260,27 @@ async function uploadImageToDrive(base64Image) {
         console.log('Subiendo imagen a Drive...');
         console.log('Tamaño de imagen (base64):', base64Image.length, 'caracteres');
         
+        // Convertir base64 a Blob para mejor compatibilidad con iOS
+        const byteCharacters = atob(base64Image);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'image/jpeg' });
+        
+        console.log('Tamaño del blob:', blob.size, 'bytes');
+        
+        // Usar FormData para mejor compatibilidad con iOS
+        const formData = new FormData();
+        formData.append('image', blob, 'reporte.jpg');
+        formData.append('action', 'uploadImage');
+        
         const response = await fetch('https://script.google.com/macros/s/AKfycbz6sUS28Xza02Kjwg-Eez1TPn4BBj2XcZGF8gKxEHr4Fsxz4eqYoQYHCqx5NWaOP1OR8g/exec', {
             method: 'POST',
-            body: base64Image,
-            headers: {
-                'Content-Type': 'text/plain'
-            }
+            body: formData,
+            mode: 'cors',
+            credentials: 'omit'
         });
         
         console.log('Respuesta HTTP status:', response.status);

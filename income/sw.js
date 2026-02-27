@@ -1,5 +1,5 @@
 // Service Worker - Rutas Relativas
-const CACHE_NAME = 'ingresos-mp-v1';
+const CACHE_NAME = 'ingresos-mp-v12-ios-fix';
 const urlsToCache = [
   './',
   './index.html',
@@ -13,6 +13,7 @@ const urlsToCache = [
   './js/config/constants.js',
   './js/utils/date_utils.js',
   './js/utils/formatters.js',
+  './js/utils/ios_debug.js',
   './js/api/google_sheets.js',
   './js/core/metrics.js',
   './js/core/trends_logic.js',

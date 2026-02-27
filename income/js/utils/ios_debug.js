@@ -113,6 +113,8 @@ function addDebugButton() {
         showDebugLog(`PWA Mode: ${env.isInStandaloneMode}`, 'info');
         showDebugLog(`Safari: ${env.isSafari}`, 'info');
         showDebugLog(`Platform: ${env.platform}`, 'info');
+        showDebugLog(`Versión del código: v12-ios-fix`, 'success');
+        showDebugLog(`Cache actualizado: ${new Date().toLocaleString()}`, 'info');
     });
     
     document.body.appendChild(debugBtn);
@@ -123,6 +125,28 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', addDebugButton);
 } else {
     addDebugButton();
+}
+
+// Forzar actualización del Service Worker y limpiar cache
+if ('serviceWorker' in navigator) {
+    // Verificar si hay una actualización disponible
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (let registration of registrations) {
+            registration.update();
+        }
+    });
+    
+    // Limpiar cache antiguo
+    if ('caches' in window) {
+        caches.keys().then(cacheNames => {
+            cacheNames.forEach(cacheName => {
+                if (cacheName.includes('ingresos-mp') && !cacheName.includes('v12-ios-fix')) {
+                    console.log('Eliminando cache antiguo:', cacheName);
+                    caches.delete(cacheName);
+                }
+            });
+        });
+    }
 }
 
 // Exportar funciones
