@@ -239,7 +239,7 @@ function generateEmailContent() {
                                 <table cellpadding="0" cellspacing="0">
                                     <tr>
                                         <td style="background-color: #2563eb; border-radius: 8px; padding: 12px 24px;">
-                                            <a href="https://andres1-dev.github.io/one/ingresos/informe/generar" 
+                                            <a href="https://andres1-dev.github.io/four/income/index.html" 
                                                style="color: #ffffff; text-decoration: none; font-weight: 600; display: block;">
                                                 Abrir Sistema de Ingresos
                                             </a>
