@@ -98,58 +98,28 @@ async function captureAndDownloadCards() {
         
         console.log('Imagen generada - Tamaño:', blob.size, 'bytes');
 
-        // 6. Crear archivo para compartir
+        // 6. Crear archivo y descargar
         const fileName = `Informe_Ingresos_${formatDate(new Date()).replace(/\//g, '-')}.jpg`;
-        const file = new File([blob], fileName, { type: 'image/jpeg' });
+        downloadImage(blob, fileName);
         
-        // 7. Generar mensaje de texto
+        // 7. Esperar un momento para que se descargue
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // 8. Generar mensaje y abrir WhatsApp
+        if (loadingText) loadingText.textContent = "Abriendo WhatsApp...";
         const whatsappText = generateWhatsAppMessage();
+        openWhatsAppWithText(whatsappText);
         
-        // 8. Copiar mensaje al portapapeles
-        try {
-            await navigator.clipboard.writeText(whatsappText);
-            console.log('✓ Mensaje copiado al portapapeles');
-            if (loadingText) loadingText.textContent = "Mensaje copiado - Selecciona WhatsApp";
-        } catch (err) {
-            console.warn('No se pudo copiar al portapapeles:', err);
-        }
-        
-        // 9. Intentar compartir con Web Share API (incluye imagen)
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-            console.log('Usando Web Share API con imagen');
-            if (loadingText) loadingText.textContent = "Abriendo menú de compartir...";
-            
-            try {
-                await navigator.share({
-                    files: [file],
-                    title: 'Informe de Ingresos'
-                });
-                console.log('✓ Compartido exitosamente con imagen');
-                
-                // Mostrar instrucción al usuario con toast
-                showToast(`
-                    <strong>📋 Mensaje copiado al portapapeles</strong><br><br>
-                    En WhatsApp:<br>
-                    1. La imagen ya está adjunta ✅<br>
-                    2. Mantén presionado el campo de texto<br>
-                    3. Selecciona "Pegar"<br>
-                    4. Envía el mensaje 🚀
-                `, 8000);
-                
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error('Error al compartir:', error);
-                    // Fallback: descargar imagen y abrir WhatsApp con texto
-                    downloadImage(blob, fileName);
-                    openWhatsAppWithText(whatsappText);
-                }
-            }
-        } else {
-            // Fallback para navegadores que no soportan Web Share API con archivos
-            console.log('Web Share API no disponible, usando fallback');
-            downloadImage(blob, fileName);
-            openWhatsAppWithText(whatsappText);
-        }
+        // 9. Mostrar instrucción al usuario
+        setTimeout(() => {
+            showToast(`
+                <strong>✅ Imagen descargada</strong><br><br>
+                En WhatsApp:<br>
+                1. Adjunta la imagen desde tu galería 📎<br>
+                2. El mensaje ya está escrito ✅<br>
+                3. Envía 🚀
+            `, 6000);
+        }, 1500);
 
     } catch (e) {
         console.error("Capture error:", e);
