@@ -273,7 +273,7 @@ async function sendEmail(emailContent) {
     try {
         const formData = new FormData();
         formData.append('action', 'sendEmail');
-        formData.append('to', 'nixandres2@gmail.com,coordinadorlogistico@eltemplodelamoda.com.co,planeadorproduccion@tceluniverso.com');
+        formData.append('to', 'nixandres2@gmail.com,coordinadorlogistico@eltemplodelamoda.com.co,planeadorproduccion@tceluniverso.com,directorproduccion@tceluniverso.com');
         formData.append('subject', emailContent.subject);
         formData.append('body', emailContent.body);
         
