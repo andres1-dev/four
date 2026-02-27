@@ -113,7 +113,13 @@ function addDebugButton() {
         showDebugLog(`PWA Mode: ${env.isInStandaloneMode}`, 'info');
         showDebugLog(`Safari: ${env.isSafari}`, 'info');
         showDebugLog(`Platform: ${env.platform}`, 'info');
-        showDebugLog(`Versión del código: v12-ios-fix`, 'success');
+        showDebugLog(`Versión del código: v14-share-api`, 'success');
+        
+        // Verificar soporte de Web Share API
+        const hasShare = 'share' in navigator;
+        const canShareFiles = navigator.canShare && navigator.canShare({ files: [new File([], 'test.jpg')] });
+        showDebugLog(`Web Share API: ${hasShare ? 'SÍ' : 'NO'}`, hasShare ? 'success' : 'error');
+        showDebugLog(`Puede compartir archivos: ${canShareFiles ? 'SÍ' : 'NO'}`, canShareFiles ? 'success' : 'error');
         showDebugLog(`Cache actualizado: ${new Date().toLocaleString()}`, 'info');
     });
     

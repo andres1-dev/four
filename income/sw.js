@@ -1,5 +1,5 @@
 // Service Worker - Rutas Relativas
-const CACHE_NAME = 'ingresos-mp-v12-ios-fix';
+const CACHE_NAME = 'ingresos-mp-v14-share-api';
 const urlsToCache = [
   './',
   './index.html',

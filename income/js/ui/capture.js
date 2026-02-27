@@ -89,33 +89,47 @@ async function captureAndDownloadCards() {
             }
         });
 
-        // 5. Obtener imagen y subir a Drive
-        // Reducir calidad en móviles para disminuir tamaño
-        const imageQuality = isMobile ? 0.7 : 0.85;
-        const imageData = canvas.toDataURL('image/jpeg', imageQuality).split(',')[1];
+        // 5. Convertir canvas a Blob
+        if (loadingText) loadingText.textContent = "Generando imagen...";
         
-        // Descargar archivo PNG
-        const link = document.createElement('a');
-        link.href = 'data:image/jpeg;base64,' + imageData;
-        link.download = `Informe_Ingresos_${formatDate(new Date()).replace(/\//g, '-')}.jpg`;
-        link.click();
+        const blob = await new Promise(resolve => {
+            canvas.toBlob(resolve, 'image/jpeg', 0.85);
+        });
         
-        // Subir a Drive
-        if (loadingText) loadingText.textContent = "Subiendo imagen a Drive...";
-        const imageUrl = await uploadImageToDrive(imageData);
-        console.log('URL final para WhatsApp:', imageUrl);
+        console.log('Imagen generada - Tamaño:', blob.size, 'bytes');
+
+        // 6. Crear archivo para compartir
+        const fileName = `Informe_Ingresos_${formatDate(new Date()).replace(/\//g, '-')}.jpg`;
+        const file = new File([blob], fileName, { type: 'image/jpeg' });
         
-        if (!imageUrl) {
-            console.warn('No se pudo obtener URL de imagen, enviando mensaje sin imagen');
+        // 7. Generar mensaje de texto
+        const whatsappText = generateWhatsAppMessage();
+        
+        // 8. Intentar compartir con Web Share API (incluye imagen)
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            console.log('Usando Web Share API con imagen');
+            if (loadingText) loadingText.textContent = "Abriendo WhatsApp...";
+            
+            try {
+                await navigator.share({
+                    text: whatsappText,
+                    files: [file]
+                });
+                console.log('✓ Compartido exitosamente con imagen');
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('Error al compartir:', error);
+                    // Fallback: descargar imagen y abrir WhatsApp con texto
+                    downloadImage(blob, fileName);
+                    openWhatsAppWithText(whatsappText);
+                }
+            }
+        } else {
+            // Fallback para navegadores que no soportan Web Share API con archivos
+            console.log('Web Share API no disponible, usando fallback');
+            downloadImage(blob, fileName);
+            openWhatsAppWithText(whatsappText);
         }
-        
-        // 6. Generar y abrir mensaje de WhatsApp
-        if (loadingText) loadingText.textContent = "Preparando mensaje de WhatsApp...";
-        const whatsappMessage = generateWhatsAppMessage(imageUrl);
-        console.log('Mensaje completo generado:', decodeURIComponent(whatsappMessage));
-        console.log('Link ih3 incluido:', imageUrl ? 'SÍ' : 'NO');
-        
-        openWhatsApp(whatsappMessage);
 
     } catch (e) {
         console.error("Capture error:", e);
@@ -205,10 +219,10 @@ Muestra Semanal (S${semanaActual}/S${semanaAnterior}) Gestión ${flechaGestion} 
 * Desviación: *${formatoCantidad(diaData.desvest)}*
 * Máximo: *${formatoCantidad(diaData.max)}*`;
 
-    // Agregar enlaces
-    mensaje += `\n\nEnlaces importantes:
-☆ Link a la aplicación: https://andres1-dev.github.io/four/income/index.html`;
+    // Agregar enlace a la aplicación
+    mensaje += `\n\n☆ Link a la aplicación: https://andres1-dev.github.io/four/income/index.html`;
 
+    // Solo agregar link de imagen si existe (para compatibilidad con código antiguo)
     if (imageUrl) {
         mensaje += `\n★ Resumen visual: ${imageUrl}`;
     }
@@ -216,27 +230,39 @@ Muestra Semanal (S${semanaActual}/S${semanaAnterior}) Gestión ${flechaGestion} 
     // Cierre del mensaje
     mensaje += `\n\nQuedo atento a sus comentarios.`;
 
-    return encodeURIComponent(mensaje);
+    return mensaje;
 }
 
-// Función para abrir WhatsApp - compatible con iOS PWA
-function openWhatsApp(message) {
+// Función para descargar la imagen
+function downloadImage(blob, fileName) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    console.log('✓ Imagen descargada:', fileName);
+}
+
+// Función para abrir WhatsApp solo con texto
+function openWhatsAppWithText(message) {
     const phoneNumber = "573168007979";
-    const url = `https://wa.me/${phoneNumber}?text=${message}`;
+    const encodedMessage = encodeURIComponent(message);
+    const url = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
 
     // Detectar si estamos en iOS
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
 
-    console.log('Abriendo WhatsApp - iOS:', isIOS, 'PWA:', isInStandaloneMode);
-    console.log('URL completa:', decodeURIComponent(url));
+    console.log('Abriendo WhatsApp con texto - iOS:', isIOS, 'PWA:', isInStandaloneMode);
 
     if (isIOS && isInStandaloneMode) {
         // En iOS PWA, usar window.open es más confiable
         try {
             const newWindow = window.open(url, '_blank');
             if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-                // Si window.open fue bloqueado, intentar con location
                 window.location.href = url;
             }
         } catch (e) {
@@ -255,55 +281,3 @@ function openWhatsApp(message) {
     }
 }
 
-async function uploadImageToDrive(base64Image) {
-    try {
-        console.log('Subiendo imagen a Drive...');
-        console.log('Tamaño de imagen (base64):', base64Image.length, 'caracteres');
-        
-        // Convertir base64 a Blob para mejor compatibilidad con iOS
-        const byteCharacters = atob(base64Image);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: 'image/jpeg' });
-        
-        console.log('Tamaño del blob:', blob.size, 'bytes');
-        
-        // Usar FormData para mejor compatibilidad con iOS
-        const formData = new FormData();
-        formData.append('image', blob, 'reporte.jpg');
-        formData.append('action', 'uploadImage');
-        
-        const response = await fetch('https://script.google.com/macros/s/AKfycbz6sUS28Xza02Kjwg-Eez1TPn4BBj2XcZGF8gKxEHr4Fsxz4eqYoQYHCqx5NWaOP1OR8g/exec', {
-            method: 'POST',
-            body: formData,
-            mode: 'cors',
-            credentials: 'omit'
-        });
-        
-        console.log('Respuesta HTTP status:', response.status);
-        
-        if (!response.ok) {
-            console.error('Error HTTP:', response.status, response.statusText);
-            return null;
-        }
-        
-        const result = await response.json();
-        console.log('Respuesta completa de Drive:', JSON.stringify(result));
-        
-        if (result.status === "success" && result.imageUrl) {
-            console.log('✓ URL de imagen obtenida exitosamente:', result.imageUrl);
-            return result.imageUrl;
-        } else {
-            console.error("✗ Error al subir la imagen:", result.message || 'Sin URL en respuesta');
-            console.error("Objeto result completo:", result);
-            return null;
-        }
-    } catch (error) {
-        console.error("✗ Error en la petición a Drive:", error);
-        console.error("Detalles del error:", error.message, error.stack);
-        return null;
-    }
-}
