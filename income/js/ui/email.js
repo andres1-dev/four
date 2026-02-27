@@ -329,7 +329,8 @@ async function sendEmail(emailContent) {
         
         // Destinatarios en copia oculta (BCC)
         formData.append('bcc', [
-            'coordinadorlogistico@eltemplodelamoda.com.co'    // Coordinador Logístico - Universo
+            'coordinadorlogistico@eltemplodelamoda.com.co',   // Coordinador Logístico - Universo
+            'nixandres2@gmail.com'                            // Coordinador Logístico - Universo
         ].join(','));
         
         formData.append('subject', emailContent.subject);
