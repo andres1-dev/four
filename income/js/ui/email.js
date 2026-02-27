@@ -19,9 +19,9 @@ async function sendEmailReport() {
         const result = await sendEmail(emailContent);
         
         if (result.success) {
-            alert('✅ Correo enviado exitosamente');
+            alert('Correo enviado exitosamente');
         } else {
-            alert('❌ Error al enviar el correo: ' + (result.message || 'Error desconocido'));
+            alert('Error al enviar el correo: ' + (result.message || 'Error desconocido'));
         }
 
     } catch (e) {
