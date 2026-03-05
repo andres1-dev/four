@@ -1,0 +1,321 @@
+/* ===== HEADER MEJORADO ===== */
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: nowrap;
+}
+
+.control-item {
+    display: flex;
+    align-items: center;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-base);
+    overflow: hidden;
+}
+
+.control-item:hover {
+    border-color: var(--accent-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.flatpickr-control {
+    min-width: 150px;
+    max-width: 180px;
+}
+
+.flatpickr-header-input {
+    width: 100%;
+    font-size: 0.8125rem !important;
+    padding: 0.5rem 0.75rem !important;
+    border: none !important;
+    background: transparent !important;
+    color: var(--text-primary) !important;
+    cursor: pointer;
+    text-align: center;
+}
+
+.flatpickr-header-input:focus {
+    outline: none;
+    box-shadow: none !important;
+}
+
+.flatpickr-header-input::placeholder {
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+}
+
+.control-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+    height: 100%;
+}
+
+.control-btn:hover {
+    background: rgba(15, 52, 96, 0.05);
+    color: var(--accent-color);
+}
+
+.control-btn i {
+    font-size: 0.875rem;
+    color: var(--accent-color);
+    transition: color var(--transition-fast);
+}
+
+.control-btn:hover i {
+    color: var(--accent-light);
+}
+
+/* Botón de menú móvil */
+.mobile-menu-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    background: var(--bg-secondary);
+    color: var(--accent-color);
+    font-size: 1.125rem;
+    transition: all var(--transition-fast);
+}
+
+.mobile-menu-btn:hover {
+    border-color: var(--accent-color);
+    background: rgba(15, 52, 96, 0.05);
+    transform: rotate(90deg);
+}
+
+/* Modal de controles móviles */
+.controls-modal .modal-header {
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.controls-modal .modal-body {
+    padding: 1.5rem;
+}
+
+.control-option {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    margin-bottom: 0.75rem;
+    transition: all var(--transition-fast);
+    cursor: pointer;
+    background: var(--bg-secondary);
+}
+
+.control-option:hover {
+    border-color: var(--accent-color);
+    background: rgba(15, 52, 96, 0.03);
+    transform: translateX(4px);
+}
+
+.control-option:last-child {
+    margin-bottom: 0;
+}
+
+.control-option i {
+    width: 20px;
+    text-align: center;
+    font-size: 1.125rem;
+    color: var(--accent-color);
+}
+
+.control-option-content {
+    flex: 1;
+}
+
+.control-option-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.control-option-desc {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+}
+
+/* Flatpickr en modal móvil */
+#flatpickrMobile {
+    text-align: center;
+    font-size: 1rem;
+    padding: 1rem;
+}
+
+/* ===== HEADER MINIMALISTA ===== */
+.header {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    padding: var(--spacing-lg) 0;
+    margin-bottom: var(--spacing-xl);
+    box-shadow: var(--shadow-sm);
+    border-bottom: 1px solid var(--border-light);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.header .container-fluid {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.header h1 {
+    font-size: clamp(1.25rem, 4vw, 1.75rem);
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    letter-spacing: -0.025em;
+    color: var(--text-primary);
+}
+
+.header h1 i {
+    font-size: 1.5rem;
+    color: var(--accent-color);
+}
+
+.header .d-flex {
+    align-items: center;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+@media (max-width: 576px) {
+    .header .d-flex {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--spacing-sm);
+    }
+
+    .header h1 {
+        justify-content: center;
+    }
+}
+
+/* ===== HEADER PROFESIONAL MEJORADO ===== */
+.header h1 {
+    font-size: clamp(1.25rem, 4vw, 1.75rem);
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    letter-spacing: -0.025em;
+    color: var(--text-primary);
+}
+
+.brand-name {
+    font-style: italic;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    position: relative;
+}
+
+.brand-name sup {
+    font-size: 0.35em;
+    vertical-align: super;
+    margin-left: 1px;
+    color: var(--accent-color);
+    font-style: normal;
+    font-weight: 400;
+    opacity: 0.8;
+}
+
+.status-indicator-simple {
+    display: flex;
+    align-items: center;
+    margin-left: 0.375rem;
+    cursor: help;
+    transition: all var(--transition-fast);
+    line-height: 1;
+}
+
+.status-icon {
+    font-size: 0.75rem;
+    /* Más pequeño */
+    color: var(--text-primary);
+    transition: all var(--transition-fast);
+    background: transparent;
+}
+
+.status-indicator-simple:hover .status-icon {
+    transform: scale(1.05);
+}
+
+/* Estados del indicador */
+.status-indicator-simple.ready .status-icon {
+    color: #22c55e;
+    /* Verde cuando está listo */
+}
+
+.status-indicator-simple.updating .status-icon {
+    color: #3b82f6;
+    /* Azul durante actualización */
+    animation: spin 1.5s linear infinite;
+}
+
+.status-indicator-simple.error .status-icon {
+    color: #ef4444;
+    /* Rojo en error */
+}
+
+/* Animación de giro para actualización */
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Ajustes responsivos */
+@media (max-width: 768px) {
+    .status-indicator-simple {
+        margin-left: 0.25rem;
+    }
+
+    .status-icon {
+        font-size: 0.65rem;
+        /* Aún más pequeño en móvil */
+    }
+
+    .brand-name sup {
+        font-size: 0.3em;
+    }
+}
+
+/* Asegurar alineación perfecta */
+.header h1 .fa-signature {
+    font-size: 1.5rem;
+    color: var(--accent-color);
+}
+
+.header h1 .brand-name {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}

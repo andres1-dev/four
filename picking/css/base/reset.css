@@ -1,0 +1,35 @@
+/* ===== RESET Y BASE ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    /* background-color: var(--bg-primary); */
+    color: var(--text-primary);
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+
+/* Clases Utilitarias */
+.hide-initially {
+    display: none;
+}
+
+/* Ajustar el layout de los filtros */
+.filtros-grid {
+    grid-template-columns: 1fr auto !important;
+}
+
+.filtro-group:last-child .btn-group-sm {
+    gap: 0.25rem;
+}

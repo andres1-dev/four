@@ -1,0 +1,126 @@
+/* ===== PANEL DE ACCIONES MINIMALISTA ===== */
+.acciones-panel {
+    display: inline-flex;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-xs);
+    gap: 0;
+}
+
+.acciones-panel .btn {
+    border-radius: 0;
+    margin: 0;
+    border: none;
+    border-right: 1px solid var(--border-light);
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    transition: all var(--transition-fast);
+    min-width: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.acciones-panel .btn:last-child {
+    border-right: none;
+}
+
+.acciones-panel .btn i {
+    font-size: 0.875rem;
+}
+
+/* Botones minimalistas en el panel de acciones */
+.acciones-panel .btn.btn-primary {
+    background: transparent;
+    color: var(--text-primary);
+}
+
+.acciones-panel .btn.btn-primary:hover {
+    background: rgba(59, 130, 246, 0.08);
+}
+
+.acciones-panel .btn.btn-primary i {
+    color: var(--info-color);
+}
+
+.acciones-panel .btn.btn-success {
+    background: transparent;
+    color: var(--text-primary);
+}
+
+.acciones-panel .btn.btn-success:hover {
+    background: rgba(16, 185, 129, 0.08);
+}
+
+.acciones-panel .btn.btn-success i {
+    color: var(--success-color);
+}
+
+.acciones-panel .btn.btn-warning {
+    background: transparent;
+    color: var(--text-primary);
+}
+
+.acciones-panel .btn.btn-warning:hover {
+    background: rgba(245, 158, 11, 0.08);
+}
+
+.acciones-panel .btn.btn-warning i {
+    color: var(--warning-color);
+}
+
+.acciones-panel .btn.btn-info {
+    background: transparent;
+    color: var(--text-primary);
+}
+
+.acciones-panel .btn.btn-info:hover {
+    background: rgba(15, 52, 96, 0.08);
+}
+
+.acciones-panel .btn.btn-info i {
+    color: var(--accent-color);
+}
+
+.acciones-panel .btn.btn-danger {
+    background: transparent;
+    color: var(--text-primary);
+}
+
+.acciones-panel .btn.btn-danger:hover {
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.acciones-panel .btn.btn-danger i {
+    color: var(--danger-color);
+}
+
+.acciones-panel .btn.btn-secondary {
+    background: transparent;
+    color: var(--text-primary);
+}
+
+.acciones-panel .btn.btn-secondary:hover {
+    background: rgba(100, 116, 139, 0.08);
+}
+
+.acciones-panel .btn.btn-secondary i {
+    color: var(--text-secondary);
+}
+
+/* Estado deshabilitado */
+.acciones-panel .btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    background: transparent;
+}
+
+.acciones-panel .btn:disabled:hover {
+    background: transparent;
+}
+
+.acciones-panel .btn:disabled i {
+    color: var(--text-muted);
+}

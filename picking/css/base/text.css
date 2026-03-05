@@ -1,0 +1,9 @@
+/* ===== MEJORAS DE CONTRASTE Y LEGIBILIDAD ===== */
+.text-contrast {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.bg-subtle {
+    background-color: var(--bg-primary);
+}

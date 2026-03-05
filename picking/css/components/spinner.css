@@ -1,0 +1,149 @@
+/* ===== SPINER PROFESIONAL ===== */
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-left: 1rem;
+}
+
+.spinner-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+}
+
+.spinner-icon i {
+    font-size: 0.875rem;
+    color: var(--accent-color);
+    transition: all 0.3s ease;
+}
+
+.spinner-icon.rotating i {
+    animation: spin 1.5s linear infinite;
+}
+
+.spinner-icon.success i {
+    color: #28a745;
+}
+
+.spinner-icon.warning i {
+    color: #ffc107;
+}
+
+.spinner-icon.error i {
+    color: #dc3545;
+}
+
+.status-text {
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.status-text.updating {
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+.last-update {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.125rem;
+    white-space: nowrap;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header-controls .control-item:not(.mobile-menu-btn) {
+        display: none;
+    }
+
+    .mobile-menu-btn {
+        display: flex;
+    }
+
+    .header .d-flex.justify-content-between {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .status-indicator {
+        margin-left: 0.5rem;
+        gap: 0.5rem;
+    }
+
+    .status-text,
+    .last-update {
+        font-size: 0.75rem;
+    }
+}
+
+@media (min-width: 769px) {
+    .mobile-menu-btn {
+        display: none !important;
+    }
+}
+
+/* Ajustes para pantallas medianas */
+@media (max-width: 992px) and (min-width: 769px) {
+    .flatpickr-control {
+        min-width: 140px;
+        max-width: 160px;
+    }
+
+    .control-btn {
+        padding: 0.5rem 0.75rem;
+    }
+
+    .control-btn .hide-xs {
+        font-size: 0.75rem;
+    }
+}
+
+/* Ocultar el flatpickr original del panel de filtros */
+#filtroFecha {
+    display: none !important;
+}
+
+.filtro-group label[for="filtroFecha"] {
+    display: none;
+}
+
+/* Mejoras de alineación y espaciado */
+.header h1 {
+    flex-shrink: 0;
+}
+
+.header-controls {
+    flex-shrink: 0;
+}
+
+/* Estados activos */
+.control-item.active {
+    border-color: var(--accent-color);
+    background: rgba(15, 52, 96, 0.05);
+}
+
+.flatpickr-header-input.active {
+    color: var(--accent-color);
+    font-weight: 500;
+}
+
+/* Animaciones de entrada */
+.fade-in {
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+}

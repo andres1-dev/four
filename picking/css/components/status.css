@@ -1,0 +1,28 @@
+/* ===== STATUS INDICATORS ===== */
+.status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    margin-right: var(--spacing-xs);
+}
+
+.status-indicator.pendiente {
+    background: var(--warning-color);
+}
+
+.status-indicator.proceso {
+    background: var(--info-color);
+}
+
+.status-indicator.directo {
+    background: var(--success-color);
+}
+
+.status-indicator.finalizado {
+    background: var(--text-secondary);
+}
+
+.status-indicator.pausado {
+    background: var(--text-muted);
+}

@@ -1,0 +1,24 @@
+/* ===== PRINT STYLES ===== */
+@media print {
+    body {
+        background: white;
+    }
+
+    .header,
+    .filtros-panel,
+    .btn,
+    .no-print {
+        display: none !important;
+    }
+
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #000 !important;
+    }
+
+    .table th,
+    .table td {
+        padding: 0.5rem !important;
+        font-size: 0.75rem !important;
+    }
+}

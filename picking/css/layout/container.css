@@ -1,0 +1,18 @@
+/* ===== LAYOUT Y CONTENEDORES ===== */
+.container-fluid {
+    padding: var(--spacing-md);
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+    .container-fluid {
+        padding: var(--spacing-lg) var(--spacing-xl);
+    }
+}
+
+@media (min-width: 1200px) {
+    .container-fluid {
+        max-width: 1400px;
+    }
+}

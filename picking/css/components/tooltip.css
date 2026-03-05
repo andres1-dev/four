@@ -1,0 +1,5 @@
+/* ===== TOOLTIP STYLE ===== */
+[title] {
+    position: relative;
+    cursor: help;
+}

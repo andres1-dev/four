@@ -1,0 +1,141 @@
+/* ===== FLATPICKR PREMIUM DESIGN - SEPARACIÓN THEME ===== */
+.flatpickr-calendar {
+    background: var(--bg-secondary) !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: var(--shadow-xl) !important;
+    border: 1px solid var(--border-color) !important;
+    font-family: inherit !important;
+    padding: 10px !important;
+    z-index: 9999 !important;
+    width: 320px !important; /* Aumentado para evitar cortes laterales */
+}
+
+/* Header (Mes y Año) */
+.flatpickr-current-month {
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+    color: var(--primary-color) !important;
+}
+
+.flatpickr-month {
+    height: 38px !important; /* Un poco más alto para centrar flechas */
+}
+
+.flatpickr-prev-month, .flatpickr-next-month {
+    color: var(--accent-color) !important;
+    fill: var(--accent-color) !important;
+    transition: all var(--transition-fast) !important;
+    padding: 10px !important;
+}
+
+.flatpickr-prev-month:hover, .flatpickr-next-month:hover {
+    color: var(--accent-light) !important;
+    background: rgba(15, 52, 96, 0.05) !important;
+    border-radius: 50% !important;
+}
+
+/* Días de la semana */
+span.flatpickr-weekday {
+    font-weight: 700 !important;
+    color: var(--text-muted) !important;
+    font-size: 0.75rem !important;
+}
+
+/* Contenedores de rejilla (Asegurar que no corten el Domingo) */
+.flatpickr-days,
+.dayContainer {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: space-around !important;
+}
+
+/* OCULTAR DÍAS DE MESES VECINOS */
+.flatpickr-day.prevMonthDay, 
+.flatpickr-day.nextMonthDay {
+    visibility: hidden !important;
+}
+
+/* Días individuales */
+.flatpickr-day {
+    border-radius: var(--radius-md) !important;
+    height: 38px !important;
+    line-height: 38px !important;
+    font-weight: 500 !important;
+    color: var(--text-primary) !important;
+    transition: all var(--transition-fast) !important;
+    margin: 2px 1px !important; /* Margen horizontal mínimo para que quepan los 7 días */
+    flex-basis: 13% !important; /* Aproximadamente 1/7 para asegurar que quepan todos */
+}
+
+.flatpickr-day:hover {
+    background: var(--border-light) !important;
+    color: var(--accent-color) !important;
+}
+
+.flatpickr-day.today {
+    border-color: var(--accent-color) !important;
+    color: var(--accent-color) !important;
+    background: rgba(15, 52, 96, 0.05) !important;
+    font-weight: 700 !important;
+}
+
+.flatpickr-day.selected, 
+.flatpickr-day.startRange, 
+.flatpickr-day.endRange {
+    background: var(--accent-color) !important;
+    border-color: var(--accent-color) !important;
+    color: #ffffff !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+.flatpickr-day.inRange {
+    background: rgba(15, 52, 96, 0.1) !important;
+    box-shadow: none !important;
+    color: var(--accent-color) !important;
+    border-radius: 0 !important; /* Para que el rango se vea fluido */
+}
+
+/* Estilos de los inputs en el header y modal */
+.flatpickr-control {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* Input del header */
+.flatpickr-header-input {
+    padding-left: 2.2rem !important; /* Espacio para el icono */
+    text-align: left !important;
+}
+
+/* Icono de calendario dentro del input */
+.flatpickr-control::before {
+    content: '\f133';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--accent-color);
+    font-size: 0.85rem;
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* Input en móvil (Modal) */
+#filtroFechaMobile {
+    padding-left: 2.5rem !important;
+    position: relative;
+    z-index: 1;
+}
+
+/* Ajustes responsivos */
+@media (max-width: 768px) {
+    .flatpickr-calendar {
+        width: 280px !important;
+    }
+}

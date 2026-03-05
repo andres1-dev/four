@@ -1,0 +1,8 @@
+/* ===== DURACIÓN CON ESTILO ===== */
+.duracion-tiempo {
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Courier New', monospace;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    letter-spacing: 0.025em;
+    font-variant-numeric: tabular-nums;
+}

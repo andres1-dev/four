@@ -1,0 +1,111 @@
+/* ===== UTILIDADES RESPONSIVAS ===== */
+.text-primary {
+    color: var(--text-primary) !important;
+}
+
+.text-secondary {
+    color: var(--text-secondary) !important;
+}
+
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+.text-success {
+    color: var(--success-color) !important;
+}
+
+.text-danger {
+    color: var(--danger-color) !important;
+}
+
+.text-info {
+    color: var(--info-color) !important;
+}
+
+.text-warning {
+    color: var(--warning-color) !important;
+}
+
+.fw-bold {
+    font-weight: 700 !important;
+}
+
+.fw-semibold {
+    font-weight: 600 !important;
+}
+
+.fw-medium {
+    font-weight: 500 !important;
+}
+
+.fw-normal {
+    font-weight: 400 !important;
+}
+
+.small {
+    font-size: 0.875rem !important;
+}
+
+/* ===== MEJORAS PARA MÓVILES ===== */
+@media (max-width: 576px) {
+    :root {
+        --spacing-md: 0.75rem;
+        --spacing-lg: 1rem;
+        --spacing-xl: 1.5rem;
+    }
+
+    .resumen-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+    }
+
+    .resumen-card {
+        padding: var(--spacing-md);
+    }
+
+    .resumen-count {
+        font-size: 1.5rem;
+    }
+
+    .filtros-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+    }
+
+    .btn-group-sm {
+        width: 100%;
+    }
+
+    .btn-group-sm .btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .card-header {
+        padding: var(--spacing-md);
+    }
+
+    .card-title {
+        font-size: 0.9375rem;
+    }
+}
+
+/* ===== RESPONSIVE UTILITIES ===== */
+@media (max-width: 992px) {
+    .hide-md {
+        display: none !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .hide-sm {
+        display: none !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .hide-xs {
+        display: none !important;
+    }
+}

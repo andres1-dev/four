@@ -1,0 +1,22 @@
+/* ===== LOADER MINIMALISTA ===== */
+#loader {
+    padding: var(--spacing-xl);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.spinner-border {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-width: 0.25rem;
+    border-color: var(--accent-color);
+    border-right-color: transparent;
+}
+
+#loader p {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
