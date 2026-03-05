@@ -1,84 +1,95 @@
 // ============================================
-// NotificationManager — Adaptado para usar GAS r1 (VAPID/JWT)
+// NotificationManager — GAS r1 (VAPID/JWT)
+// Usa el MISMO patrón de fetch que llamarAPI()
+// en documents-table.js (query params + POST vacío)
 // ============================================
 class NotificationManager {
     constructor() {
         this.swRegistration = null;
         this.isSubscribed = false;
-        this.vapidPublicKey = null; // Se obtiene dinámicamente de r1
+        this.vapidPublicKey = null;
         this.lastNotificationTimestamp = 0;
 
-        // URL del GAS de notificaciones r1
         this.notifApiUrl = (typeof API_URL_NOTIF !== 'undefined')
             ? API_URL_NOTIF
             : 'https://script.google.com/macros/s/AKfycbyDTzMkBog7uq3o_0yAuD_WVHOtLQNgBYMzxgdrr9QlLFTKJOk_8mJJlaXMqkixEnm05A/exec';
 
-        console.log('🔔 NotificationManager Constructor iniciado (r1 API)');
+        console.log('🔔 NotificationManager iniciado');
         this.setupUI();
         this.init();
     }
 
-    async init() {
-        console.log('🔔 NotificationManager.init() ejecutándose...');
-
-        if (!('serviceWorker' in navigator)) {
-            console.warn('❌ Service Worker no soportado');
-            this.updateUIForState('unsupported');
-            return;
-        }
-
-        if (!('Notification' in window)) {
-            console.warn('❌ Notificaciones no soportadas');
-            this.updateUIForState('unsupported');
-            return;
-        }
-
-        if (!('PushManager' in window)) {
-            console.warn('❌ PushManager no soportado');
-            this.updateUIForState('unsupported');
-            return;
-        }
-
+    // ============================================
+    // LLAMAR AL GAS — MISMO PATRÓN QUE llamarAPI()
+    // Datos en query string + POST sin body + redirect:follow
+    // ============================================
+    async callGAS(params) {
         try {
-            // Esperar a que el SW esté listo
-            this.swRegistration = await navigator.serviceWorker.ready;
+            const queryString = new URLSearchParams(params).toString();
+            const url = `${this.notifApiUrl}?${queryString}`;
+            console.log('📤 callGAS:', params);
 
-            if (this.swRegistration) {
-                console.log('✅ Service Worker listo y vinculado');
+            const response = await fetch(url, {
+                method: 'POST',
+                redirect: 'follow'
+            });
 
-                // Sincronizar estado inicial
-                const permission = Notification.permission;
-                console.log('📊 Permiso actual:', permission);
-                this.updateUIForState(permission);
+            const text = await response.text();
+            console.log('📥 callGAS respuesta:', text.substring(0, 200));
 
-                // Configurar polling r1
-                this.sendPollingConfigToSW();
-
-                // Si ya tiene permiso, intentar suscribir (por si expiró el endpoint de GAS)
-                if (permission === 'granted') {
-                    console.log('🔄 Ya tiene permisos, verificando suscripción Push...');
-                    await this.subscribeToPush();
-                }
-            } else {
-                console.warn('⚠️ No se pudo obtener el registro del Service Worker.');
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                if (text.toLowerCase().includes('success')) return { success: true };
+                return { success: false, raw: text };
             }
-        } catch (e) {
-            console.error('❌ Error crítico en init():', e);
+        } catch (error) {
+            console.error('❌ callGAS error:', error);
+            return { success: false, error: error.message };
         }
     }
 
+    // ============================================
+    // INIT
+    // ============================================
+    async init() {
+        console.log('🔔 init()...');
+
+        if (!('serviceWorker' in navigator)) { console.warn('❌ SW no soportado'); this.updateUIForState('unsupported'); return; }
+        if (!('Notification' in window)) { console.warn('❌ Notification no soportada'); this.updateUIForState('unsupported'); return; }
+        if (!('PushManager' in window)) { console.warn('❌ PushManager no soportado'); this.updateUIForState('unsupported'); return; }
+
+        try {
+            this.swRegistration = await navigator.serviceWorker.ready;
+            console.log('✅ SW listo');
+
+            const permission = Notification.permission;
+            console.log('📊 Permiso:', permission);
+            this.updateUIForState(permission);
+            this.sendPollingConfigToSW();
+
+            if (permission === 'granted') {
+                await this.subscribeToPush();
+            }
+        } catch (e) {
+            console.error('❌ init error:', e);
+        }
+    }
+
+    // ============================================
+    // UI
+    // ============================================
     setupUI() {
-        console.log('🔔 Configurando UI de notificaciones...');
         const notifToggles = [document.getElementById('notifToggle'), document.getElementById('notifToggleMobile')];
         const summaryBtns = [document.getElementById('sendSummaryBtn'), document.getElementById('sendSummaryBtnMobile')];
 
         notifToggles.forEach(toggle => {
             if (toggle) {
-                toggle.onchange = (e) => {
+                toggle.onchange = () => {
                     if (toggle.checked) {
                         this.requestPermission(true);
                     } else {
-                        alert('Para desactivar totalmente las notificaciones, debes quitarlas desde la configuración del sitio en tu navegador.');
+                        alert('Para desactivar notificaciones, quítalas desde la configuración del sitio.');
                         this.updateUIForState(Notification.permission);
                     }
                 };
@@ -86,12 +97,7 @@ class NotificationManager {
         });
 
         summaryBtns.forEach(btn => {
-            if (btn) {
-                btn.onclick = (e) => {
-                    e.preventDefault();
-                    this.sendDailySummary();
-                };
-            }
+            if (btn) btn.onclick = (e) => { e.preventDefault(); this.sendDailySummary(); };
         });
 
         setTimeout(() => this.applyRolePermissions(), 1000);
@@ -100,478 +106,274 @@ class NotificationManager {
     applyRolePermissions() {
         const adminNotifSection = document.getElementById('adminNotifSection');
         if (adminNotifSection) adminNotifSection.style.display = 'none';
-
-        let role = null;
-        if (window.currentUser && window.currentUser.rol) {
-            role = window.currentUser.rol.toUpperCase();
-        } else {
-            const stored = localStorage.getItem('user');
-            if (stored) {
-                try {
-                    const parsed = JSON.parse(stored);
-                    const rawRole = parsed.user ? parsed.user.rol : parsed.rol;
-                    if (rawRole) role = rawRole.toUpperCase();
-                } catch (e) { }
-            }
-        }
-
-        console.log(`🔔 NotificationManager: Verificando acceso para rol [${role}]`);
-    }
-
-    // ============================================
-    // Llamar al GAS de Notificaciones (VAPID/JWT)
-    // ============================================
-    async callNotifAPI(action, method = 'GET', data = null) {
-        if (method === 'GET') {
-            const res = await fetch(this.notifApiUrl + '?action=' + action, { mode: 'cors' });
-            const text = await res.text();
-            try { return JSON.parse(text); } catch { return text; }
-        }
-
-        // Si es una suscripción o tiene endpoint, enviamos JSON preparado para el GAS
-        if (action === 'subscribe' || (data && data.endpoint)) {
-            // El GAS espera un JSON con la propiedad 'action' y los datos de suscripción
-            const payload = {
-                action: 'subscribe',
-                endpoint: data.endpoint,
-                p256dh: data.keys ? data.keys.p256dh : '',
-                auth: data.keys ? data.keys.auth : '',
-                subscription: data // El objeto completo para redundancia
-            };
-
-            console.log('📤 Enviando suscripción a GAS:', payload);
-
-            const res = await fetch(this.notifApiUrl, {
-                method: 'POST',
-                mode: 'cors',
-                body: JSON.stringify(payload),
-                headers: { 'Content-Type': 'text/plain' } // GAS recibe mejor JSON con text/plain
-            });
-            const text = await res.text();
-            try { return JSON.parse(text); } catch { return text; }
-        }
-
-        // Para otras acciones (como send-notification)
-        const formAction = action;
-        const payloadParams = { action: formAction, ...data };
-
-        const res = await fetch(this.notifApiUrl, {
-            method: 'POST',
-            mode: 'cors',
-            body: JSON.stringify(payloadParams),
-            headers: { 'Content-Type': 'text/plain' }
-        });
-        const text = await res.text();
-        try { return JSON.parse(text); } catch { return text; }
-    }
-
-    // ============================================
-    // Obtener la clave VAPID pública desde r1
-    // ============================================
-    async fetchVapidKey() {
-        try {
-            const res = await fetch(this.notifApiUrl + '?action=vapid-public-key', { mode: 'cors' });
-            const text = (await res.text()).trim();
-
-            if (text.startsWith('{')) {
-                const obj = JSON.parse(text);
-                throw new Error(obj.error || obj.message || 'Error VAPID');
-            }
-            if (text.length > 20) {
-                this.vapidPublicKey = text;
-                console.log('✅ Clave VAPID obtenida de r1');
-                return true;
-            }
-            throw new Error('Clave VAPID inválida');
-        } catch (err) {
-            console.error('❌ Error obteniendo VAPID key:', err.message);
-            return false;
-        }
-    }
-
-    // ============================================
-    // ENVIAR REPORTE DIARIO → usa r1 send-notification
-    // ============================================
-    async sendDailySummary(targetDateStr = null) {
-        const btn = document.getElementById('sendSummaryBtn');
-        const btnMobile = document.getElementById('sendSummaryBtnMobile');
-        const activeBtn = (btn && btn.offsetParent) ? btn : btnMobile;
-        const originalHtml = activeBtn ? activeBtn.innerHTML : 'Reporte';
-
-        let confirmMsg = '¿Deseas generar y enviar el resumen de entregas?';
-        if (targetDateStr) {
-            confirmMsg = `¿Deseas generar y enviar el resumen de entregas para la fecha ${targetDateStr}?`;
-        } else {
-            confirmMsg += '\n(Se enviará el reporte del último día con datos registrados)';
-        }
-
-        if (!confirm(confirmMsg)) return;
-
-        try {
-            if (activeBtn) {
-                activeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analizando...';
-                activeBtn.disabled = true;
-            }
-
-            // Usar datosTablaDocumentos que es la fuente de verdad actual
-            let rawData = window.datosTablaDocumentos || [];
-
-            if (rawData.length === 0) {
-                if (typeof window.cargarTablaDocumentos === 'function') {
-                    await window.cargarTablaDocumentos();
-                    rawData = window.datosTablaDocumentos || [];
-                }
-            }
-
-            if (rawData.length === 0) throw new Error('No hay datos disponibles en el sistema para generar el reporte.');
-
-            // Mapear datos globales (enriquecidos con clientes) por REC
-            const infoGlobalMap = {};
-            if (window.datosGlobales) {
-                window.datosGlobales.forEach(item => {
-                    if (item.REC) infoGlobalMap[item.REC] = item;
-                });
-            }
-
-            console.log(`🔍 Analizando ${rawData.length} documentos para el reporte inteligente...`);
-
-            const parseDate = (str) => {
-                if (!str) return null;
-                const match = str.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-                if (match) {
-                    return new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
-                }
-                const d = new Date(str);
-                return isNaN(d.getTime()) ? null : d;
-            };
-
-            const formatCurrency = (val) => new Intl.NumberFormat('es-CO', {
-                style: 'currency', currency: 'COP', minimumFractionDigits: 0
-            }).format(val);
-
-            // 1. Recopilar entregas finalizadas
-            const allDeliveries = [];
-            rawData.forEach(row => {
-                const rec = String(row[0] || '').trim();
-                const estado = String(row[3] || '').trim().toUpperCase();
-
-                // Solo nos interesan los finalizados (entregas completas)
-                if (estado !== 'FINALIZADO') return;
-
-                const fechaStr = row[1] || "";
-                const dateObj = parseDate(fechaStr);
-                if (!dateObj) return;
-
-                const infoExtra = infoGlobalMap[rec] || {};
-
-                allDeliveries.push({
-                    rec: rec,
-                    dateObj: dateObj,
-                    dateVal: (dateObj.getFullYear() * 10000) + ((dateObj.getMonth() + 1) * 100) + dateObj.getDate(),
-                    dateStr: `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`,
-                    clientes: infoExtra.CLIENTES || {},
-                    valorTotal: infoExtra.PVP ? (parseFloat(infoExtra.PVP) * (infoExtra.CANTIDAD || 1)) : 0,
-                    unidades: infoExtra.CANTIDAD || 0,
-                    lote: infoExtra.LOTE || ''
-                });
-            });
-
-            if (allDeliveries.length === 0) {
-                alert('No se encontraron registros de documentos FINALIZADOS para generar el reporte.');
-                if (activeBtn) {
-                    activeBtn.innerHTML = originalHtml;
-                    activeBtn.disabled = false;
-                }
-                return;
-            }
-
-            // 2. Determinar fecha objetivo
-            let finalDateStr = "";
-            let finalDateVal = 0;
-            let finalDateObj = null;
-
-            if (targetDateStr) {
-                const parts = targetDateStr.split('-');
-                finalDateVal = (parseInt(parts[0]) * 10000) + (parseInt(parts[1]) * 100) + parseInt(parts[2]);
-                finalDateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                finalDateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-            } else {
-                allDeliveries.forEach(d => {
-                    if (d.dateVal > finalDateVal) {
-                        finalDateVal = d.dateVal;
-                        finalDateStr = d.dateStr;
-                        finalDateObj = d.dateObj;
-                    }
-                });
-            }
-
-            // 3. Filtrar y Consolidar
-            const dayDeliveries = allDeliveries.filter(d => d.dateVal === finalDateVal);
-            if (dayDeliveries.length === 0) {
-                alert(`No se encontraron entregas finalizadas para la fecha ${finalDateStr}.`);
-                if (activeBtn) {
-                    activeBtn.innerHTML = originalHtml;
-                    activeBtn.disabled = false;
-                }
-                return;
-            }
-
-            const clientGroups = {};
-            let totalUnidades = 0;
-            let totalValor = 0;
-            const recsUnicos = new Set();
-
-            dayDeliveries.forEach(d => {
-                recsUnicos.add(d.rec);
-                totalUnidades += d.unidades;
-                totalValor += d.valorTotal;
-
-                // Agrupar por clientes dentro del documento
-                const clientes = Object.keys(d.clientes);
-                if (clientes.length === 0) {
-                    const cName = "VENTA DIRECTA / OTROS";
-                    if (!clientGroups[cName]) clientGroups[cName] = { unidades: 0, valor: 0, docs: new Set() };
-                    clientGroups[cName].unidades += d.unidades;
-                    clientGroups[cName].valor += d.valorTotal;
-                    clientGroups[cName].docs.add(d.rec);
-                } else {
-                    clientes.forEach(cName => {
-                        const cInfo = d.clientes[cName];
-                        const cUnidades = cInfo.unidades || (d.unidades / clientes.length); // Prorrateo si no hay detalle
-                        const cValor = (d.valorTotal / clientes.length);
-
-                        if (!clientGroups[cName]) clientGroups[cName] = { unidades: 0, valor: 0, docs: new Set() };
-                        clientGroups[cName].unidades += cUnidades;
-                        clientGroups[cName].valor += cValor;
-                        clientGroups[cName].docs.add(d.rec);
-                    });
-                }
-            });
-
-            // 4. Construir cuerpo del mensaje
-            let bodyDetalle = "";
-            Object.entries(clientGroups)
-                .sort((a, b) => b[1].valor - a[1].valor)
-                .forEach(([name, data]) => {
-                    bodyDetalle += `\n👤 *${name}*\n   - Documentos: ${data.docs.size}\n   - Unidades: ${Math.round(data.unidades)}\n   - Subtotal: ${formatCurrency(data.valor)}\n`;
-                });
-
-            const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-            const diaNombre = diasSemana[finalDateObj.getDay()];
-
-            const titulo = `Resumen Entregas - ${finalDateStr}`;
-            const headerResumen = `*REPORTE DE ENTREGAS (${diaNombre})*
-            ----------------------------
-            Docs: ${recsUnicos.size}
-            Unidades: ${totalUnidades}
-            Venta Total: ${formatCurrency(totalValor)}
-            ----------------------------`;
-
-            const cuerpoCompleto = headerResumen + bodyDetalle;
-
-            // Enviar vía Push (y polling r1 lo detectará)
-            const resData = await this.callNotifAPI('send-notification', 'POST', {
-                title: titulo,
-                body: `Reporte ${finalDateStr}: ${totalUnidades} und en ${recsUnicos.size} docs. Total: ${formatCurrency(totalValor)}`,
-                url: `./`
-            });
-
-            if (resData && resData.success) {
-                alert(`✅ Reporte enviado correctamente.\nFecha: ${finalDateStr}\nTotal: ${formatCurrency(totalValor)}`);
-            } else {
-                throw new Error(resData.message || resData.error || 'Error en el servidor');
-            }
-
-        } catch (e) {
-            console.error('❌ Error enviando resumen:', e);
-            alert('Error al generar resumen: ' + e.message);
-        } finally {
-            if (activeBtn) {
-                activeBtn.innerHTML = originalHtml;
-                activeBtn.disabled = false;
-            }
-        }
     }
 
     updateUIForState(state) {
         const toggles = [document.getElementById('notifToggle'), document.getElementById('notifToggleMobile')];
         const descs = [document.getElementById('notifDesc'), document.getElementById('notifDescMobile')];
-
-        console.log('🔔 Actualizando UI de notificaciones: ' + state);
-
-        toggles.forEach(toggle => {
-            if (toggle) toggle.checked = (state === 'granted');
-        });
-
-        const statusLabel = state === 'granted' ? 'Estado: Activo' : (state === 'denied' ? 'Estado: Bloqueado' : 'Estado: Desactivado');
-        descs.forEach(desc => {
-            if (desc) desc.innerText = statusLabel;
-        });
+        toggles.forEach(t => { if (t) t.checked = (state === 'granted'); });
+        const label = state === 'granted' ? 'Estado: Activo' : (state === 'denied' ? 'Estado: Bloqueado' : 'Estado: Desactivado');
+        descs.forEach(d => { if (d) d.innerText = label; });
     }
 
+    // ============================================
+    // PEDIR PERMISO
+    // Sin bloqueo de iOS en PC (verifica touch real)
+    // ============================================
     async requestPermission(isManual = false) {
-        // Validación específica para iOS
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        // Solo bloquear en iOS REAL con touch, no en simulación de PC
+        const isRealIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+            && !window.MSStream
+            && ('ontouchstart' in window)
+            && (navigator.maxTouchPoints > 0);
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
-        if (isIOS && !isStandalone) {
-            alert('Para activar notificaciones en iOS (iPhone), debes:\n1. Pulsar el botón "Compartir" de Safari.\n2. Seleccionar "Añadir a pantalla de inicio".\n3. Abrir la app desde el icono de tu pantalla.');
+        if (isRealIOS && !isStandalone) {
+            alert('Para notificaciones en iOS:\n1. Pulsa "Compartir" en Safari.\n2. "Añadir a pantalla de inicio".\n3. Abre la app desde ese icono.');
             this.updateUIForState('denied');
             return false;
         }
 
         try {
-            console.log('🔔 Solicitando permisos de notificación...');
-
-            // Algunos navegadores antiguos no soportan la versión Promise de requestPermission
+            console.log('🔔 Solicitando permisos...');
             const permission = await new Promise((resolve, reject) => {
                 const res = Notification.requestPermission(resolve);
                 if (res) res.then(resolve).catch(reject);
             });
 
+            console.log('🔔 Resultado permiso:', permission);
             this.updateUIForState(permission);
 
             if (permission === 'granted') {
-                if (isManual) {
-                    Swal.fire({
-                        title: '¡Permisos Concedidos!',
-                        text: 'Estamos configurando tu dispositivo...',
-                        icon: 'success',
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                    await this.subscribeToPush();
+                if (isManual && typeof Swal !== 'undefined') {
+                    Swal.fire({ title: '¡Permisos Concedidos!', text: 'Registrando dispositivo...', icon: 'success', timer: 2500, showConfirmButton: false });
                 }
+                await this.subscribeToPush();
             } else if (permission === 'denied') {
-                alert('Has bloqueado las notificaciones. Para habilitarlas, debes ir a los ajustes de tu navegador para este sitio.');
+                alert('Notificaciones bloqueadas. Habilítalas en ajustes del navegador.');
             }
-
             return permission === 'granted';
         } catch (e) {
-            console.error('Error solicitando permiso:', e);
-            alert('Error al solicitar permisos: ' + e.message);
+            console.error('Error permiso:', e);
+            alert('Error: ' + e.message);
         }
         return false;
     }
 
     // ============================================
-    // Suscribir — usa r1 (VAPID key dinámica + subscribe)
+    // VAPID KEY — GET vía callGAS
+    // ============================================
+    async fetchVapidKey() {
+        try {
+            console.log('🔑 Obteniendo VAPID key...');
+            // GET simple con redirect:follow (igual que callGAS pero GET)
+            const res = await fetch(this.notifApiUrl + '?action=vapid-public-key', { redirect: 'follow' });
+            const text = (await res.text()).trim();
+            console.log('🔑 VAPID respuesta:', text.substring(0, 60));
+
+            if (text.startsWith('{')) {
+                const obj = JSON.parse(text);
+                if (obj.error) { console.error('❌ VAPID error:', obj.error); return false; }
+            }
+            if (text.length > 20 && !text.startsWith('<')) {
+                this.vapidPublicKey = text;
+                console.log('✅ VAPID key OK');
+                return true;
+            }
+            console.error('❌ VAPID inválida');
+            return false;
+        } catch (err) {
+            console.error('❌ VAPID fetch error:', err);
+            return false;
+        }
+    }
+
+    // ============================================
+    // SUSCRIBIR A PUSH + GUARDAR EN SHEETS
+    // Usa callGAS (datos en query string, POST vacío)
     // ============================================
     async subscribeToPush() {
-        if (!this.swRegistration) return;
+        if (!this.swRegistration) { console.warn('❌ Sin SW'); return; }
 
         try {
-            // Obtener la clave VAPID de r1 si no la tenemos
+            // 1. Obtener VAPID key
             if (!this.vapidPublicKey) {
                 const ok = await this.fetchVapidKey();
-                if (!ok) {
-                    console.warn('⚠️ No se pudo obtener VAPID key, push no disponible');
-                    return;
-                }
+                if (!ok) { alert('No se pudo obtener la clave VAPID.'); return; }
             }
 
-            const applicationServerKey = this.urlBase64ToUint8Array(this.vapidPublicKey);
+            // 2. Suscribir al PushManager
+            console.log('📱 Suscribiendo al PushManager...');
+            const appKey = this.urlBase64ToUint8Array(this.vapidPublicKey);
             const subscription = await this.swRegistration.pushManager.subscribe({
                 userVisibleOnly: true,
-                applicationServerKey: applicationServerKey
+                applicationServerKey: appKey
+            });
+            this.isSubscribed = true;
+            console.log('✅ Push subscription obtenida');
+
+            const sub = subscription.toJSON();
+            console.log('📱 Endpoint:', sub.endpoint.substring(0, 80) + '...');
+            console.log('📱 p256dh:', sub.keys.p256dh ? 'OK (' + sub.keys.p256dh.length + ' chars)' : 'VACÍO');
+            console.log('📱 auth:', sub.keys.auth ? 'OK' : 'VACÍO');
+
+            // 3. Guardar en Sheets via callGAS
+            // MISMO PATRÓN que llamarAPI(): datos en query string + POST sin body
+            console.log('💾 Guardando suscripción en Sheets...');
+            const result = await this.callGAS({
+                action: 'subscribe',
+                endpoint: sub.endpoint,
+                p256dh: sub.keys.p256dh || '',
+                auth: sub.keys.auth || ''
             });
 
-            this.isSubscribed = true;
-
-            // ⭐ Guardar suscripción en r1 con action=subscribe
-            const subJSON = subscription.toJSON();
-            const result = await this.callNotifAPI('subscribe', 'POST', subJSON);
-
+            console.log('💾 Resultado guardar:', result);
             if (result && result.success) {
-                console.log('✅ Suscripción guardada en r1:', result.message);
+                console.log('✅✅✅ ¡Suscripción GUARDADA en Sheets!', result.message);
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ title: '✅ Registrado', text: result.message || 'Dispositivo registrado.', icon: 'success', timer: 2500, showConfirmButton: false });
+                }
             } else {
-                console.warn('⚠️ Respuesta de r1 al suscribir:', result);
+                console.error('❌ Error al guardar suscripción:', result);
+                alert('No se pudo registrar: ' + (result.message || result.error || JSON.stringify(result)));
             }
 
         } catch (e) {
-            console.warn('Push subscribe error:', e.message);
-            alert('Fallo al suscribir a push: ' + e.message + '\n\nAsegúrate de estar en una conexión segura (HTTPS) y de no estar en modo incógnito.');
+            console.error('❌ subscribeToPush error:', e);
+            alert('Error al suscribir: ' + e.message + '\n\nAsegúrate de usar HTTPS.');
         }
     }
 
     // ============================================
-    // Enviar configuración de polling al SW → apunta a r1
+    // Polling → SW
     // ============================================
     sendPollingConfigToSW() {
         const userId = window.currentUser ? window.currentUser.id : 'anonimo';
-
         if (this.swRegistration && this.swRegistration.active) {
             this.swRegistration.active.postMessage({
                 type: 'SET_POLLING_CONFIG',
-                url: this.notifApiUrl,       // ⭐ Ahora apunta a r1
+                url: this.notifApiUrl,
                 userId: userId,
                 lastTs: this.lastNotificationTimestamp
             });
-            console.log('🔔 Polling configurado → r1 API');
+            console.log('🔔 Polling configurado');
         }
     }
 
+    // ============================================
+    // Test local
+    // ============================================
     sendTestNotification(msg = 'Prueba de notificación local') {
-        if (Notification.permission === 'granted') {
-            if (this.swRegistration) {
-                this.swRegistration.showNotification(CONFIG.APP_NAME || 'Separación', {
-                    body: msg,
-                    icon: './icons/icon-192.png',
-                    badge: './icons/icon-192.png',
-                    vibrate: [100, 50, 100],
-                    tag: 'test-notification'
-                });
-            } else {
-                new Notification(CONFIG.APP_NAME || 'Separación', { body: msg });
-            }
+        if (Notification.permission === 'granted' && this.swRegistration) {
+            this.swRegistration.showNotification('Separación', {
+                body: msg, icon: './icons/icon-192.png', badge: './icons/icon-192.png',
+                vibrate: [100, 50, 100], tag: 'test-' + Date.now()
+            });
         } else {
             this.requestPermission(false);
         }
     }
 
-    /**
-     * Notifica cuando se asigna un nuevo lote.
-     */
+    // ============================================
+    // Notificar asignación de lote (push a todos)
+    // ============================================
     async notifyNewLotAssignment(lote, responsable) {
-        console.log(`🔔 Notificando asignación de lote [${lote}] a [${responsable}]`);
-        try {
-            const title = `Nuevo Lote Asignado: ${lote}`;
-            const body = `El lote ${lote} ha sido asignado a ${responsable || 'Sin asignar'}.`;
-            return await this.callNotifAPI('send-notification', 'POST', {
-                title: title,
-                body: body,
-                url: './'
-            });
-        } catch (e) {
-            console.error('❌ Error enviando notificación de lote:', e);
-        }
+        console.log(`🔔 Notificando lote [${lote}] → [${responsable}]`);
+        return this.callGAS({
+            action: 'send-notification',
+            title: 'Nuevo Lote Asignado: ' + lote,
+            body: 'Lote ' + lote + ' asignado a ' + (responsable || 'Sin asignar') + '.'
+        });
     }
 
-    /**
-     * Notifica cambios de estado (Ej: Pausado para pruebas)
-     */
-    /**
-     * Notifica cambios de estado (Ej: Pausado para pruebas)
-     */
+    // ============================================
+    // Notificar cambio de estado (para pruebas)
+    // ============================================
     async notifyStatusChange(rec, status) {
-        console.log(`🔔 Notificando cambio de estado: REC${rec} -> ${status}`);
-        try {
-            const doc = (window.documentosGlobales || []).find(d => d.rec === rec);
-            const loteInfo = doc && doc.lote ? ` (Lote: ${doc.lote})` : '';
-            const refInfo = doc && doc.refProv ? ` [${doc.refProv}]` : '';
+        console.log(`🔔 Notificando estado: REC${rec} → ${status}`);
+        const doc = (window.documentosGlobales || []).find(d => d.rec === rec);
+        const loteInfo = doc && doc.lote ? ' (Lote: ' + doc.lote + ')' : '';
+        return this.callGAS({
+            action: 'send-notification',
+            title: 'Documento ' + status + ': REC' + rec + loteInfo,
+            body: 'REC' + rec + ' cambió a ' + status + '.'
+        });
+    }
 
-            const title = `Documento ${status}: REC${rec}${loteInfo}`;
-            const body = `El documento REC${rec}${refInfo} ha cambiado su estado a ${status}.`;
-            return await this.callNotifAPI('send-notification', 'POST', {
-                title: title,
-                body: body,
-                url: './'
+    // ============================================
+    // REPORTE DIARIO
+    // ============================================
+    async sendDailySummary(targetDateStr = null) {
+        const btn = document.getElementById('sendSummaryBtn');
+        const btnMobile = document.getElementById('sendSummaryBtnMobile');
+        const activeBtn = (btn && btn.offsetParent) ? btn : btnMobile;
+        const originalHtml = activeBtn ? activeBtn.innerHTML : '';
+
+        if (!confirm('¿Enviar resumen de entregas?')) return;
+
+        try {
+            if (activeBtn) { activeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...'; activeBtn.disabled = true; }
+
+            let rawData = window.datosTablaDocumentos || [];
+            if (rawData.length === 0 && typeof window.cargarTablaDocumentos === 'function') {
+                await window.cargarTablaDocumentos();
+                rawData = window.datosTablaDocumentos || [];
+            }
+            if (rawData.length === 0) throw new Error('No hay datos.');
+
+            const infoMap = {};
+            if (window.datosGlobales) window.datosGlobales.forEach(i => { if (i.REC) infoMap[i.REC] = i; });
+
+            const parseDate = (s) => {
+                if (!s) return null;
+                const m = s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+                return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
+            };
+
+            const deliveries = [];
+            rawData.forEach(row => {
+                if (String(row[3] || '').trim().toUpperCase() !== 'FINALIZADO') return;
+                const d = parseDate(row[1] || '');
+                if (!d) return;
+                const info = infoMap[String(row[0] || '').trim()] || {};
+                deliveries.push({
+                    dateVal: d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(),
+                    dateStr: `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`,
+                    unidades: info.CANTIDAD || 0
+                });
             });
+
+            if (!deliveries.length) { alert('No hay documentos finalizados.'); return; }
+
+            let bestVal = 0, bestStr = '';
+            deliveries.forEach(d => { if (d.dateVal > bestVal) { bestVal = d.dateVal; bestStr = d.dateStr; } });
+
+            const dayDelvs = deliveries.filter(d => d.dateVal === bestVal);
+            let totalUnd = 0;
+            dayDelvs.forEach(d => totalUnd += d.unidades);
+
+            const result = await this.callGAS({
+                action: 'send-notification',
+                title: 'Resumen Entregas - ' + bestStr,
+                body: dayDelvs.length + ' docs, ' + totalUnd + ' unidades.'
+            });
+
+            if (result && result.success) {
+                alert('✅ Reporte enviado.\n' + bestStr + ': ' + dayDelvs.length + ' docs, ' + totalUnd + ' und.');
+            } else {
+                alert('Error: ' + (result.message || result.error || 'Respuesta inválida'));
+            }
         } catch (e) {
-            console.error('❌ Error enviando notificación de estado:', e);
+            console.error('❌ Reporte error:', e);
+            alert('Error: ' + e.message);
+        } finally {
+            if (activeBtn) { activeBtn.innerHTML = originalHtml; activeBtn.disabled = false; }
         }
     }
 
+    // ============================================
+    // Utilidad
+    // ============================================
     urlBase64ToUint8Array(base64String) {
         const padding = '='.repeat((4 - base64String.length % 4) % 4);
         const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -582,10 +384,9 @@ class NotificationManager {
     }
 }
 
+// Inicializar
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        window.notificationManager = new NotificationManager();
-    });
+    document.addEventListener('DOMContentLoaded', () => { window.notificationManager = new NotificationManager(); });
 } else {
     window.notificationManager = new NotificationManager();
 }
