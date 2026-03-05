@@ -77,9 +77,10 @@
     color: var(--accent-light);
 }
 
-/* Botón de menú móvil */
+/* Botón de Ajustes (antes Menú Móvil) */
 .mobile-menu-btn {
-    display: none;
+    display: flex;
+    /* Ahora siempre visible */
     align-items: center;
     justify-content: center;
     width: 40px;

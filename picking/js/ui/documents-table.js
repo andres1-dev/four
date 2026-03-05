@@ -1129,9 +1129,15 @@ async function cambiarEstadoDocumento(rec, nuevoEstado) {
         const result = await llamarAPI({ action: action, id: rec });
 
         if (result.success) {
-            if (nuevoEstado === 'PAUSADO' && timers[rec]) {
-                clearInterval(timers[rec]);
-                delete timers[rec];
+            if (nuevoEstado === 'PAUSADO') {
+                if (timers[rec]) {
+                    clearInterval(timers[rec]);
+                    delete timers[rec];
+                }
+                // Notificar vía PWA para pruebas
+                if (window.notificationManager) {
+                    window.notificationManager.notifyStatusChange(rec, 'PAUSADO');
+                }
             }
             Notificador.success('✓ Actualizado', `REC${rec} ahora está ${nuevoEstado}`);
             await actualizarFilaEspecifica(rec);
@@ -1403,6 +1409,7 @@ function inicializarDataTable(documentos) {
             },
             {
                 name: "Prenda / Línea",
+                id: "prenda_linea",
                 formatter: (cell, row) => {
                     const prenda = row.cells[6]?.data || documentosGlobales.find(d => d.rec === row.cells[0].data)?.prenda || '-';
                     return gridjs.html(`<div class="lh-sm">${prenda}</div>`);
@@ -1410,6 +1417,7 @@ function inicializarDataTable(documentos) {
             },
             {
                 name: "Acciones",
+                id: "acciones",
                 formatter: (cell, row) => {
                     const rec = row.cells[0].data;
                     const doc = documentosGlobales.find(d => d.rec === rec);

@@ -2,7 +2,7 @@
 // CONFIGURACIÓN DE NOTIFICACIONES
 // ============================================
 // URL para Google Apps Script (notificaciones push)
-const R1_GAS_URL = 'https://script.google.com/macros/s/AKfycbzgDzLOCj96zMoLLVVm4xtEk0hbi3fG1_4zNoFqIGRG7FE7PiEqgmw7Wlim8wkOvcHq/exec';
+const R1_GAS_URL = 'https://script.google.com/macros/s/AKfycbyDTzMkBog7uq3o_0yAuD_WVHOtLQNgBYMzxgdrr9QlLFTKJOk_8mJJlaXMqkixEnm05A/exec';
 
 let API_URL_POLLING = null;
 let USER_ID_POLLING = null;

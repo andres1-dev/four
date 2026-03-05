@@ -11,7 +11,7 @@ class NotificationManager {
         // URL del GAS de notificaciones r1
         this.notifApiUrl = (typeof API_URL_NOTIF !== 'undefined')
             ? API_URL_NOTIF
-            : 'https://script.google.com/macros/s/AKfycbzgDzLOCj96zMoLLVVm4xtEk0hbi3fG1_4zNoFqIGRG7FE7PiEqgmw7Wlim8wkOvcHq/exec';
+            : 'https://script.google.com/macros/s/AKfycbyDTzMkBog7uq3o_0yAuD_WVHOtLQNgBYMzxgdrr9QlLFTKJOk_8mJJlaXMqkixEnm05A/exec';
 
         console.log('🔔 NotificationManager Constructor iniciado (r1 API)');
         this.setupUI();
@@ -21,46 +21,49 @@ class NotificationManager {
     async init() {
         console.log('🔔 NotificationManager.init() ejecutándose...');
 
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-            console.warn('❌ Notificaciones Push no soportadas por este navegador');
+        if (!('serviceWorker' in navigator)) {
+            console.warn('❌ Service Worker no soportado');
+            this.updateUIForState('unsupported');
+            return;
+        }
+
+        if (!('Notification' in window)) {
+            console.warn('❌ Notificaciones no soportadas');
+            this.updateUIForState('unsupported');
+            return;
+        }
+
+        if (!('PushManager' in window)) {
+            console.warn('❌ PushManager no soportado');
             this.updateUIForState('unsupported');
             return;
         }
 
         try {
-            this.swRegistration = await navigator.serviceWorker.getRegistration() || await navigator.serviceWorker.ready;
+            // Esperar a que el SW esté listo
+            this.swRegistration = await navigator.serviceWorker.ready;
 
             if (this.swRegistration) {
-                console.log('✅ Service Worker vinculado a Notificaciones');
-                this.updateUIForState(Notification.permission);
+                console.log('✅ Service Worker listo y vinculado');
 
-                // Enviar la URL de r1 al SW para polling
+                // Sincronizar estado inicial
+                const permission = Notification.permission;
+                console.log('📊 Permiso actual:', permission);
+                this.updateUIForState(permission);
+
+                // Configurar polling r1
                 this.sendPollingConfigToSW();
 
-                if ('periodicSync' in this.swRegistration) {
-                    try {
-                        const status = await navigator.permissions.query({
-                            name: 'periodic-background-sync',
-                        });
-                        if (status.state === 'granted') {
-                            await this.swRegistration.periodicSync.register('check-notif', {
-                                minInterval: 60 * 60 * 1000,
-                            });
-                            console.log('✅ Periodic Sync registrado');
-                        }
-                    } catch (e) {
-                        console.warn('Periodic Sync no disponible:', e.message);
-                    }
-                }
-
-                if (Notification.permission === 'granted') {
-                    this.subscribeToPush();
+                // Si ya tiene permiso, intentar suscribir (por si expiró el endpoint de GAS)
+                if (permission === 'granted') {
+                    console.log('🔄 Ya tiene permisos, verificando suscripción Push...');
+                    await this.subscribeToPush();
                 }
             } else {
-                console.warn('⚠️ No se encontró Service Worker registrado.');
+                console.warn('⚠️ No se pudo obtener el registro del Service Worker.');
             }
         } catch (e) {
-            console.error('❌ Error en NotificationManager.init():', e);
+            console.error('❌ Error crítico en init():', e);
         }
     }
 
@@ -125,39 +128,38 @@ class NotificationManager {
             try { return JSON.parse(text); } catch { return text; }
         }
 
-        // Si es una suscripción o tiene endpoint, enviamos JSON puro para que GAS lo reciba bien
+        // Si es una suscripción o tiene endpoint, enviamos JSON preparado para el GAS
         if (action === 'subscribe' || (data && data.endpoint)) {
+            // El GAS espera un JSON con la propiedad 'action' y los datos de suscripción
             const payload = {
-                action: action,
-                data: JSON.stringify(data),
-                subscription: data
+                action: 'subscribe',
+                endpoint: data.endpoint,
+                p256dh: data.keys ? data.keys.p256dh : '',
+                auth: data.keys ? data.keys.auth : '',
+                subscription: data // El objeto completo para redundancia
             };
+
+            console.log('📤 Enviando suscripción a GAS:', payload);
+
             const res = await fetch(this.notifApiUrl, {
-                method: 'POST', mode: 'cors', body: JSON.stringify(payload),
-                headers: { 'Content-Type': 'text/plain' } // Evita preflight OPTIONS molesto en GAS
+                method: 'POST',
+                mode: 'cors',
+                body: JSON.stringify(payload),
+                headers: { 'Content-Type': 'text/plain' } // GAS recibe mejor JSON con text/plain
             });
             const text = await res.text();
             try { return JSON.parse(text); } catch { return text; }
         }
 
-        const form = new URLSearchParams();
-        form.append('action', action);
-        if (data) {
-            form.append('data', JSON.stringify(data));
-            if (data.endpoint) form.append('endpoint', data.endpoint);
-            if (data.keys) {
-                if (data.keys.p256dh) form.append('p256dh', data.keys.p256dh);
-                if (data.keys.auth) form.append('auth', data.keys.auth);
-            }
-            if (data.title) form.append('title', data.title);
-            if (data.body) form.append('body', data.body);
-            if (data.icon) form.append('icon', data.icon);
-            if (data.url) form.append('url', data.url);
-        }
+        // Para otras acciones (como send-notification)
+        const formAction = action;
+        const payloadParams = { action: formAction, ...data };
 
         const res = await fetch(this.notifApiUrl, {
-            method: 'POST', mode: 'cors', body: form,
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            method: 'POST',
+            mode: 'cors',
+            body: JSON.stringify(payloadParams),
+            headers: { 'Content-Type': 'text/plain' }
         });
         const text = await res.text();
         try { return JSON.parse(text); } catch { return text; }
@@ -192,7 +194,9 @@ class NotificationManager {
     // ============================================
     async sendDailySummary(targetDateStr = null) {
         const btn = document.getElementById('sendSummaryBtn');
-        const originalHtml = btn ? btn.innerHTML : 'Reporte';
+        const btnMobile = document.getElementById('sendSummaryBtnMobile');
+        const activeBtn = (btn && btn.offsetParent) ? btn : btnMobile;
+        const originalHtml = activeBtn ? activeBtn.innerHTML : 'Reporte';
 
         let confirmMsg = '¿Deseas generar y enviar el resumen de entregas?';
         if (targetDateStr) {
@@ -204,31 +208,39 @@ class NotificationManager {
         if (!confirm(confirmMsg)) return;
 
         try {
-            if (btn) {
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analizando...';
-                btn.disabled = true;
+            if (activeBtn) {
+                activeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analizando...';
+                activeBtn.disabled = true;
             }
 
-            const result = await window.obtenerDatosFacturados();
-            if (!result || !result.success) throw new Error('No se pudieron obtener los datos');
+            // Usar datosTablaDocumentos que es la fuente de verdad actual
+            let rawData = window.datosTablaDocumentos || [];
 
-            console.log(`🔍 Analizando ${result.data.length} documentos para el reporte...`);
+            if (rawData.length === 0) {
+                if (typeof window.cargarTablaDocumentos === 'function') {
+                    await window.cargarTablaDocumentos();
+                    rawData = window.datosTablaDocumentos || [];
+                }
+            }
 
-            // Helper para parsear fechas de Google Sheets (DD/MM/YYYY HH:mm:ss o similar)
+            if (rawData.length === 0) throw new Error('No hay datos disponibles en el sistema para generar el reporte.');
+
+            // Mapear datos globales (enriquecidos con clientes) por REC
+            const infoGlobalMap = {};
+            if (window.datosGlobales) {
+                window.datosGlobales.forEach(item => {
+                    if (item.REC) infoGlobalMap[item.REC] = item;
+                });
+            }
+
+            console.log(`🔍 Analizando ${rawData.length} documentos para el reporte inteligente...`);
+
             const parseDate = (str) => {
                 if (!str) return null;
-                // Intentar DD/MM/YYYY HH:mm:ss
-                const match = str.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+                const match = str.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
                 if (match) {
-                    const day = parseInt(match[1]);
-                    const month = parseInt(match[2]) - 1; // 0-indexed
-                    const year = parseInt(match[3]);
-                    const hour = parseInt(match[4] || 0);
-                    const min = parseInt(match[5] || 0);
-                    const sec = parseInt(match[6] || 0);
-                    return new Date(year, month, day, hour, min, sec);
+                    return new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
                 }
-                // Fallback a Date nativo
                 const d = new Date(str);
                 return isNaN(d.getTime()) ? null : d;
             };
@@ -237,29 +249,39 @@ class NotificationManager {
                 style: 'currency', currency: 'COP', minimumFractionDigits: 0
             }).format(val);
 
-            // 1. Recopilar todas las entregas
+            // 1. Recopilar entregas finalizadas
             const allDeliveries = [];
-            result.data.forEach(item => {
-                const itemsAProcesar = item.datosSiesa || (item.factura ? [item] : []);
-                itemsAProcesar.forEach(f => {
-                    const esEntregado = f.confirmacion && f.confirmacion.includes('ENTREGADO');
-                    if (!esEntregado) return;
+            rawData.forEach(row => {
+                const rec = String(row[0] || '').trim();
+                const estado = String(row[3] || '').trim().toUpperCase();
 
-                    const rawDateStr = f.fechaEntrega || f.fecha || "";
-                    const dateObj = parseDate(rawDateStr);
-                    if (!dateObj) return;
+                // Solo nos interesan los finalizados (entregas completas)
+                if (estado !== 'FINALIZADO') return;
 
-                    allDeliveries.push({
-                        ...f,
-                        dateObj,
-                        dateVal: (dateObj.getFullYear() * 10000) + ((dateObj.getMonth() + 1) * 100) + dateObj.getDate(),
-                        dateStr: `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`
-                    });
+                const fechaStr = row[1] || "";
+                const dateObj = parseDate(fechaStr);
+                if (!dateObj) return;
+
+                const infoExtra = infoGlobalMap[rec] || {};
+
+                allDeliveries.push({
+                    rec: rec,
+                    dateObj: dateObj,
+                    dateVal: (dateObj.getFullYear() * 10000) + ((dateObj.getMonth() + 1) * 100) + dateObj.getDate(),
+                    dateStr: `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`,
+                    clientes: infoExtra.CLIENTES || {},
+                    valorTotal: infoExtra.PVP ? (parseFloat(infoExtra.PVP) * (infoExtra.CANTIDAD || 1)) : 0,
+                    unidades: infoExtra.CANTIDAD || 0,
+                    lote: infoExtra.LOTE || ''
                 });
             });
 
             if (allDeliveries.length === 0) {
-                alert('No se encontraron registros de entregas en el sistema.');
+                alert('No se encontraron registros de documentos FINALIZADOS para generar el reporte.');
+                if (activeBtn) {
+                    activeBtn.innerHTML = originalHtml;
+                    activeBtn.disabled = false;
+                }
                 return;
             }
 
@@ -269,13 +291,11 @@ class NotificationManager {
             let finalDateObj = null;
 
             if (targetDateStr) {
-                // targetDateStr viene de <input type="date"> -> YYYY-MM-DD
                 const parts = targetDateStr.split('-');
                 finalDateVal = (parseInt(parts[0]) * 10000) + (parseInt(parts[1]) * 100) + parseInt(parts[2]);
                 finalDateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
                 finalDateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
             } else {
-                // Buscar la fecha más reciente
                 allDeliveries.forEach(d => {
                     if (d.dateVal > finalDateVal) {
                         finalDateVal = d.dateVal;
@@ -285,125 +305,90 @@ class NotificationManager {
                 });
             }
 
-            // 3. Filtrar entregas del día
+            // 3. Filtrar y Consolidar
             const dayDeliveries = allDeliveries.filter(d => d.dateVal === finalDateVal);
-
             if (dayDeliveries.length === 0) {
-                alert(`No se encontraron entregas para la fecha ${finalDateStr}.`);
+                alert(`No se encontraron entregas finalizadas para la fecha ${finalDateStr}.`);
+                if (activeBtn) {
+                    activeBtn.innerHTML = originalHtml;
+                    activeBtn.disabled = false;
+                }
                 return;
             }
 
-            // 4. Consolidar inteligentemente
-            // Agrupar por cliente
             const clientGroups = {};
-            dayDeliveries.forEach(d => {
-                const client = d.cliente || "CLIENTE DESCONOCIDO";
-                if (!clientGroups[client]) clientGroups[client] = [];
-                clientGroups[client].push(d);
-            });
-
             let totalUnidades = 0;
             let totalValor = 0;
-            const facturasUnicas = new Set();
-            let bodyDetalle = "";
+            const recsUnicos = new Set();
 
-            // Para cada cliente, identificar "sesiones" de entrega
-            Object.keys(clientGroups).sort().forEach(clientName => {
-                const deliveries = clientGroups[clientName];
-                // Ordenar por hora
-                deliveries.sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
+            dayDeliveries.forEach(d => {
+                recsUnicos.add(d.rec);
+                totalUnidades += d.unidades;
+                totalValor += d.valorTotal;
 
-                const sessions = [];
-                let currentSession = null;
+                // Agrupar por clientes dentro del documento
+                const clientes = Object.keys(d.clientes);
+                if (clientes.length === 0) {
+                    const cName = "VENTA DIRECTA / OTROS";
+                    if (!clientGroups[cName]) clientGroups[cName] = { unidades: 0, valor: 0, docs: new Set() };
+                    clientGroups[cName].unidades += d.unidades;
+                    clientGroups[cName].valor += d.valorTotal;
+                    clientGroups[cName].docs.add(d.rec);
+                } else {
+                    clientes.forEach(cName => {
+                        const cInfo = d.clientes[cName];
+                        const cUnidades = cInfo.unidades || (d.unidades / clientes.length); // Prorrateo si no hay detalle
+                        const cValor = (d.valorTotal / clientes.length);
 
-                deliveries.forEach(d => {
-                    facturasUnicas.add(d.factura);
-                    const cant = parseFloat(d.cantidad) || 0;
-                    const val = parseFloat(d.valorBruto) || 0;
-                    totalUnidades += cant;
-                    totalValor += val;
-
-                    if (!currentSession) {
-                        currentSession = {
-                            start: d.dateObj,
-                            last: d.dateObj,
-                            unidades: cant,
-                            facturas: new Set([d.factura]),
-                            valor: val
-                        };
-                        sessions.push(currentSession);
-                    } else {
-                        // Si ha pasado más de 1 hora (3600000 ms), es nueva sesión
-                        const diff = d.dateObj.getTime() - currentSession.last.getTime();
-                        if (diff > 3600 * 1000) {
-                            currentSession = {
-                                start: d.dateObj,
-                                last: d.dateObj,
-                                unidades: cant,
-                                facturas: new Set([d.factura]),
-                                valor: val
-                            };
-                            sessions.push(currentSession);
-                        } else {
-                            currentSession.last = d.dateObj;
-                            currentSession.unidades += cant;
-                            currentSession.facturas.add(d.factura);
-                            currentSession.valor += val;
-                        }
-                    }
-                });
-
-                // Construir string para este cliente
-                const clientHeader = `\n👤 *${clientName}*`;
-                let sessionInfo = "";
-                sessions.forEach((s, idx) => {
-                    const timeStr = s.start.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
-                    sessionInfo += `\n   - Entrega ${idx + 1} (${timeStr}): ${s.facturas.size} fac, ${s.unidades.toLocaleString('es-CO')} und, ${formatCurrency(s.valor)}`;
-                });
-
-                bodyDetalle += clientHeader + sessionInfo;
+                        if (!clientGroups[cName]) clientGroups[cName] = { unidades: 0, valor: 0, docs: new Set() };
+                        clientGroups[cName].unidades += cUnidades;
+                        clientGroups[cName].valor += cValor;
+                        clientGroups[cName].docs.add(d.rec);
+                    });
+                }
             });
 
-            console.log(`✅ Reporte inteligente generado: ${finalDateStr}`);
+            // 4. Construir cuerpo del mensaje
+            let bodyDetalle = "";
+            Object.entries(clientGroups)
+                .sort((a, b) => b[1].valor - a[1].valor)
+                .forEach(([name, data]) => {
+                    bodyDetalle += `\n👤 *${name}*\n   - Documentos: ${data.docs.size}\n   - Unidades: ${Math.round(data.unidades)}\n   - Subtotal: ${formatCurrency(data.valor)}\n`;
+                });
 
-            const titulo = `Proceso de Entregas`;
-            const headerResumen = `*Consolidado del Día:*
-            Facturas: ${facturasUnicas.size}
-            Unidades: ${totalUnidades.toLocaleString('es-CO')}
-            Total: ${formatCurrency(totalValor)}
+            const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            const diaNombre = diasSemana[finalDateObj.getDay()];
+
+            const titulo = `Resumen Entregas - ${finalDateStr}`;
+            const headerResumen = `*REPORTE DE ENTREGAS (${diaNombre})*
+            ----------------------------
+            Docs: ${recsUnicos.size}
+            Unidades: ${totalUnidades}
+            Venta Total: ${formatCurrency(totalValor)}
             ----------------------------`;
 
             const cuerpoCompleto = headerResumen + bodyDetalle;
 
-            // Simple body for the push notification
-            const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-            const diaNombre = diasSemana[finalDateObj.getDay()];
-            const cuerpoSimple = `Reporte Entregas del día ${diaNombre} ${finalDateStr}: Facturas: ${facturasUnicas.size} Unidades: ${totalUnidades.toLocaleString('es-CO')} Total: ${formatCurrency(totalValor)}`;
-
-            // ⭐ Enviar al GAS de r1 con action=send-notification
+            // Enviar vía Push (y polling r1 lo detectará)
             const resData = await this.callNotifAPI('send-notification', 'POST', {
                 title: titulo,
-                body: cuerpoSimple,
-                icon: '',
-                url: `./?showReport=${finalDateVal}`
+                body: `Reporte ${finalDateStr}: ${totalUnidades} und en ${recsUnicos.size} docs. Total: ${formatCurrency(totalValor)}`,
+                url: `./`
             });
 
             if (resData && resData.success) {
-                alert(`✅ Reporte enviado correctamente.\nFecha: ${finalDateStr}`);
-                if (this.swRegistration && this.swRegistration.active) {
-                    this.swRegistration.active.postMessage({ type: 'CHECK_NOW' });
-                }
+                alert(`✅ Reporte enviado correctamente.\nFecha: ${finalDateStr}\nTotal: ${formatCurrency(totalValor)}`);
             } else {
-                throw new Error(resData.message || resData.error || 'Error desconocido');
+                throw new Error(resData.message || resData.error || 'Error en el servidor');
             }
 
         } catch (e) {
-            console.error(e);
-            alert('❌ Error al generar resumen: ' + e.message);
+            console.error('❌ Error enviando resumen:', e);
+            alert('Error al generar resumen: ' + e.message);
         } finally {
-            if (btn) {
-                btn.innerHTML = originalHtml;
-                btn.disabled = false;
+            if (activeBtn) {
+                activeBtn.innerHTML = originalHtml;
+                activeBtn.disabled = false;
             }
         }
     }
@@ -425,18 +410,46 @@ class NotificationManager {
     }
 
     async requestPermission(isManual = false) {
+        // Validación específica para iOS
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+        if (isIOS && !isStandalone) {
+            alert('Para activar notificaciones en iOS (iPhone), debes:\n1. Pulsar el botón "Compartir" de Safari.\n2. Seleccionar "Añadir a pantalla de inicio".\n3. Abrir la app desde el icono de tu pantalla.');
+            this.updateUIForState('denied');
+            return false;
+        }
+
         try {
             console.log('🔔 Solicitando permisos de notificación...');
-            const permission = await Notification.requestPermission();
+
+            // Algunos navegadores antiguos no soportan la versión Promise de requestPermission
+            const permission = await new Promise((resolve, reject) => {
+                const res = Notification.requestPermission(resolve);
+                if (res) res.then(resolve).catch(reject);
+            });
+
             this.updateUIForState(permission);
 
-            if (permission === 'granted' && isManual) {
-                this.sendTestNotification('¡Notificaciones activadas correctamente!');
-                await this.subscribeToPush();
+            if (permission === 'granted') {
+                if (isManual) {
+                    Swal.fire({
+                        title: '¡Permisos Concedidos!',
+                        text: 'Estamos configurando tu dispositivo...',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    await this.subscribeToPush();
+                }
+            } else if (permission === 'denied') {
+                alert('Has bloqueado las notificaciones. Para habilitarlas, debes ir a los ajustes de tu navegador para este sitio.');
             }
+
             return permission === 'granted';
         } catch (e) {
             console.error('Error solicitando permiso:', e);
+            alert('Error al solicitar permisos: ' + e.message);
         }
         return false;
     }
@@ -477,6 +490,7 @@ class NotificationManager {
 
         } catch (e) {
             console.warn('Push subscribe error:', e.message);
+            alert('Fallo al suscribir a push: ' + e.message + '\n\nAsegúrate de estar en una conexión segura (HTTPS) y de no estar en modo incógnito.');
         }
     }
 
@@ -517,8 +531,6 @@ class NotificationManager {
 
     /**
      * Notifica cuando se asigna un nuevo lote.
-     * @param {string} lote - ID del lote
-     * @param {string} responsable - Nombre del responsable asignado
      */
     async notifyNewLotAssignment(lote, responsable) {
         console.log(`🔔 Notificando asignación de lote [${lote}] a [${responsable}]`);
@@ -532,6 +544,31 @@ class NotificationManager {
             });
         } catch (e) {
             console.error('❌ Error enviando notificación de lote:', e);
+        }
+    }
+
+    /**
+     * Notifica cambios de estado (Ej: Pausado para pruebas)
+     */
+    /**
+     * Notifica cambios de estado (Ej: Pausado para pruebas)
+     */
+    async notifyStatusChange(rec, status) {
+        console.log(`🔔 Notificando cambio de estado: REC${rec} -> ${status}`);
+        try {
+            const doc = (window.documentosGlobales || []).find(d => d.rec === rec);
+            const loteInfo = doc && doc.lote ? ` (Lote: ${doc.lote})` : '';
+            const refInfo = doc && doc.refProv ? ` [${doc.refProv}]` : '';
+
+            const title = `Documento ${status}: REC${rec}${loteInfo}`;
+            const body = `El documento REC${rec}${refInfo} ha cambiado su estado a ${status}.`;
+            return await this.callNotifAPI('send-notification', 'POST', {
+                title: title,
+                body: body,
+                url: './'
+            });
+        } catch (e) {
+            console.error('❌ Error enviando notificación de estado:', e);
         }
     }
 
