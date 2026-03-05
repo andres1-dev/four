@@ -66,25 +66,30 @@ class NotificationManager {
 
     setupUI() {
         console.log('🔔 Configurando UI de notificaciones...');
-        const notifToggle = document.getElementById('notifToggle');
-        const summaryBtn = document.getElementById('sendSummaryBtn');
+        const notifToggles = [document.getElementById('notifToggle'), document.getElementById('notifToggleMobile')];
+        const summaryBtns = [document.getElementById('sendSummaryBtn'), document.getElementById('sendSummaryBtnMobile')];
 
-        if (notifToggle) {
-            notifToggle.onchange = (e) => {
-                if (notifToggle.checked) {
-                    this.requestPermission(true);
-                } else {
-                    alert('Para desactivar totalmente las notificaciones, debes quitarlas desde la configuración del sitio en tu navegador.');
-                }
-            };
-        }
+        notifToggles.forEach(toggle => {
+            if (toggle) {
+                toggle.onchange = (e) => {
+                    if (toggle.checked) {
+                        this.requestPermission(true);
+                    } else {
+                        alert('Para desactivar totalmente las notificaciones, debes quitarlas desde la configuración del sitio en tu navegador.');
+                        this.updateUIForState(Notification.permission);
+                    }
+                };
+            }
+        });
 
-        if (summaryBtn) {
-            summaryBtn.onclick = (e) => {
-                e.preventDefault();
-                this.sendDailySummary();
-            };
-        }
+        summaryBtns.forEach(btn => {
+            if (btn) {
+                btn.onclick = (e) => {
+                    e.preventDefault();
+                    this.sendDailySummary();
+                };
+            }
+        });
 
         setTimeout(() => this.applyRolePermissions(), 1000);
     }
@@ -116,6 +121,21 @@ class NotificationManager {
     async callNotifAPI(action, method = 'GET', data = null) {
         if (method === 'GET') {
             const res = await fetch(this.notifApiUrl + '?action=' + action, { mode: 'cors' });
+            const text = await res.text();
+            try { return JSON.parse(text); } catch { return text; }
+        }
+
+        // Si es una suscripción o tiene endpoint, enviamos JSON puro para que GAS lo reciba bien
+        if (action === 'subscribe' || (data && data.endpoint)) {
+            const payload = {
+                action: action,
+                data: JSON.stringify(data),
+                subscription: data
+            };
+            const res = await fetch(this.notifApiUrl, {
+                method: 'POST', mode: 'cors', body: JSON.stringify(payload),
+                headers: { 'Content-Type': 'text/plain' } // Evita preflight OPTIONS molesto en GAS
+            });
             const text = await res.text();
             try { return JSON.parse(text); } catch { return text; }
         }
@@ -389,21 +409,19 @@ class NotificationManager {
     }
 
     updateUIForState(state) {
-        const notifToggle = document.getElementById('notifToggle');
-        const notifDesc = document.getElementById('notifDesc');
-        if (!notifToggle) return;
+        const toggles = [document.getElementById('notifToggle'), document.getElementById('notifToggleMobile')];
+        const descs = [document.getElementById('notifDesc'), document.getElementById('notifDescMobile')];
 
         console.log('🔔 Actualizando UI de notificaciones: ' + state);
-        if (state === 'granted') {
-            notifToggle.checked = true;
-            if (notifDesc) notifDesc.innerText = 'Estado: Activo';
-        } else if (state === 'denied') {
-            notifToggle.checked = false;
-            if (notifDesc) notifDesc.innerText = 'Estado: Bloqueado';
-        } else {
-            notifToggle.checked = false;
-            if (notifDesc) notifDesc.innerText = 'Estado: Desactivado';
-        }
+
+        toggles.forEach(toggle => {
+            if (toggle) toggle.checked = (state === 'granted');
+        });
+
+        const statusLabel = state === 'granted' ? 'Estado: Activo' : (state === 'denied' ? 'Estado: Bloqueado' : 'Estado: Desactivado');
+        descs.forEach(desc => {
+            if (desc) desc.innerText = statusLabel;
+        });
     }
 
     async requestPermission(isManual = false) {
