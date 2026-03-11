@@ -30,8 +30,7 @@ function handleLotSelection(event) {
     const lotData = JSON.parse(event.target.dataset.lot);
     fillLotDetails(lotData);
 
-    DOM.loteInput().value =
-        `${lotData.LOTE || ''} - ${lotData.PROCESO || 'SIN PROCESO'} - ${lotData.PLANTA || 'SIN PLANTA'}`;
+    DOM.loteInput().value = lotData.LOTE || '';
 
     clearSuggestions();
 
@@ -133,10 +132,10 @@ function toggleLotCollapse() {
     const body = document.getElementById('lotCollapseBody');
     if (!header || !body) return;
 
+    header.classList.toggle('open');
+    body.classList.toggle('open');
     const isOpen = header.classList.contains('open');
-    header.classList.toggle('open', !isOpen);
-    body.classList.toggle('open', !isOpen);
-    header.setAttribute('aria-expanded', String(!isOpen));
+    header.setAttribute('aria-expanded', String(isOpen));
 }
 
 /**
@@ -153,3 +152,15 @@ function expandLotCollapse() {
     header.setAttribute('aria-expanded', 'true');
 }
 
+/**
+ * Cierra el acordeón de datos del lote de forma programática.
+ */
+function hideLotCollapse() {
+    const header = document.getElementById('lotCollapseToggle');
+    const body = document.getElementById('lotCollapseBody');
+    if (!header || !body) return;
+
+    header.classList.remove('open');
+    body.classList.remove('open');
+    header.setAttribute('aria-expanded', 'false');
+}

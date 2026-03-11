@@ -3,13 +3,13 @@
    ========================================================================== */
 
 /**
- * Configuración de Google Sheets API (lectura de datos SISPRO).
- * @readonly
+ * Configuración dinámica: Las llaves se recuperan desde GAS para mayor seguridad.
  */
-const CONFIG = Object.freeze({
-    API_KEY: 'AIzaSyC7hjbRc0TGLgImv8gVZg8tsOeYWgXlPcM',
+let CONFIG = {
+    API_KEY: null,      // Se cargará desde GAS
+    GEMINI_KEY: null,   // Se cargará desde GAS
     SPREADSHEET_ID: '1ZLGG8wfszE6D8vGwCECWguWGUiDXGUGfN87ZukyaCpo',
-});
+};
 
 /**
  * Endpoint de Google Apps Script para guardar datos de formularios.
@@ -58,6 +58,16 @@ const SHEET_PLANTAS = Object.freeze({
     name: 'PLANTAS',
     indices: [0, 1, 2, 3, 4, 5],
     headers: ['TIMESTAMP', 'CEDULA', 'PLANTA', 'DIRECCION', 'TELEFONO', 'EMAIL'],
+});
+
+/**
+ * Definición de la hoja de Usuarios para control de acceso.
+ * @readonly
+ */
+const SHEET_USUARIOS = Object.freeze({
+    name: 'USUARIOS',
+    indices: [0, 1, 2, 3, 4, 5],
+    headers: ['ID', 'USUARIO', 'CORREO', 'TELEFONO', 'ROL', 'PASSWORD'],
 });
 
 /* ── Hojas inactivas (reservadas para uso futuro) ──────────────────────── */

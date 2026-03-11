@@ -11,14 +11,18 @@ async function loadData() {
     try {
         showLoader();
 
+        // PASO 1: Recuperar llaves de API desde GAS (Seguridad)
+        await fetchSecureConfig();
+
+        // PASO 2: Cargar datos operativos utilizando las llaves obtenidas
         const { lots, plantas } = await fetchAllData();
 
         if (lots) {
             setCurrentLots(lots);
             setCurrentPlantas(plantas || []);
             populatePlantaOptions(lots);
+            applyAccessControl(); // Re-aplicar restricciones de rol tras cargar datos
             hideLoaderShowForm();
-            console.log(`[app] SISPRO: ${lots.length}, Plantas: ${plantas.length}`);
         } else {
             throw new Error('No se obtuvieron datos de SISPRO');
         }
@@ -70,14 +74,18 @@ window.onload = function () {
     // Registrar eventos
     bindEvents();
 
-    // Cargar datos de SISPRO
+    // Cargar datos (Lotes + Plantas + Usuarios)
     loadData();
+    loadUsers(); 
 
     // Dropzones de archivo personalizados
     initDropzones();
 
     // Fondo de partículas
     initParticles();
+
+    // Mostrar login inicial si no hay sesión
+    updateAuthUI();
 
     // Actualizar reloj cada minuto
     setInterval(updateDateTime, 60_000);

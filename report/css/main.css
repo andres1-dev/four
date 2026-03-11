@@ -2,85 +2,99 @@
    main.css — Variables globales, reset y layout base
    ========================================================================== */
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 /* ── Custom Properties (Design Tokens) ── */
 :root {
   --color-primary: #3f51b5;
-  --color-primary-shadow: rgba(63, 81, 181, 0.3);
-  --color-border: #ced4da;
-  --color-text-label: #666;
-  --color-text-muted: #999;
-  --color-link: #666;
-  --color-link-hover: #448aff;
-  --color-loader-track: #f3f3f3;
-  --color-loader-spinner: #3498db;
-  --color-error: #dc3545;
-  --color-facebook: #1877f2;
-  --color-instagram: #e1306c;
-  --color-whatsapp: #25d366;
+  --color-primary-dark: #303f9f;
+  --color-primary-light: #ffffff;
+  --color-primary-shadow: rgba(0, 0, 0, 0.05);
+  --color-background: #ffffff;
+  --color-card-bg: #ffffff;
+  --color-border: #e2e8f0;
+  --color-text-main: #1e293b;
+  --color-text-label: #64748b;
+  --color-text-muted: #94a3b8;
+  
+  --radius-xl: 24px;
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-input: 10px;
 
-  --radius-input: 20px;
-  --shadow-input: 0 2px 5px rgba(0, 0, 0, 0.1);
-  --shadow-input-focus: 0 2px 8px var(--color-primary-shadow);
-  --transition-base: 0.3s ease;
-
-  --container-max-width: 1200px;
-  --container-padding-x: 35px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.04);
+  
+  --transition-base: 0.2s ease;
+  --container-max-width: 1440px;
 }
 
 /* ── Base / Reset ── */
-body {
-  padding-top: 60px;
-  padding-bottom: 60px;
-  margin: 0;
+* {
+  box-sizing: border-box;
 }
 
-/* ── Utility Classes ── */
-.hidden {
-  display: none;
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-text-main);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
 }
 
 /* ── Layout ── */
 .container-fluid {
+  width: 100%;
   max-width: var(--container-max-width);
   margin: 0 auto;
-  padding-left: var(--container-padding-x);
-  padding-right: var(--container-padding-x);
+  padding: 0;
 }
 
-/* ── Particles Background ── */
+/* ── Particles (Eliminado por preferencia de usuario) ── */
 #particles-js {
-  position: fixed;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: 0;
-  z-index: -1;
+  display: none;
 }
 
 /* ── Logo ── */
 #logo {
   height: auto;
-  cursor: pointer;
+  max-width: 220px;
+  margin: 3rem 0;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.05));
 }
 
-/* ── Responsive: Landscape ── */
-@media (orientation: landscape) {
-  #logo {
-    max-width: 25%;
-  }
+/* ── Wrappers para Diferenciación PC/Móvil ── */
+.content-wrapper {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-/* ── Responsive: Portrait ── */
-@media (orientation: portrait) {
-  #logo {
-    max-width: 50%;
-  }
-
+/* Estilos específicos Móvil (Vista Compacta y Directa) */
+@media (max-width: 767px) {
   body {
-    zoom: 2.0;
+    background-color: #ffffff;
   }
-
-  label {
-    zoom: 1.2;
+  
+  .content-wrapper {
+    margin-top: 80px; /* Espacio para el header fijo en móvil */
+    padding: 1rem;
   }
 }
+
+/* Estilos específicos Desktop (PC - Vista Profesional y Espaciosa) */
+@media (min-width: 768px) {
+  body {
+    background-color: #ffffff;
+  }
+  
+  .content-wrapper {
+    margin-top: 100px; /* Mayor espacio en desktop para aire visual */
+    padding: 0 2rem 4rem;
+  }
+}
+
+
+

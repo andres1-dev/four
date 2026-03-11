@@ -62,30 +62,39 @@ function clearSuggestions() {
     el.classList.add('hidden');
 }
 
-/** Oculta todas las secciones dinámicas del formulario. */
+/** Oculta todas las secciones dinámicas del formulario y colapsa los detalles del lote. */
 function hideSections() {
     DOM.detailsSection().classList.add('hidden');
     DOM.novedadesSection().classList.add('hidden');
     DOM.calidadSection().classList.add('hidden');
     DOM.actualizarDatosSection().classList.add('hidden');
     DOM.errorMessage().classList.add('hidden');
+    
+    // Asegurar que los datos del lote se contraigan
+    const collapseHeader = document.getElementById('lotCollapseToggle');
+    const collapseBody = document.getElementById('lotCollapseBody');
+    if (collapseHeader && collapseBody) {
+        collapseHeader.classList.remove('open');
+        collapseBody.classList.remove('open');
+        collapseHeader.setAttribute('aria-expanded', 'false');
+    }
+    
     clearSuggestions();
 }
 
 /**
- * Muestra el loader y oculta el error.
+ * Muestra el indicador de sincronización y oculta el error.
  */
 function showLoader() {
-    DOM.loader().classList.remove('hidden');
+    DOM.loader().style.display = 'block';
     DOM.errorMessage().classList.add('hidden');
 }
 
 /**
- * Oculta el loader y muestra el formulario principal.
+ * Oculta el indicador de sincronización.
  */
 function hideLoaderShowForm() {
-    DOM.loader().classList.add('hidden');
-    DOM.mainForm().classList.remove('hidden');
+    DOM.loader().style.display = 'none';
 }
 
 /**
@@ -96,7 +105,7 @@ function showError(message) {
     const el = DOM.errorMessage();
     el.textContent = message;
     el.classList.remove('hidden');
-    DOM.loader().classList.add('hidden');
+    DOM.loader().style.display = 'none';
 }
 
 /* ── Poblar elementos del DOM ── */
@@ -280,13 +289,20 @@ async function mejorarRedaccion(fieldId) {
     });
 
     try {
-        // --- CONFIGURACIÓN REPLICADA DE CARPETA IA ---
-        const apiKey = 'AIzaSyCjogOqyvGhpYCmJnbR46TuVOqR9RyqeuU'; // Llave interna carpeta IA
-        const model = 'gemma-3n-e4b-it'; // Modelo específico carpeta IA
+        // --- SEGURIDAD: Verificar llave antes de proceder ---
+        const apiKey = CONFIG.GEMINI_KEY; 
+        
+        if (!apiKey) {
+            throw new Error("La llave de IA no se ha cargado correctamente desde el servidor.");
+        }
 
+        const model = 'gemma-3n-e4b-it'; // Modelo específico solicitado
         const promptIA = `Actúa como corrector técnico industrial. Corrige ortografía, gramática y normaliza abreviaturas (ej: pta -> planta, cant -> cantidad) del siguiente texto para que sea profesional y ejecutivo. Devuelve solo el resultado corregido.\n\nTexto a corregir: ${textoOriginal}`;
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        // Regresamos al endpoint v1beta solicitado originalmente
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+        const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -295,9 +311,16 @@ async function mejorarRedaccion(fieldId) {
             })
         });
 
-        if (!response.ok) throw new Error("Error en la respuesta de la IA");
-
         const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error?.message || "Error en la respuesta de la IA");
+        }
+
+        if (!data.candidates || data.candidates.length === 0) {
+            throw new Error("La IA no pudo generar una respuesta (Filtro de seguridad o bloqueo).");
+        }
+
         let textoPulido = data.candidates[0].content.parts[0].text.trim();
         textoPulido = textoPulido.replace(/^["']|["']$/g, '');
 

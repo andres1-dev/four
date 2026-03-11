@@ -1,12 +1,15 @@
 /* ==========================================================================
-   resolucion.js — Lógica para la vista de Resolución de Novedades
+   resolucion.js — Lógica para la vista de Resolución (Ultra Compact Cards)
    ========================================================================== */
 
 let gsNovedades = [];
 let gsPlantas = [];
+let gsCurrentPage = 1;
+const gsRecordsPerPage = 6;
 
 window.onload = async function () {
-    initParticles(); // Fondo visual
+    if (typeof initParticles === 'function') initParticles();
+    if (typeof loadUsers === 'function') loadUsers();
     await cargarDatos();
 };
 
@@ -15,6 +18,9 @@ async function cargarDatos() {
     const section = document.getElementById('dataSection');
 
     try {
+        // PASO 1: Recuperar llaves de API desde GAS (Seguridad)
+        await fetchSecureConfig();
+
         const [novedades, plantas] = await Promise.all([
             fetchNovedadesData(),
             fetchPlantasData()
@@ -22,6 +28,8 @@ async function cargarDatos() {
 
         gsNovedades = novedades;
         gsPlantas = plantas;
+
+        updateStats();
 
         gsNovedades.sort((a, b) => {
             const estA = a.ESTADO || 'PENDIENTE';
@@ -31,23 +39,70 @@ async function cargarDatos() {
             if (isA_Fin !== isB_Fin) return isA_Fin ? 1 : -1;
             const dateA = parsearFechaLatina(a.FECHA) || new Date(0);
             const dateB = parsearFechaLatina(b.FECHA) || new Date(0);
-            return dateB - dateA;
+            return dateA - dateB; // Antigüedad: más viejos primero
         });
 
         renderTabla(gsNovedades);
-        loader.style.display = 'none';
-        section.style.display = 'block';
+        if (loader) loader.style.display = 'none';
+        if (section) section.style.display = 'block';
 
     } catch (error) {
-        console.error('Error cargando resolución:', error);
-        loader.innerHTML = `<span class="text-danger"><i class="fas fa-exclamation-triangle"></i> Error al cargar datos.</span>`;
+        console.error('Error:', error);
+        if (loader) loader.innerHTML = `<span class="text-danger small">Error de conexión.</span>`;
     }
 }
 
+function updateStats() {
+    const stats = {
+        PENDIENTE: { lots: 0, qty: 0 },
+        ELABORACION: { lots: 0, qty: 0 },
+        FINALIZADO: { lots: 0, qty: 0 }
+    };
+
+    gsNovedades.forEach(n => {
+        const est = n.ESTADO || 'PENDIENTE';
+        if (stats[est]) {
+            stats[est].lots++;
+            stats[est].qty += parseFloat(n.CANTIDAD_SOLICITADA || 0);
+        }
+    });
+
+    const updateEl = (idVal, idQty, data) => {
+        const elV = document.getElementById(idVal);
+        const elQ = document.getElementById(idQty);
+        if (elV) elV.textContent = data.lots;
+        if (elQ) elQ.textContent = `${Math.round(data.qty)} UND`;
+    };
+
+    updateEl('stat-pending', 'stat-pending-qty', stats.PENDIENTE);
+    updateEl('stat-process', 'stat-process-qty', stats.ELABORACION);
+    updateEl('stat-done', 'stat-done-qty', stats.FINALIZADO);
+}
+
+function handleFilter() {
+    gsCurrentPage = 1;
+    const term = document.getElementById('searchInput')?.value.toLowerCase().trim() || '';
+    renderTabla(gsNovedades.filter(n => {
+        if (!term) return true;
+        return (n.LOTE || '').toLowerCase().includes(term) ||
+            (n.PLANTA || '').toLowerCase().includes(term) ||
+            (n.ID_RADICADO || '').toLowerCase().includes(term) ||
+            (n.DESCRIPCION || '').toLowerCase().includes(term);
+    }));
+}
+
+/**
+ * Renderiza el feed de novedades en formato ULTRA COMPACTO con Trazabilidad.
+ */
 function renderTabla(data = gsNovedades) {
-    const tbody = document.getElementById('tableBody');
+    const feed = document.getElementById('novedadesFeed');
+    const pagContainer = document.getElementById('paginationFeed');
+    if (!feed) return;
+
     const mostrarFinalizados = document.getElementById('toggleFinalizados')?.checked;
-    tbody.innerHTML = '';
+    updateStats();
+    feed.innerHTML = '';
+    if (pagContainer) pagContainer.innerHTML = '';
 
     let datosMostrar = data;
     if (!mostrarFinalizados) {
@@ -55,145 +110,193 @@ function renderTabla(data = gsNovedades) {
     }
 
     if (!datosMostrar || datosMostrar.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-5">No hay registros disponibles.</td></tr>`;
+        feed.innerHTML = `<div class="text-center py-4 text-muted small">Sin registros coincidentes.</div>`;
         return;
     }
 
-    let currentDate = null;
+    // Lógica de Paginación
+    const totalRecords = datosMostrar.length;
+    const sliceStart = (gsCurrentPage - 1) * gsRecordsPerPage;
+    const sliceEnd = sliceStart + gsRecordsPerPage;
+    const paginatedData = datosMostrar.slice(sliceStart, sliceEnd);
 
-    datosMostrar.forEach((nov) => {
+    if (totalRecords > gsRecordsPerPage) {
+        renderPaginacion(totalRecords, data);
+    }
+
+    paginatedData.forEach((nov) => {
+        const dtIngreso = parsearFechaLatina(nov.FECHA);
+        const dtSalida = nov.SALIDA ? parsearFechaLatina(nov.SALIDA) : null;
         const estadoActual = nov.ESTADO || 'PENDIENTE';
-        let infoPlanta = obtenerPlantaReciente(nov.PLANTA);
+        const infoPlanta = obtenerPlantaReciente(nov.PLANTA);
 
-        const novDate = formatearFecha(nov.FECHA);
-        if (novDate !== currentDate) {
-            const trHeader = document.createElement('tr');
-            trHeader.innerHTML = `
-                <td colspan="7" class="py-2 border-top border-bottom" style="background-color: #f1f3f9 !important; border-left: 4px solid #3f51b5;">
-                    <span class="ps-2 fw-bold text-primary" style="font-size: 0.8rem; letter-spacing: 0.5px;">
-                        <i class="far fa-calendar-check me-2"></i>${novDate.toUpperCase()}
-                    </span>
-                </td>
-            `;
-            tbody.appendChild(trHeader);
-            currentDate = novDate;
-        }
+        // Calcular días hábiles
+        const totalDias = calcularDiasHabiles(dtIngreso, dtSalida || new Date());
 
-        const tr = document.createElement('tr');
-        if (estadoActual === 'FINALIZADO') {
-            tr.style.opacity = '0.6';
-            tr.style.backgroundColor = '#fafafa';
-        }
+        const card = document.createElement('div');
+        const statusClass = `status-${estadoActual.toLowerCase()}`;
+        card.className = `novedad-card-ultra ${statusClass} ${estadoActual === 'FINALIZADO' ? 'is-finalized' : ''}`;
 
-        // Diseño Ultra-Simétrico con tabla fixed
-        tr.innerHTML = `
-      <td class="align-middle overflow-hidden">
-        <div class="ps-2 border-start border-3 border-light-subtle">
-          <div class="fw-bold text-dark" style="font-size: 0.9rem;">${formatearFechaCorta(nov.FECHA)}</div>
-          <div class="text-muted small"><i class="far fa-clock me-1 text-primary"></i>${formatearHora(nov.FECHA)}</div>
-        </div>
-      </td>
-      <td class="align-middle overflow-hidden">
-        <div class="d-flex flex-column align-items-start">
-          <span class="badge bg-dark text-white mb-1" style="font-size: 0.65rem; border-radius: 4px;">LOTE: ${nov.LOTE || 'N/A'}</span>
-          <span class="text-dark fw-bold text-truncate w-100" style="font-size: 0.85rem;" title="${nov.PLANTA}">
-            <i class="fas fa-industry me-2 text-muted shadow-sm"></i>${nov.PLANTA}
-          </span>
-          <span class="text-muted" style="font-size: 0.7rem; font-family: 'JetBrains Mono', monospace;">ID: ${nov.ID_RADICADO.substring(0, 10)}</span>
-        </div>
-      </td>
-      <td class="align-middle">
-        <div class="pe-2 text-wrap" style="height: 100%;">
-          <div class="text-dark fw-medium mb-2" style="font-size: 0.85rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;" title="${nov.DESCRIPCION}">
-             ${nov.DESCRIPCION || 'Sin descripción detallada.'}
-          </div>
-          <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-light text-dark border shadow-sm px-2 py-1" style="font-size: 0.65rem;"><i class="fas fa-tag me-1 text-primary-emphasis"></i>${nov.AREA || 'Gral'}</span>
-            <span class="badge ${nov.CANTIDAD_SOLICITADA > 0 ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-light text-muted border'} px-2 py-1" style="font-size: 0.65rem;">CANT: ${nov.CANTIDAD_SOLICITADA || 0}</span>
-          </div>
-        </div>
-      </td>
-      <td class="align-middle text-center overflow-hidden">
-        ${nov.IMAGEN ?
-                `<a href="${nov.IMAGEN}" target="_blank" class="btn btn-sm btn-outline-primary border-0 p-1" style="font-size: 0.75rem; font-weight: 600;">
-            <i class="fas fa-image me-1"></i> VER ADJUNTO
-           </a>` :
-                `<span class="small text-muted opacity-50 px-2 py-1" style="font-size: 0.65rem;">N/A</span>`
-            }
-      </td>
-      <td class="align-middle overflow-hidden">
-        ${infoPlanta ?
-                `<div class="d-flex flex-column" style="font-size: 0.75rem; line-height: 1.2;">
-            <div class="text-dark fw-bold mb-1"><i class="fas fa-id-badge text-muted me-2"></i>${infoPlanta.ID || infoPlanta.CEDULA}</div>
-            <div class="text-primary fw-bold"><i class="fab fa-whatsapp me-2"></i>${infoPlanta.TELEFONO}</div>
-          </div>`
-                : '<span class="text-muted small italic">S/R</span>'
-            }
-      </td>
-      <td class="align-middle">
-        <select class="form-select form-select-sm border fw-bold shadow-sm status-${estadoActual}" 
-                style="border-radius: 4px; font-size: 0.75rem; height: 32px; padding: 2px 5px;" 
-                onchange="actualizarEstado('${nov.ID_RADICADO}', this.value, this)">
-          <option value="PENDIENTE" ${estadoActual === 'PENDIENTE' ? 'selected' : ''}>PENDIENTE</option>
-          <option value="ELABORACION" ${estadoActual === 'ELABORACION' ? 'selected' : ''}>EN PROCESO</option>
-          <option value="FINALIZADO" ${estadoActual === 'FINALIZADO' ? 'selected' : ''}>FINALIZADO</option>
-        </select>
-      </td>
-      <td class="align-middle text-end pe-2">
-        <button class="btn btn-sm btn-outline-primary border-0" 
-                onclick="imprimirNovedad('${nov.ID_RADICADO}')" title="Imprimir constancia">
-          <i class="fas fa-print"></i> IMPRIMIR
-        </button>
-      </td>
-    `;
-        tbody.appendChild(tr);
+        let sIcon = 'clock', sClass = 'p', sLab = 'PENDIENTE';
+        if (estadoActual === 'ELABORACION') { sIcon = 'sync-alt'; sClass = 'w'; sLab = 'ELABORACIÓN'; }
+        else if (estadoActual === 'FINALIZADO') { sIcon = 'check-circle'; sClass = 'd'; sLab = 'CERRADA'; }
+
+        card.innerHTML = `
+            <div class="card-visual-ultra" onclick="${nov.IMAGEN ? `window.open('${nov.IMAGEN}', '_blank')` : ''}">
+                ${nov.IMAGEN ? `<img src="${nov.IMAGEN}">` : `<div class="h-100 d-flex align-items-center justify-content-center bg-light text-muted" style="font-size:0.6rem;">SIN EVIDENCIA</div>`}
+            </div>
+            <div class="card-body-ultra">
+                <div class="card-top-info">
+                    <div class="tech-pills-container">
+                        <div class="tech-pill-lux" title="Lote"><i class="fas fa-barcode"></i> ${nov.LOTE || 'S/L'}</div>
+                        <div class="tech-pill-lux" title="Referencia"><i class="fas fa-tag"></i> ${nov.REFERENCIA || 'REF S/N'}</div>
+                        <div class="tech-pill-lux" title="Línea"><i class="fas fa-route"></i> ${nov.LINEA || '--'}</div>
+                        <div class="tech-pill-lux" title="Cantidad Original"><i class="fas fa-cubes"></i> ${nov.CANTIDAD || '0'}</div>
+                    </div>
+                    <div style="text-align: right; line-height: 1.1;">
+                        <span style="display: block; font-size: 0.75rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">${nov.AREA || 'GEN'}</span>
+                        <span style="font-size: 1.1rem; font-weight: 900; color: #3b82f6; letter-spacing: -0.5px;">${nov.CANTIDAD_SOLICITADA || '0'} <small style="font-size: 0.6rem; color: #64748b;">UND</small></span>
+                    </div>
+                </div>
+
+                <div class="card-desc-ultra">${(nov.DESCRIPCION || 'Sin registro detallado.').trim()}</div>
+
+                <div class="card-meta-ultra">
+                    <div class="d-flex flex-column">
+                        <div class="planta-label-lux">
+                            ${nov.PLANTA}
+                            ${infoPlanta ? `
+                                <div class="info-trigger-lux" onclick="verFichaTaller('${nov.PLANTA.replace(/'/g, "\\'")}')" title="Ver contacto del taller">
+                                    <i class="fas fa-info"></i>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="date-row-lux">
+                            <span><b>Reportado:</b> ${dtIngreso ? (dtIngreso.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).charAt(0).toUpperCase() + dtIngreso.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).slice(1)) : '--'}</span>
+                            <span><b>Despachado:</b> ${dtSalida ? (dtSalida.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).charAt(0).toUpperCase() + dtSalida.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).slice(1)) : (estadoActual === 'FINALIZADO' ? '--' : 'PENDIENTE DE DESPACHO')}</span>
+                        </div>
+                    </div>
+                    <div class="days-badge-lux">
+                        ${calcularDiasHabiles(dtSalida || dtIngreso, dtIngreso || new Date())} DÍAS HÁBILES
+                    </div>
+                </div>
+            </div>
+            <div class="actions-tower-ultra">
+                <div class="status-btn-lux ${sClass}">
+                    <i class="fas fa-${sIcon}"></i>
+                    <span>${sLab}</span>
+                    <select class="status-select-hidden" onchange="actualizarEstado('${nov.ID_RADICADO}', this.value, this)">
+                        <option value="PENDIENTE" ${estadoActual === 'PENDIENTE' ? 'selected' : ''}>PENDIENTE</option>
+                        <option value="ELABORACION" ${estadoActual === 'ELABORACION' ? 'selected' : ''}>ELABORACIÓN</option>
+                        <option value="FINALIZADO" ${estadoActual === 'FINALIZADO' ? 'selected' : ''}>CERRADA</option>
+                    </select>
+                </div>
+                <button class="btn-print-ultra w-100" onclick="imprimirNovedad('${nov.ID_RADICADO}')">
+                    <i class="fas fa-print"></i> IMPRIMIR
+                </button>
+            </div>
+        `;
+        feed.appendChild(card);
     });
+}
+
+function renderPaginacion(totalRecords, dataRef) {
+    const pagContainer = document.getElementById('paginationFeed');
+    if (!pagContainer) return;
+
+    const totalPages = Math.ceil(totalRecords / gsRecordsPerPage);
+    if (totalPages <= 1) return;
+
+    const nav = document.createElement('div');
+    nav.className = 'pagination-container-lux';
+
+    // Botón Anterior
+    const btnPrev = document.createElement('button');
+    btnPrev.className = 'page-btn-lux';
+    btnPrev.disabled = gsCurrentPage === 1;
+    btnPrev.innerHTML = `<i class="fas fa-chevron-left"></i> Anterior`;
+    btnPrev.onclick = () => { gsCurrentPage--; renderTabla(dataRef); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+    nav.appendChild(btnPrev);
+
+    // Info Páginas
+    const info = document.createElement('span');
+    info.className = 'page-info-lux';
+    info.textContent = `Página ${gsCurrentPage} de ${totalPages}`;
+    nav.appendChild(info);
+
+    // Botón Siguiente
+    const btnNext = document.createElement('button');
+    btnNext.className = 'page-btn-lux';
+    btnNext.disabled = gsCurrentPage === totalPages;
+    btnNext.innerHTML = `Siguiente <i class="fas fa-chevron-right"></i>`;
+    btnNext.onclick = () => { gsCurrentPage++; renderTabla(dataRef); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+    nav.appendChild(btnNext);
+
+    pagContainer.appendChild(nav);
+}
+
+/**
+ * Calcula días hábiles entre dos fechas (Lunes a Viernes)
+ * Ignora la hora, solo toma en cuenta el cambio de fecha.
+ */
+function calcularDiasHabiles(fechaInicio, fechaFin) {
+    if (!fechaInicio || !fechaFin) return 0;
+
+    // Normalizar a medianoche para ignorar horas/minutos
+    let start = new Date(fechaInicio);
+    start.setHours(0, 0, 0, 0);
+
+    let end = new Date(fechaFin);
+    end.setHours(0, 0, 0, 0);
+
+    if (start > end) return 0;
+
+    let count = 0;
+    let curr = new Date(start);
+
+    while (curr <= end) {
+        let day = curr.getDay();
+        if (day !== 0 && day !== 6) { // 0=Dom, 6=Sab
+            count++;
+        }
+        curr.setDate(curr.getDate() + 1);
+    }
+
+    // Si queremos contar los días transcurridos (excluyendo el día de inicio si es el mismo)
+    // Pero usualmente se cuenta el rango completo. El usuario pide "diferencia".
+    // Si es el mismo día, count será 1 si es hábil.
+    return count;
 }
 
 function obtenerPlantaReciente(nombrePlanta) {
     if (!nombrePlanta) return null;
-    return gsPlantas.find(p => p.PLANTA.toLowerCase().trim() === nombrePlanta.toLowerCase().trim()) || null;
+    const search = nombrePlanta.toLowerCase().trim();
+    return gsPlantas.find(p => p.PLANTA.toLowerCase().trim() === search) || null;
 }
 
 async function actualizarEstado(timestampId, nuevoEstado, selectEl) {
-    const claseAnterior = Array.from(selectEl.classList).find(c => c.startsWith('status-'));
     const row = gsNovedades.find(n => n.ID_RADICADO === timestampId);
+    const btnContainer = selectEl.closest('.status-btn-lux');
+    const originalHTML = btnContainer.innerHTML;
     let respuestaCorreo = "";
 
     if (nuevoEstado === 'FINALIZADO') {
-        const infoPlanta = obtenerPlantaReciente(row?.PLANTA);
         const { value: texto, isConfirmed } = await Swal.fire({
-            title: 'CIERRE DE NOVEDAD',
-            html: `
-                <div class="text-start mb-2">
-                    <p class="small text-muted mb-2">Se enviará la solución a ${infoPlanta?.EMAIL || 'la planta'}.</p>
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <label class="fw-bold small">Detalles de la Solución:</label>
-                        <button type="button" class="btn-action-muted" 
-                                onclick="const t = document.getElementById('swal-solucion'); if(t.value) mejorarRedaccion('swal-solucion');" 
-                                title="Optimizar texto con IA">
-                            <i class="fas fa-wand-magic-sparkles"></i> Pulir texto
-                        </button>
-                    </div>
-                    <textarea id="swal-solucion" class="form-control" placeholder="Escriba la solución..." rows="5"></textarea>
-                </div>
-            `,
+            title: 'RESOLUCIÓN',
+            input: 'textarea',
+            inputPlaceholder: 'Escriba la solución...',
             showCancelButton: true,
-            confirmButtonText: 'CONFIRMAR CIERRE',
-            confirmButtonColor: '#000',
-            preConfirm: () => {
-                const val = document.getElementById('swal-solucion').value;
-                if (!val) { Swal.showValidationMessage('Por favor escriba la solución'); return false; }
-                return val;
-            }
+            confirmButtonText: 'CONFIRMAR',
+            confirmButtonColor: '#3f51b5'
         });
-        if (!isConfirmed) { selectEl.value = claseAnterior.replace('status-', ''); return; }
+        if (!isConfirmed) { renderTabla(); return; }
         respuestaCorreo = texto;
     }
 
+    // Estado de carga en el botón
     selectEl.disabled = true;
-    selectEl.classList.remove(claseAnterior);
-    selectEl.classList.add(`status-${nuevoEstado}`);
+    btnContainer.classList.add('is-loading');
+    btnContainer.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> <span>SINCRONIZANDO...</span>`;
 
     try {
         const res = await fetch(GAS_ENDPOINT, {
@@ -201,75 +304,227 @@ async function actualizarEstado(timestampId, nuevoEstado, selectEl) {
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({ accion: "UPDATE_ESTADO", timestampId, nuevoEstado, respuesta: respuestaCorreo, correo: obtenerPlantaReciente(row?.PLANTA)?.EMAIL || '', resLote: row?.LOTE || '' })
         });
-        if (!(await res.json()).success) throw new Error();
+
         if (row) row.ESTADO = nuevoEstado;
-        renderTabla();
-        Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 }).fire({ icon: 'success', title: 'Estado actualizado' });
+        renderTabla(); // Esto reconstruirá la UI con el nuevo estado y el botón correcto
+
+        Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 }).fire({ icon: 'success', title: 'Actualizado' });
     } catch (e) {
         Swal.fire({ icon: 'error', title: 'Error' });
-        selectEl.value = claseAnterior.replace('status-', '');
-        selectEl.classList.remove(`status-${nuevoEstado}`);
-        selectEl.classList.add(claseAnterior);
-    } finally { selectEl.disabled = false; }
+        btnContainer.classList.remove('is-loading');
+        btnContainer.innerHTML = originalHTML;
+        renderTabla();
+    } finally {
+        // No es necesario selectEl.disabled = false porque renderTabla() recrea el elemento
+    }
 }
-
-async function imprimirNovedad(timestamp) {
-    const nov = gsNovedades.find(n => n.ID_RADICADO === timestamp);
+function imprimirNovedad(id) {
+    const nov = gsNovedades.find(n => n.ID_RADICADO === id);
     if (!nov) return;
-    const dateF = parsearFechaLatina(nov.FECHA);
-    const dateS = parsearFechaLatina(nov.SALIDA);
-
-    if (dateF && dateS) {
-        localStorage.setItem('printNovedad', JSON.stringify(nov));
-        const p = obtenerPlantaReciente(nov.PLANTA);
-        localStorage.setItem('printPlanta', JSON.stringify(p));
-        window.open('plantilla-impresion.html', '_blank');
-        return;
-    }
-
-    const { value: v, isConfirmed } = await Swal.fire({
-        title: 'NORMALIZACIÓN DE FECHA',
-        html: `<div class="text-start small"><div class="mb-2"><label class="fw-bold">EMISIÓN:</label><input type="date" id="fN" class="form-control rounded-0"></div><div><label class="fw-bold">SALIDA:</label><input type="date" id="sN" class="form-control rounded-0"></div></div>`,
-        showCancelButton: true,
-        confirmButtonColor: '#000'
-    });
-
-    if (isConfirmed) {
-        // Implementación directa simplificada
-        localStorage.setItem('printNovedad', JSON.stringify(nov));
-        window.open('plantilla-impresion.html', '_blank');
-    }
+    
+    const infoPlanta = obtenerPlantaReciente(nov.PLANTA);
+    
+    localStorage.setItem('printNovedad', JSON.stringify(nov));
+    localStorage.setItem('printPlanta', JSON.stringify(infoPlanta));
+    
+    window.open('plantilla-impresion.html', '_blank');
 }
 
+/**
+ * Muestra un modal estético con la información de contacto del taller
+ */
+/**
+ * Muestra una ficha de contacto amplia y estilizada
+ */
+function verFichaTaller(nombre) {
+    const p = obtenerPlantaReciente(nombre);
+    if (!p) return;
+
+    Swal.fire({
+        title: null,
+        html: `
+            <style>
+                .ficha-tl { position: relative; font-family: 'Inter', sans-serif; text-align: left; }
+                .grad-text {
+                    background: linear-gradient(135deg, #3f51b5 0%, #3b82f6 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;
+                }
+                .row-lux { 
+                    position: relative; 
+                    display: flex; 
+                    align-items: center; 
+                    gap: 15px; 
+                    padding: 6px 0;
+                    margin-bottom: 8px;
+                    white-space: nowrap;
+                }
+                .hint-lux {
+                    position: absolute;
+                    left: 0;
+                    top: -14px;
+                    background: #1e293b;
+                    color: white;
+                    font-size: 0.55rem;
+                    font-weight: 700;
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.02em;
+                    opacity: 0;
+                    pointer-events: none;
+                    transition: all 0.1s ease-out;
+                    z-index: 20;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                .row-lux:hover .hint-lux {
+                    opacity: 1;
+                    top: -18px;
+                }
+                .icon-box-lux {
+                    width: 22px;
+                    display: flex;
+                    justify-content: center;
+                    color: #475569;
+                    font-size: 1.1rem;
+                    transition: all 0.2s;
+                }
+                .row-lux:hover .icon-box-lux { 
+                    transform: scale(1.1);
+                    color: #3b82f6;
+                }
+                .val-lux { 
+                    font-size: 0.95rem; 
+                    color: #64748b; 
+                    transition: color 0.2s;
+                }
+                .val-link { 
+                    text-decoration: none; 
+                    font-weight: 700;
+                    color: #64748b;
+                    transition: all 0.2s;
+                }
+                .row-lux:hover .val-lux,
+                .row-lux:hover .val-link {
+                    color: #3b82f6;
+                }
+                .val-link:hover { opacity: 0.8; }
+            </style>
+
+            <div class="ficha-tl">
+                <!-- Header con Degradado Institucional -->
+                <div style="padding-bottom: 12px; border-bottom: 2px solid #eff6ff; margin-bottom: 20px;">
+                    <div style="font-size: 1.2rem; font-weight: 900; display: flex; align-items: center; gap: 12px;" class="grad-text">
+                        <i class="fas fa-address-card"></i> Ficha de Contacto
+                    </div>
+                </div>
+                
+                <!-- Lista de Datos Auto-Expandible -->
+                <div style="display: flex; flex-direction: column;">
+                    <div class="row-lux">
+                        <span class="hint-lux">Planta</span>
+                        <div class="icon-box-lux"><i class="fas fa-industry"></i></div>
+                        <span class="val-lux" style="font-weight: 400; text-transform: uppercase;">${p.PLANTA}</span>
+                    </div>
+
+                    ${p.CEDULA ? `
+                    <div class="row-lux">
+                        <span class="hint-lux">NIT o Cédula</span>
+                        <div class="icon-box-lux"><i class="fas fa-id-card"></i></div>
+                        <span class="val-lux" style="font-weight: 600;">${p.CEDULA}</span>
+                    </div>` : ''}
+
+                    ${p.TELEFONO ? `
+                    <div class="row-lux">
+                        <span class="hint-lux">Teléfono</span>
+                        <div class="icon-box-lux"><i class="fas fa-phone"></i></div>
+                        <a href="tel:${p.TELEFONO}" class="val-link" style="font-size: 0.95rem;">${p.TELEFONO}</a>
+                    </div>` : ''}
+
+                    ${p.DIRECCION ? `
+                    <div class="row-lux" style="align-items: center;">
+                        <span class="hint-lux">Dirección</span>
+                        <div class="icon-box-lux"><i class="fas fa-map-marker-alt"></i></div>
+                        <span class="val-lux" style="font-weight: 500;">${p.DIRECCION}</span>
+                    </div>` : ''}
+
+                    ${p.EMAIL ? `
+                    <div class="row-lux">
+                        <span class="hint-lux">Correo</span>
+                        <div class="icon-box-lux"><i class="fas fa-envelope"></i></div>
+                        <a href="mailto:${p.EMAIL}" class="val-link" style="font-size: 0.95rem;">${p.EMAIL}</a>
+                    </div>` : ''}
+                </div>
+            </div>
+        `,
+        showConfirmButton: false,
+        width: 'auto',
+        padding: '1.75rem',
+        background: '#ffffff',
+        showCloseButton: false,
+        backdrop: 'rgba(15, 23, 42, 0.15)',
+        customClass: {
+            popup: 'shadow-2xl border-0 rounded-4'
+        }
+    });
+}
+
+/**
+ * Motor de parseo de fechas ultra-resiliente
+ */
 function parsearFechaLatina(d) {
     if (!d) return null;
     if (d instanceof Date) return d;
-    const s = d.toString().toLowerCase();
-    if (s.includes('-')) {
-        const p = s.split('-');
-        if (p.length === 3) {
-            const m = { 'ene': 0, 'feb': 1, 'mar': 2, 'abr': 3, 'may': 4, 'jun': 5, 'jul': 6, 'ago': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dic': 11 }[p[1].substring(0, 3)];
-            let a = parseInt(p[2]); if (a < 100) a += 2000;
-            return new Date(a, m, parseInt(p[0]));
+    let s = String(d).trim();
+    if (!s) return null;
+
+    // 1. Detectar Separadores (Soporte para / y -)
+    const sep = s.includes('/') ? '/' : (s.includes('-') ? '-' : null);
+
+    if (sep) {
+        const parts = s.split(/\s+/); // Separa fecha de hora
+        const dateParts = parts[0].split(sep);
+
+        if (dateParts.length === 3) {
+            let dia, mes, anio;
+            // Caso DD/MM/YYYY o DD-MM-YYYY
+            if (dateParts[2].length === 4 || dateParts[2].length === 2) {
+                dia = parseInt(dateParts[0]);
+                // Si el segundo parte es texto (ene, feb...)
+                if (isNaN(dateParts[1])) {
+                    const meses = { 'ene': 0, 'feb': 1, 'mar': 2, 'abr': 3, 'may': 4, 'jun': 5, 'jul': 6, 'ago': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dic': 11 };
+                    mes = meses[dateParts[1].toLowerCase().substring(0, 3)] || 0;
+                } else {
+                    mes = parseInt(dateParts[1]) - 1;
+                }
+                anio = parseInt(dateParts[2].length === 2 ? '20' + dateParts[2] : dateParts[2]);
+            }
+            // Caso YYYY-MM-DD (Formato ISO de Sheets)
+            else if (dateParts[0].length === 4) {
+                anio = parseInt(dateParts[0]);
+                mes = parseInt(dateParts[1]) - 1;
+                dia = parseInt(dateParts[2]);
+            }
+
+            if (!isNaN(dia) && !isNaN(mes) && !isNaN(anio)) {
+                let fecha = new Date(anio, mes, dia);
+                // Si hay hora (HH:mm)
+                if (parts[1] && parts[1].includes(':')) {
+                    const timeParts = parts[1].split(':');
+                    fecha.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]));
+                }
+                if (!isNaN(fecha.getTime())) return fecha;
+            }
         }
     }
-    const dt = new Date(d);
-    return isNaN(dt.getTime()) ? null : dt;
-}
 
-function formatearFecha(d) {
-    const dt = parsearFechaLatina(d);
-    if (!dt) return d || '';
-    return dt.toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-}
-
-function formatearFechaCorta(d) {
-    const dt = parsearFechaLatina(d);
-    if (!dt) return d || '';
-    return dt.toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' });
+    // Fallback al parse nativo solo si lo de arriba falla
+    const dtFallback = new Date(d);
+    return isNaN(dtFallback.getTime()) ? null : dtFallback;
 }
 
 function formatearHora(d) {
     const dt = parsearFechaLatina(d);
-    return dt ? dt.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '';
+    return dt ? dt.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
 }

@@ -1,7 +1,35 @@
 /* ==========================================================================
-   api.js — Comunicación con Google Sheets API
-   Depende de: config.js (CONFIG, SHEET_SISPRO, getFallbackData)
+   api.js — Comunicación con Google Sheets API y Seguridad
+   Depende de: config.js (CONFIG, SHEET_SISPRO, GAS_ENDPOINT)
    ========================================================================== */
+
+/**
+ * Recupera las llaves de API desde Google Apps Script (GAS)
+ * para evitar que estén hardcodeadas en el frontend.
+ */
+async function fetchSecureConfig() {
+    try {
+        // Usamos una petición POST para mayor seguridad en la transferencia
+        const res = await fetch(GAS_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ accion: "GET_CONFIG" })
+        });
+
+        if (!res.ok) throw new Error('No se pudo obtener la configuración segura.');
+        
+        const data = await res.json();
+        
+        if (data && data.API_KEY && data.GEMINI_KEY) {
+            CONFIG.API_KEY = data.API_KEY;
+            CONFIG.GEMINI_KEY = data.GEMINI_KEY;
+        } else {
+            throw new Error('Configuración incompleta: Faltan llaves de API en el servidor.');
+        }
+    } catch (error) {
+        throw error; // Re-lanzar para que app.js lo maneje
+    }
+}
 
 /**
  * Obtiene los datos de una hoja específica del spreadsheet.
@@ -48,7 +76,6 @@ async function fetchAllData() {
         fetchPlantasData()
     ]);
 
-    console.log(`[api] Carga masiva: ${lots.length} lotes, ${plantas.length} plantas`);
     return { lots, plantas };
 }
 
@@ -71,5 +98,15 @@ async function fetchPlantasData() {
         SHEET_PLANTAS.name,
         SHEET_PLANTAS.indices,
         SHEET_PLANTAS.headers,
+    );
+}
+/**
+ * Obtiene el listado de usuarios para el sistema de login.
+ */
+async function fetchUsuariosData() {
+    return fetchSheetData(
+        SHEET_USUARIOS.name,
+        SHEET_USUARIOS.indices,
+        SHEET_USUARIOS.headers,
     );
 }

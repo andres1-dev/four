@@ -152,6 +152,10 @@ async function handleActualizarDatosSubmit(e) {
 
         DOM.accionesSelect().removeAttribute('disabled');
         DOM.accionesSelect().value = '';
+        // Limpiar el input principal para que solo quede el lote
+        const loteSolo = document.getElementById('lote').value;
+        if (loteSolo) DOM.loteInput().value = loteSolo;
+
         e.target.reset();
         hideSections();
 

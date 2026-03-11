@@ -40,5 +40,11 @@ function setCurrentPlantas(plantas) {
  * Maneja el cambio del select de acciones y muestra el sub-formulario correcto.
  */
 function handleActionChange() {
-    toggleActionSections(DOM.accionesSelect().value);
+    const action = DOM.accionesSelect().value;
+    toggleActionSections(action);
+    
+    // Si se selecciona cualquier acción, contraer los datos del lote para ahorrar espacio
+    if (action) {
+        hideLotCollapse();
+    }
 }

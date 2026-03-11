@@ -3,38 +3,9 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Reporte de Novedades - SISPRO</title>
-  <style>
-    #editPlantaBtn {
-      display: none;
-    }
-
-    /* Botones de acción secundaria (tipo enlace discreto) */
-    .btn-action-muted {
-      font-size: 0.75rem;
-      font-weight: 500;
-      color: #3f51b5;
-      background: none;
-      border: none;
-      padding: 0;
-      transition: opacity 0.2s ease, transform 0.2s ease;
-      text-decoration: none !important;
-    }
-
-    .btn-action-muted:hover {
-      color: #3f51b5;
-      opacity: 0.8;
-      transform: translateY(-1px);
-      background: none !important;
-    }
-
-    .btn-action-muted i {
-      margin-right: 4px;
-      font-size: 0.8rem;
-    }
-  </style>
+  <title>Novedades - Grupo TMD</title>
   <base target="_top">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
 
   <!-- ── Vendor CSS ── -->
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
@@ -54,64 +25,59 @@
   <!-- ══════════════════════════════════════════════════════════════════════
        CONTENIDO PRINCIPAL
        ══════════════════════════════════════════════════════════════════════ -->
-  <div class="container-fluid mt-5">
+  <div class="container-fluid">
 
-    <!-- ── Logo ── -->
-    <div class="text-center">
-      <img id="logo" src="https://i.ibb.co/nD9wcPv/GRUPO-TMD-FULL.png" alt="Logo" class="img-fluid">
-    </div>
 
-    <div class="mt-4 px-3">
+    <main class="content-wrapper px-2">
 
-      <div class="d-flex justify-content-end mb-3">
-        <a href="resolucion.html" class="btn-action-muted">
-          <i class="fas fa-desktop"></i> Módulo de Resolución
-        </a>
-      </div>
-
-      <!-- ── Loader ── -->
-      <div id="loader" class="text-center">
-        <div class="loader"></div>
-        <p>Cargando datos de SISPRO...</p>
+      <!-- ── Sincronizador Discreto ── -->
+      <div id="loader" class="sync-indicator">
+        <i class="fas fa-sync-alt fa-spin"></i> Sincronizando datos...
       </div>
 
       <!-- ══════════════════════════════════════════════════════════════════
            FORMULARIO PRINCIPAL — Búsqueda y detalle del lote
            ══════════════════════════════════════════════════════════════════ -->
-      <form id="mainForm" class="hidden">
+      <form id="mainForm">
 
         <!-- Buscador de lote -->
         <div class="mb-3">
-          <input type="text" id="loteInput" class="form-control" placeholder="Escriba el lote...">
+          <input type="text" id="loteInput" class="form-control"
+            placeholder="Ingrese el Lote o el número de la Orden de Producción...">
           <ul id="loteSuggestions" class="list-group mt-2 hidden"></ul>
         </div>
 
         <!-- Detalles del lote seleccionado -->
         <div id="detailsSection" class="hidden">
 
-          <!-- Planta y Acciones: siempre visibles -->
-          <div class="mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <label for="planta" class="form-label mb-0">Planta:</label>
-              <button class="btn-action-muted" type="button" id="editPlantaBtn"
-                title="Actualizar datos de la planta seleccionada">
-                <i class="fas fa-user-edit"></i> Actualizar datos
-              </button>
+          <!-- Planta y Acciones: Simetría Perfecta en PC -->
+          <div class="row-pc-grid mb-4">
+            <div class="mb-3">
+              <div class="field-header mb-1">
+                <label for="planta" class="form-label mb-0">Planta:</label>
+                <button class="btn-action-muted" type="button" id="editPlantaBtn"
+                  title="Actualizar datos de la planta seleccionada">
+                  <i class="fas fa-user-edit"></i> Actualizar
+                </button>
+              </div>
+              <select id="planta" class="form-control" required>
+                <option value="">Seleccione una planta...</option>
+              </select>
             </div>
-            <select id="planta" class="form-control" required>
-              <option value="">Seleccione una planta...</option>
-            </select>
-          </div>
 
-          <div class="mb-3">
-            <label for="acciones" class="form-label">Acciones:</label>
-            <select id="acciones" class="form-control" required>
-              <option value="">Seleccione una acción...</option>
-              <option value="NOVEDADES">NOVEDADES</option>
-              <option value="CALIDAD">CALIDAD</option>
-              <option value="ACTUALIZAR_DATOS" hidden>ACTUALIZAR DATOS</option>
-              <!-- Mantener el valor pero ocultarlo para dispararlo por JS -->
-            </select>
+            <div class="mb-3">
+              <div class="field-header mb-1">
+                <label for="acciones" class="form-label mb-0">Acciones:</label>
+                <!-- Placeholder para simetría vertical -->
+                <div class="sync-placeholder"></div>
+              </div>
+              <select id="acciones" class="form-control" required>
+                <option value="">Seleccione una acción...</option>
+                <option value="NOVEDADES">NOVEDADES</option>
+                <option value="CALIDAD">CALIDAD</option>
+                <option value="ACTUALIZAR_DATOS" hidden>ACTUALIZAR DATOS</option>
+              </select>
+            </div>
           </div>
 
           <!-- Toggle: datos del lote (colapsado por defecto) -->
@@ -171,54 +137,54 @@
            ══════════════════════════════════════════════════════════════════ -->
       <form id="novedadesForm">
         <div id="novedadesSection" class="hidden">
-          <div class="mb-3">
-            <label for="area" class="form-label">Área de Servicios:</label>
-            <select id="area" class="form-control" required>
-              <option value="">Seleccione un área...</option>
-              <option value="DISEÑO">DISEÑO</option>
-              <option value="TELAS">TELAS</option>
-              <option value="INSUMOS">INSUMOS</option>
-              <option value="CORTE">CORTE</option>
-              <option value="SESGO">SESGO</option>
-              <option value="CODIGOS">CÓDIGOS</option>
-              <option value="OTROS">OTROS</option>
-            </select>
+          <div class="row-pc-grid mt-2">
+            <div class="mb-3">
+              <label for="area" class="form-label">Área de Servicios:</label>
+              <select id="area" class="form-control" required>
+                <option value="">Seleccione un área...</option>
+                <option value="DISEÑO">DISEÑO</option>
+                <option value="TELAS">TELAS</option>
+                <option value="INSUMOS">INSUMOS</option>
+                <option value="CORTE">CORTE</option>
+                <option value="SESGO">SESGO</option>
+                <option value="CODIGOS">CÓDIGOS</option>
+                <option value="OTROS">OTROS</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="cantidadSolicitada" class="form-label">Cantidad Solicitada:</label>
+              <input type="number" class="form-control" id="cantidadSolicitada" required>
+            </div>
           </div>
 
           <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center mb-1">
-              <label for="observacionesNovedad" class="form-label mb-0">Descripción:</label>
+              <label for="observacionesNovedad" class="form-label mb-0">Descripción detallada:</label>
               <button type="button" class="btn-action-muted" onclick="mejorarRedaccion('observacionesNovedad')"
                 title="Mejorar redacción y ortografía">
                 <i class="fas fa-wand-magic-sparkles"></i> Pulir texto
               </button>
             </div>
             <textarea id="observacionesNovedad" class="form-control"
-              placeholder="Por favor, describe a detalles la novedad." rows="4" required></textarea>
+              placeholder="Escribe aquí los detalles de la novedad..." rows="4" required></textarea>
           </div>
 
-          <div class="form-group mb-3">
-            <label for="cantidadSolicitada" class="form-label">Cantidad Solicitada:</label>
-            <div class="input-group">
-              <input type="number" class="form-control" id="cantidadSolicitada" required>
-            </div>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Cargar Imagen:</label>
-            <div class="file-dropzone" id="imagenDropzone" role="button" tabindex="0" aria-label="Seleccionar imagen">
-              <i class="fas fa-image file-dropzone__icon"></i>
+          <div class="mb-4">
+            <label class="form-label">Evidencia Fotográfica:</label>
+            <div class="file-dropzone" id="imagenDropzone" role="button" tabindex="0">
+              <i class="fas fa-camera file-dropzone__icon"></i>
               <div class="file-dropzone__text">
-                <span class="file-dropzone__action">Toca para seleccionar una imagen</span>
-                <span class="file-dropzone__hint">JPG, PNG, WEBP &mdash; máx. 10 MB</span>
+                <span class="file-dropzone__action">Haz clic para subir imagen</span>
+                <span class="file-dropzone__hint">JPG, PNG o WEBP (Máx 10MB)</span>
               </div>
               <span class="file-dropzone__name" id="imagenName"></span>
             </div>
             <input type="file" id="imagen" class="file-dropzone__input" accept="image/*" required>
           </div>
 
-          <div class="mb-3 text-center">
-            <button type="submit" class="btn btn-primary">Enviar Reporte</button>
+          <div class="text-center">
+            <button type="submit" class="btn btn-primary">Enviar Reporte de Novedad</button>
           </div>
         </div>
       </form>
@@ -228,26 +194,27 @@
            ══════════════════════════════════════════════════════════════════ -->
       <form id="calidadForm">
         <div id="calidadSection" class="hidden">
-          <div class="mb-3">
-            <label for="email" class="form-label">Correo Electrónico:</label>
-            <input type="email" id="email" class="form-control" placeholder="Ingrese su correo" required>
+
+          <div class="row-pc-grid mt-2">
+            <div class="mb-3">
+              <label for="email" class="form-label">Correo Electrónico:</label>
+              <input type="email" id="email" class="form-control" placeholder="usuario@ejemplo.com" required>
+            </div>
+
+            <div class="mb-3">
+              <label for="tipoVisita" class="form-label">Tipo de Visita:</label>
+              <select id="tipoVisita" class="form-control" required>
+                <option value="">Seleccione tipo...</option>
+                <option value="AUDITORIA">AUDITORIA</option>
+                <option value="RONDA">RONDA</option>
+                <option value="CONTRAMUESTRA">CONTRAMUESTRA</option>
+                <option value="SEGUIMIENTO">SEGUIMIENTO</option>
+              </select>
+            </div>
           </div>
 
-
-
           <div class="mb-3">
-            <label for="tipoVisita" class="form-label">Tipo de Visita:</label>
-            <select id="tipoVisita" class="form-control" required>
-              <option value="">Seleccione tipo de visita...</option>
-              <option value="AUDITORIA">AUDITORIA</option>
-              <option value="RONDA">RONDA</option>
-              <option value="CONTRAMUESTRA">CONTRAMUESTRA</option>
-              <option value="SEGUIMIENTO">SEGUIMIENTO</option>
-            </select>
-          </div>
-
-          <div class="mb-3">
-            <label for="conclusion" class="form-label">Conclusión:</label>
+            <label for="conclusion" class="form-label">Conclusión de Inspección:</label>
             <select id="conclusion" class="form-control" required>
               <option value="">Seleccione una conclusión...</option>
               <option value="APROBADO">APROBADO</option>
@@ -257,23 +224,23 @@
 
           <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center mb-1">
-              <label for="observacionesCalidad" class="form-label mb-0">Observaciones:</label>
+              <label for="observacionesCalidad" class="form-label mb-0">Observaciones Técnicas:</label>
               <button type="button" class="btn-action-muted" onclick="mejorarRedaccion('observacionesCalidad')"
                 title="Mejorar redacción y ortografía">
                 <i class="fas fa-wand-magic-sparkles"></i> Pulir texto
               </button>
             </div>
-            <textarea id="observacionesCalidad" class="form-control" placeholder="Escriba las observaciones..." rows="4"
-              required></textarea>
+            <textarea id="observacionesCalidad" class="form-control" placeholder="Detalla los hallazgos encontrados..."
+              rows="4" required></textarea>
           </div>
 
-          <div class="mb-3">
-            <label class="form-label">Agregar Soporte:</label>
-            <div class="file-dropzone" id="soporteDropzone" role="button" tabindex="0" aria-label="Seleccionar soporte">
-              <i class="fas fa-paperclip file-dropzone__icon"></i>
+          <div class="mb-4">
+            <label class="form-label">Añadir Soporte Técnico:</label>
+            <div class="file-dropzone" id="soporteDropzone" role="button" tabindex="0">
+              <i class="fas fa-camera file-dropzone__icon"></i>
               <div class="file-dropzone__text">
-                <span class="file-dropzone__action">Toca para adjuntar soporte</span>
-                <span class="file-dropzone__hint">Imagen o PDF &mdash; máx. 10 MB</span>
+                <span class="file-dropzone__action">Haz clic para subir soporte técnico</span>
+                <span class="file-dropzone__hint">Imagen o PDF (Máx 10MB)</span>
               </div>
               <span class="file-dropzone__name" id="soporteName"></span>
             </div>
@@ -292,9 +259,6 @@
       <form id="actualizarDatosForm">
         <div id="actualizarDatosSection" class="hidden">
 
-          <h5 class="mb-3 text-center" style="color:#3f51b5; font-weight:600;">
-            <i class="fas fa-building"></i> Actualizar Datos de Planta
-          </h5>
 
           <div class="mb-3">
             <label for="cedulaPlanta" class="form-label">NIT o Cédula de ciudadania:</label>
@@ -314,14 +278,12 @@
 
           <div class="mb-3">
             <label for="telefonoPlanta" class="form-label">Teléfono de Contacto:</label>
-            <div class="input-group">
-              <span class="input-group-text bg-white border-end-0">
-                <img src="https://flagcdn.com/w20/co.png" srcset="https://flagcdn.com/w40/co.png 2x" width="20"
-                  alt="Colombia" class="me-2">
-                <span class="fw-bold">+57</span>
-              </span>
-              <input type="tel" id="telefonoPlanta" class="form-control border-start-0 ps-1"
-                placeholder="(316) 800-7979" required maxlength="15">
+            <div class="phone-input-integrated">
+              <div class="phone-prefix-area">
+                <img src="https://flagcdn.com/w20/co.png" srcset="https://flagcdn.com/w40/co.png 2x" width="20" alt="Colombia">
+                <span class="phone-prefix-text">+57</span>
+              </div>
+              <input type="tel" id="telefonoPlanta" class="form-control" placeholder="(316) 800-7979" required maxlength="15">
             </div>
             <div class="form-text small">Ingrese los 10 dígitos del número celular.</div>
           </div>
@@ -353,27 +315,9 @@
         </div>
       </form>
 
-    </div>
+  </div>
   </div>
 
-  <!-- ══════════════════════════════════════════════════════════════════════
-       FOOTER
-       ══════════════════════════════════════════════════════════════════════ -->
-  <footer>
-    <p>Developed by Andrés Mendoza © 2024.</p>
-    <p>Supported by <a href="https://www.eltemplodelamoda.com/" target="_blank">GrupoTDM</a>.</p>
-    <div class="social-links">
-      <a href="https://www.facebook.com/templodelamoda/?locale=es_LA" target="_blank" aria-label="Facebook">
-        <i class="fab fa-facebook"></i>
-      </a>
-      <a href="https://www.instagram.com/eltemplodelamoda/?hl=es" target="_blank" aria-label="Instagram">
-        <i class="fab fa-instagram"></i>
-      </a>
-      <a href="https://wa.me/573176418529" target="_blank" aria-label="WhatsApp">
-        <i class="fab fa-whatsapp"></i>
-      </a>
-    </div>
-  </footer>
 
   <!-- ── Vendor JS ── -->
   <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
@@ -383,6 +327,7 @@
   <script src="js/config.js"></script>
   <script src="js/api.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/auth.js"></script>
 
   <!-- ── Módulo de formularios (js/forms/) ── -->
   <script src="js/forms/index.js"></script> <!-- estado compartido + dispatcher -->
