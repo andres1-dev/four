@@ -1,0 +1,86 @@
+/* ==========================================================================
+   main.css — Variables globales, reset y layout base
+   ========================================================================== */
+
+/* ── Custom Properties (Design Tokens) ── */
+:root {
+  --color-primary: #3f51b5;
+  --color-primary-shadow: rgba(63, 81, 181, 0.3);
+  --color-border: #ced4da;
+  --color-text-label: #666;
+  --color-text-muted: #999;
+  --color-link: #666;
+  --color-link-hover: #448aff;
+  --color-loader-track: #f3f3f3;
+  --color-loader-spinner: #3498db;
+  --color-error: #dc3545;
+  --color-facebook: #1877f2;
+  --color-instagram: #e1306c;
+  --color-whatsapp: #25d366;
+
+  --radius-input: 20px;
+  --shadow-input: 0 2px 5px rgba(0, 0, 0, 0.1);
+  --shadow-input-focus: 0 2px 8px var(--color-primary-shadow);
+  --transition-base: 0.3s ease;
+
+  --container-max-width: 1200px;
+  --container-padding-x: 35px;
+}
+
+/* ── Base / Reset ── */
+body {
+  padding-top: 60px;
+  padding-bottom: 60px;
+  margin: 0;
+}
+
+/* ── Utility Classes ── */
+.hidden {
+  display: none;
+}
+
+/* ── Layout ── */
+.container-fluid {
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  padding-left: var(--container-padding-x);
+  padding-right: var(--container-padding-x);
+}
+
+/* ── Particles Background ── */
+#particles-js {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: -1;
+}
+
+/* ── Logo ── */
+#logo {
+  height: auto;
+  cursor: pointer;
+}
+
+/* ── Responsive: Landscape ── */
+@media (orientation: landscape) {
+  #logo {
+    max-width: 25%;
+  }
+}
+
+/* ── Responsive: Portrait ── */
+@media (orientation: portrait) {
+  #logo {
+    max-width: 50%;
+  }
+
+  body {
+    zoom: 2.0;
+  }
+
+  label {
+    zoom: 1.2;
+  }
+}

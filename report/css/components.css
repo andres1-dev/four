@@ -1,0 +1,269 @@
+/* ==========================================================================
+   components.css — Formularios, inputs, loader, botones
+   ========================================================================== */
+
+/* ── Form Controls ── */
+input.form-control,
+select.form-control,
+textarea.form-control {
+    border-radius: var(--radius-input);
+    border: 1px solid var(--color-border);
+    padding: 3px 13px;
+    box-shadow: var(--shadow-input);
+    transition: box-shadow var(--transition-base),
+        border-color var(--transition-base);
+}
+
+input.form-control:focus,
+select.form-control:focus,
+textarea.form-control:focus {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-input-focus);
+    outline: none;
+}
+
+/* ── Labels ── */
+label.form-label,
+label {
+    color: var(--color-text-label);
+}
+
+/* ── Suggestions List ── */
+.list-group-item {
+    cursor: pointer;
+}
+
+/* ── Loader / Spinner ── */
+.loader {
+    border: 5px solid var(--color-loader-track);
+    border-radius: 50%;
+    border-top: 5px solid var(--color-loader-spinner);
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* ── Google Maps Container ── */
+.map-container {
+    width: 100%;
+    height: 250px;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+    box-shadow: var(--shadow-input);
+}
+
+/* ── Google Places Autocomplete Dropdown ── */
+.pac-container {
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--color-border);
+    font-family: inherit;
+    z-index: 10000;
+}
+
+.pac-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.pac-item:hover {
+    background-color: #f0f4ff;
+}
+
+.pac-item-query {
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Lot Data Collapse — acordeón de datos del lote (minimalista)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Header: línea divisoria con texto inline y flecha pequeña */
+.lot-collapse-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    margin: 12px 0 4px;
+    user-select: none;
+    color: var(--color-text-muted);
+    /* gris neutro, discreto */
+}
+
+/* La línea horizontal que rodea el texto */
+.lot-collapse-header::before,
+.lot-collapse-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--color-border);
+}
+
+.lot-collapse-header::before {
+    max-width: 12px;
+    /* línea corta a la izquierda */
+}
+
+/* Texto label + ícono FA */
+.lot-collapse-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    transition: color var(--transition-base);
+}
+
+.lot-collapse-label .fas {
+    font-size: 0.85rem;
+    opacity: 0.8;
+}
+
+/* Chevron */
+.lot-chevron {
+    font-size: 0.75rem;
+    transition: transform 0.3s ease, color var(--transition-base);
+}
+
+/* Hover: el texto y flecha se colorean con el primario */
+.lot-collapse-header:hover .lot-collapse-label,
+.lot-collapse-header:hover .lot-chevron {
+    color: var(--color-primary);
+}
+
+/* Estado abierto: rotar chevron y colorear */
+.lot-collapse-header.open .lot-chevron {
+    transform: rotate(180deg);
+    color: var(--color-primary);
+}
+
+.lot-collapse-header.open .lot-collapse-label {
+    color: var(--color-primary);
+}
+
+/* Cuerpo colapsable: oculto por defecto */
+.lot-collapse-body {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.38s ease, opacity 0.28s ease;
+}
+
+.lot-collapse-body.open {
+    max-height: 900px;
+    opacity: 1;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Custom File Dropzone — Selector de archivos personalizado
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Input nativo oculto */
+.file-dropzone__input {
+    display: none;
+}
+
+/* Zona clickeable */
+.file-dropzone {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border: 1.5px dashed var(--color-border);
+    border-radius: var(--radius-input);
+    background: transparent;
+    cursor: pointer;
+    transition:
+        border-color var(--transition-base),
+        background var(--transition-base),
+        box-shadow var(--transition-base);
+}
+
+.file-dropzone:hover {
+    border-color: var(--color-primary);
+    background: rgba(63, 81, 181, 0.04);
+    box-shadow: var(--shadow-input-focus);
+}
+
+.file-dropzone:active {
+    background: rgba(63, 81, 181, 0.08);
+}
+
+/* Estado: archivo seleccionado */
+.file-dropzone.has-file {
+    border-style: solid;
+    border-color: var(--color-primary);
+    background: rgba(63, 81, 181, 0.05);
+}
+
+/* Ícono FA */
+.file-dropzone__icon {
+    font-size: 1.5rem;
+    color: var(--color-border);
+    flex-shrink: 0;
+    transition: color var(--transition-base), transform var(--transition-base);
+}
+
+.file-dropzone:hover .file-dropzone__icon,
+.file-dropzone.has-file .file-dropzone__icon {
+    color: var(--color-primary);
+    transform: scale(1.1);
+}
+
+/* Bloque de texto */
+.file-dropzone__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.file-dropzone__action {
+    font-size: 0.83rem;
+    font-weight: 600;
+    color: var(--color-text-label);
+    transition: color var(--transition-base);
+}
+
+.file-dropzone:hover .file-dropzone__action,
+.file-dropzone.has-file .file-dropzone__action {
+    color: var(--color-primary);
+}
+
+.file-dropzone__hint {
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+}
+
+/* Nombre del archivo seleccionado */
+.file-dropzone__name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 130px;
+    display: none;
+}
+
+.file-dropzone.has-file .file-dropzone__name {
+    display: block;
+}
