@@ -7,48 +7,56 @@
  * Recupera las llaves de API desde Google Apps Script (GAS)
  * para evitar que estén hardcodeadas en el frontend.
  */
+let secureConfigPromise = null;
+
+/**
+ * Recupera las llaves de API desde Google Apps Script (GAS).
+ * Singleton pattern para evitar múltiples llamadas paralelas.
+ */
 async function fetchSecureConfig() {
-    try {
-        const cachedConfig = localStorage.getItem('app_secure_config');
-        const now = new Date().getTime();
-        
-        // Retornar si hay llaves válidas en caché (menos de 24 hs de antigüedad)
-        if (cachedConfig) {
-            const parsed = JSON.parse(cachedConfig);
-            if (now - parsed.timestamp < 86400000 && parsed.API_KEY && parsed.GEMINI_KEY) {
-                CONFIG.API_KEY = parsed.API_KEY;
-                CONFIG.GEMINI_KEY = parsed.GEMINI_KEY;
-                return;
-            }
-        }
+    if (secureConfigPromise) return secureConfigPromise;
 
-        // Si no hay caché válido, solicitar vía POST (Lento)
-        const res = await fetch(GAS_ENDPOINT, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ accion: "GET_CONFIG" })
-        });
-
-        if (!res.ok) throw new Error('No se pudo obtener la configuración segura.');
-        
-        const data = await res.json();
-        
-        if (data && data.API_KEY && data.GEMINI_KEY) {
-            CONFIG.API_KEY = data.API_KEY;
-            CONFIG.GEMINI_KEY = data.GEMINI_KEY;
+    secureConfigPromise = (async () => {
+        try {
+            const cachedConfig = localStorage.getItem('app_secure_config');
+            const now = new Date().getTime();
             
-            // Guardar en caché local
-            localStorage.setItem('app_secure_config', JSON.stringify({
-                API_KEY: data.API_KEY,
-                GEMINI_KEY: data.GEMINI_KEY,
-                timestamp: now
-            }));
-        } else {
-            throw new Error('Configuración incompleta: Faltan llaves de API en el servidor.');
+            if (cachedConfig) {
+                const parsed = JSON.parse(cachedConfig);
+                if (now - parsed.timestamp < 86400000 && parsed.API_KEY) {
+                    CONFIG.API_KEY = parsed.API_KEY;
+                    CONFIG.GEMINI_KEY = parsed.GEMINI_KEY;
+                    return CONFIG;
+                }
+            }
+
+            const res = await fetch(GAS_ENDPOINT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ accion: "GET_CONFIG" })
+            });
+
+            if (!res.ok) throw new Error('Error al obtener configuración desde GAS');
+            
+            const data = await res.json();
+            if (data && data.API_KEY) {
+                CONFIG.API_KEY = data.API_KEY;
+                CONFIG.GEMINI_KEY = data.GEMINI_KEY;
+                
+                localStorage.setItem('app_secure_config', JSON.stringify({
+                    API_KEY: data.API_KEY,
+                    GEMINI_KEY: data.GEMINI_KEY,
+                    timestamp: now
+                }));
+            }
+            return CONFIG;
+        } catch (error) {
+            secureConfigPromise = null; // Reintentar en la próxima llamada
+            throw error;
         }
-    } catch (error) {
-        throw error;
-    }
+    })();
+
+    return secureConfigPromise;
 }
 
 /**
@@ -61,6 +69,11 @@ async function fetchSecureConfig() {
  * @throws {Error} Si la petición HTTP falla.
  */
 async function fetchSheetData(sheetName, indices, headers) {
+    // Asegurar que la configuración esté disponible antes de peticionar
+    if (!CONFIG.API_KEY) {
+        await fetchSecureConfig();
+    }
+    
     const url =
         `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}` +
         `/values/${sheetName}!A:AF?key=${CONFIG.API_KEY}&majorDimension=ROWS`;
@@ -128,5 +141,16 @@ async function fetchUsuariosData() {
         SHEET_USUARIOS.name,
         SHEET_USUARIOS.indices,
         SHEET_USUARIOS.headers,
+    );
+}
+
+/**
+ * Obtiene el listado completo de reportes de calidad.
+ */
+async function fetchReportesData() {
+    return fetchSheetData(
+        SHEET_REPORTES.name,
+        SHEET_REPORTES.indices,
+        SHEET_REPORTES.headers,
     );
 }

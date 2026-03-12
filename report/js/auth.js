@@ -108,11 +108,11 @@ function applyAccessControl() {
         }
     }
 
-    // 2. Acciones de Calidad: ADMIN y USER-C tienen acceso. USER-P y GUEST no.
+    // 2. Acciones de Calidad: ADMIN, MODERATOR y USER-C tienen acceso. USER-P y GUEST no.
     const accionesSelect = document.getElementById('acciones');
     if (accionesSelect) {
         let calidadOption = accionesSelect.querySelector('option[value="CALIDAD"]');
-        const hasCalidadPermission = (role === 'ADMIN' || role === 'USER-C');
+        const hasCalidadPermission = (role === 'ADMIN' || role === 'MODERATOR' || role === 'USER-C');
 
         if (hasCalidadPermission) {
             // Si el usuario tiene permiso pero la opción no existe (fue borrada), volver a crearla
@@ -172,6 +172,20 @@ function checkRouteAccess(role) {
             });
         }
     }
+
+    // Proteger calidad.html
+    if (path.includes('calidad.html')) {
+        if (role !== 'ADMIN' && role !== 'MODERATOR') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'ACCESO RESTRINGIDO',
+                text: 'Solo el personal de Moderación o Administración puede ver este módulo.',
+                confirmButtonColor: '#3F51B5'
+            }).then(() => {
+                window.location.href = 'index.html';
+            });
+        }
+    }
     
     // Proteger usuarios.html
     if (path.includes('usuarios.html')) {
@@ -220,6 +234,7 @@ function updateAuthUI() {
     if (currentUser) {
         profileType = `role-${currentUser.ROL.toLowerCase()}`;
         if (currentUser.ROL === 'ADMIN') iconClass = 'fas fa-user-shield';
+        else if (currentUser.ROL === 'MODERATOR') iconClass = 'fas fa-user-tie';
         else if (currentUser.ROL === 'USER-C') iconClass = 'fas fa-user-check';
         else if (currentUser.ROL === 'USER-P') iconClass = 'fas fa-user';
     }
@@ -268,6 +283,7 @@ function createSidebar() {
         const isUsersPage = path.includes('usuarios.html');
 
         if (currentUser.ROL === 'ADMIN') roleIcon = 'fas fa-user-shield';
+        else if (currentUser.ROL === 'MODERATOR') roleIcon = 'fas fa-user-tie';
         else if (currentUser.ROL === 'USER-C') roleIcon = 'fas fa-user-check';
         else if (currentUser.ROL === 'USER-P') roleIcon = 'fas fa-user';
 
@@ -289,6 +305,11 @@ function createSidebar() {
                 ${(currentUser.ROL === 'ADMIN' || currentUser.ROL === 'USER-P') ? `
                     <a href="resolucion.html" class="sidebar-link ${isResolutionPage ? 'active' : ''}">
                         <i class="fas fa-desktop"></i> Módulo de Resolución
+                    </a>
+                ` : ''}
+                ${(currentUser.ROL === 'ADMIN' || currentUser.ROL === 'MODERATOR') ? `
+                    <a href="calidad.html" class="sidebar-link ${path.includes('calidad.html') ? 'active' : ''}">
+                        <i class="fas fa-microscope"></i> Reportes de Calidad
                     </a>
                 ` : ''}
                 ${currentUser.ROL === 'ADMIN' ? `

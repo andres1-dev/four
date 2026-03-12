@@ -70,6 +70,16 @@ const SHEET_USUARIOS = Object.freeze({
     headers: ['ID', 'USUARIO', 'CORREO', 'TELEFONO', 'ROL', 'PASSWORD'],
 });
 
+/**
+ * Definición de lectura de datos de Reportes de Calidad.
+ * @readonly
+ */
+const SHEET_REPORTES = Object.freeze({
+    name: 'REPORTES',
+    indices: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+    headers: ['TIMESTAMP', 'FECHA', 'LOTE', 'REFERENCIA', 'CANTIDAD', 'PLANTA', 'SALIDA', 'LINEA', 'PROCESO', 'EMAIL', 'LOCALIZACION', 'TIPO_VISITA', 'CONCLUSION', 'OBSERVACIONES', 'SOPORTE'],
+});
+
 /* ── Hojas inactivas (reservadas para uso futuro) ──────────────────────── */
 // const SHEET_PLANTA  = { name: 'PLANTA',  indices: [0,1,11,12,13,27], headers: [...] };
 // const SHEET_PROCESO = { name: 'PROCESO', indices: [3,1,5,7,11,13,8], headers: [...] };

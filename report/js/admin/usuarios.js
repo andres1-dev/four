@@ -102,8 +102,9 @@ function renderUserTable(usersToRender) {
 
     const ROL_META = {
         'ADMIN':     { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', icon: 'fa-shield-halved' },
+        'MODERATOR': { color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', icon: 'fa-user-tie'       },
         'USER-P':    { color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe', icon: 'fa-industry'       },
-        'USER-C':    { color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', icon: 'fa-magnifying-glass' },
+        'USER-C':    { color: '#06b6d4', bg: '#ecfeff', border: '#a5f3fc', icon: 'fa-magnifying-glass' },
         'GUEST':     { color: '#64748b', bg: '#f8fafc', border: '#e2e8f0', icon: 'fa-user'            },
         'PENDIENTE': { color: '#d97706', bg: '#fffbeb', border: '#fde68a', icon: 'fa-user-clock'      },
     };
@@ -328,28 +329,28 @@ async function openEditUserModal(userId) {
         <style>
             .edit-modal-lux { font-family: 'Inter', sans-serif; text-align: left; }
             .field-container-lux {
-                margin-bottom: 20px;
+                margin-bottom: 12px;
                 position: relative;
             }
             .label-lux {
                 display: flex;
                 align-items: center;
-                gap: 8px;
-                font-size: 0.75rem;
+                gap: 6px;
+                font-size: 0.7rem;
                 font-weight: 700;
                 color: #64748b;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
-                margin-bottom: 6px;
+                margin-bottom: 4px;
             }
-            .label-lux i { color: #3b82f6; font-size: 0.85rem; }
+            .label-lux i { color: #3b82f6; font-size: 0.8rem; }
             .input-lux {
                 width: 100%;
-                padding: 12px 16px;
-                border-radius: 12px;
+                padding: 8px 14px;
+                border-radius: 10px;
                 border: 1.5px solid #e2e8f0;
                 background: #f8fafc;
-                font-size: 0.95rem;
+                font-size: 0.9rem;
                 font-weight: 600;
                 color: #1e293b;
                 transition: all 0.2s;
@@ -358,17 +359,17 @@ async function openEditUserModal(userId) {
                 outline: none;
                 border-color: #3b82f6;
                 background: white;
-                box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08);
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
             }
             .select-lux {
-                height: 48px;
+                height: 40px;
                 cursor: pointer;
             }
             .pwd-hint {
-                font-size: 0.65rem;
+                font-size: 0.6rem;
                 color: #94a3b8;
-                margin-top: 6px;
-                line-height: 1.4;
+                margin-top: 4px;
+                line-height: 1.2;
             }
             .header-grad-lux {
                 background: linear-gradient(135deg, #3f51b5 0%, #3b82f6 100%);
@@ -377,11 +378,15 @@ async function openEditUserModal(userId) {
                 font-weight: 900;
                 display: flex;
                 align-items: center;
-                gap: 12px;
-                font-size: 1.35rem;
-                border-bottom: 2px solid #eff6ff;
-                padding-bottom: 12px;
-                margin-bottom: 20px;
+                gap: 10px;
+                font-size: 1.15rem;
+                border-bottom: 1.5px solid #eff6ff;
+                padding-bottom: 10px;
+                margin-bottom: 15px;
+            }
+            @media (max-width: 480px) {
+                .header-grad-lux { font-size: 1rem; }
+                .input-lux { padding: 8px 10px; font-size: 0.85rem; }
             }
         </style>
 
@@ -391,24 +396,25 @@ async function openEditUserModal(userId) {
             </div>
 
             <div class="field-container-lux">
-                <label class="label-lux"><i class="fas fa-signature"></i> Nombre del Usuario</label>
-                <input type="text" id="edit-nombre" class="input-lux" value="${user.USUARIO || ''}" placeholder="Ej. Juan Pérez">
+                <label class="label-lux"><i class="fas fa-signature"></i> Nombre</label>
+                <input type="text" id="edit-nombre" class="input-lux" value="${user.USUARIO || ''}">
             </div>
             
             <div class="field-container-lux">
-                <label class="label-lux"><i class="fas fa-envelope"></i> Correo de Contacto</label>
-                <input type="email" id="edit-correo" class="input-lux" value="${user.CORREO || ''}" placeholder="usuario@dominio.com">
+                <label class="label-lux"><i class="fas fa-envelope"></i> Correo</label>
+                <input type="email" id="edit-correo" class="input-lux" value="${user.CORREO || ''}">
             </div>
             
             <div class="field-container-lux">
-                <label class="label-lux"><i class="fas fa-phone"></i> Teléfono / Celular</label>
-                <input type="tel" id="edit-telefono" class="input-lux" value="${user.TELEFONO || ''}" placeholder="+57 300...">
+                <label class="label-lux"><i class="fas fa-phone"></i> Teléfono</label>
+                <input type="tel" id="edit-telefono" class="input-lux" value="${user.TELEFONO || ''}">
             </div>
             
             <div class="field-container-lux">
-                <label class="label-lux"><i class="fas fa-shield-halved"></i> Rol en el Sistema</label>
+                <label class="label-lux"><i class="fas fa-shield-halved"></i> Rol</label>
                 <select id="edit-rol" class="input-lux select-lux">
-                    <option value="ADMIN" ${user.ROL === 'ADMIN' ? 'selected' : ''}>ADMIN — Control Total</option>
+                    <option value="ADMIN" ${user.ROL === 'ADMIN' ? 'selected' : ''}>ADMIN — Administrador</option>
+                    <option value="MODERATOR" ${user.ROL === 'MODERATOR' ? 'selected' : ''}>MODERATOR — Moderador de Calidad</option>
                     <option value="USER-P" ${user.ROL === 'USER-P' ? 'selected' : ''}>USER-P — Producción</option>
                     <option value="USER-C" ${user.ROL === 'USER-C' ? 'selected' : ''}>USER-C — Calidad</option>
                     <option value="GUEST" ${user.ROL === 'GUEST' ? 'selected' : ''}>GUEST — Visualizador</option>
@@ -417,30 +423,27 @@ async function openEditUserModal(userId) {
             </div>
             
             <div class="field-container-lux">
-                <label class="label-lux"><i class="fas fa-key"></i> Nueva Contraseña</label>
-                <input type="text" id="edit-password" class="input-lux" style="font-family: monospace;" placeholder="Dejar en blanco para no cambiar">
-                <div class="pwd-hint">Solo escriba aquí si desea establecer una nueva clave. De lo contrario, no se modificará la actual.</div>
+                <label class="label-lux"><i class="fas fa-key"></i> Nueva Clave</label>
+                <input type="text" id="edit-password" class="input-lux" style="font-family: monospace;" placeholder="Opcional">
+                <div class="pwd-hint">Deje en blanco si no desea cambiarla.</div>
             </div>
         </div>
     `;
 
     const { value: formValues } = await Swal.fire({
-        title: null,
         html: html,
         focusConfirm: false,
         showCancelButton: true,
-        confirmButtonText: '<i class="fas fa-save me-2"></i> ACTUALIZAR DATOS',
+        confirmButtonText: 'GUARDAR',
         cancelButtonText: 'SALIR',
         confirmButtonColor: '#3F51B5',
-        width: '500px',
-        padding: '2rem',
+        width: window.innerWidth < 500 ? '92%' : '440px',
+        padding: window.innerWidth < 500 ? '1rem' : '1.5rem',
         background: '#ffffff',
-        showCloseButton: false,
-        backdrop: 'rgba(15, 23, 42, 0.4)',
         customClass: {
-            popup: 'shadow-2xl border-0 rounded-4 animate__animated animate__fadeInDown',
-            confirmButton: 'rounded-pill px-4 py-2 fw-bold',
-            cancelButton: 'rounded-pill px-4 py-2 fw-bold'
+            popup: 'shadow-2xl border-0 rounded-4 animate__animated animate__fadeInUp',
+            confirmButton: 'rounded-pill px-4 py-2 fw-bold small',
+            cancelButton: 'rounded-pill px-4 py-2 fw-bold small'
         },
         preConfirm: () => {
             const nombre = document.getElementById('edit-nombre').value.trim();

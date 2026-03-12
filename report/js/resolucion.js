@@ -54,6 +54,20 @@ async function cargarDatos() {
         gsNovedades = novedades;
         gsPlantas = plantas;
 
+        // Verificar si hay datos
+        if (!gsNovedades || gsNovedades.length === 0) {
+            if (loader) {
+                loader.innerHTML = `
+                    <div class="py-5 text-center">
+                        <i class="fas fa-clipboard-list mb-3" style="font-size: 3rem; color: #e2e8f0;"></i>
+                        <p class="text-muted fw-800">NO SE ENCONTRARON REGISTROS</p>
+                        <p class="small text-muted">La base de datos de novedades está vacía o no es accesible.</p>
+                    </div>
+                `;
+            }
+            return;
+        }
+
         updateStats();
 
         gsNovedades.sort((a, b) => {
@@ -73,7 +87,16 @@ async function cargarDatos() {
 
     } catch (error) {
         console.error('Error:', error);
-        if (loader) loader.innerHTML = `<span class="text-danger small">Error de conexión.</span>`;
+        if (loader) {
+            loader.innerHTML = `
+                <div class="py-5 text-center text-danger">
+                    <i class="fas fa-exclamation-circle mb-3" style="font-size: 3.5rem;"></i>
+                    <p class="fw-800 mb-1">FALLO AL SINCRONIZAR</p>
+                    <p class="small opacity-75 mb-3">Error: ${error.message}</p>
+                    <button class="btn btn-primary rounded-pill px-4" onclick="cargarDatos()">REINTENTAR AHORA</button>
+                </div>
+            `;
+        }
     }
 }
 
@@ -144,7 +167,13 @@ function renderTabla(data = gsNovedades) {
     }
 
     if (!datosMostrar || datosMostrar.length === 0) {
-        feed.innerHTML = `<div class="text-center py-4 text-muted small">Sin registros coincidentes.</div>`;
+        feed.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-search mb-3" style="font-size: 2.5rem; color: #cbd5e1;"></i>
+                <p class="text-muted fw-bold mb-1">Sin registros coincidentes</p>
+                <p class="small text-muted">Intenta ajustar los filtros de búsqueda.</p>
+            </div>
+        `;
         return;
     }
 
