@@ -63,6 +63,9 @@ function initPlantasMasks() {
             const formatted = new Intl.NumberFormat('es-CO').format(value);
             e.target.value = formatted;
         });
+
+        // Verificar cédula solo cuando el usuario termina de escribir (blur event)
+        cedulaInput.addEventListener('blur', verificarCedulaPlanta);
     }
 
     if (emailInput) {
@@ -87,6 +90,118 @@ function initPlantasMasks() {
 
 // Llamar a la inicialización al cargar el script o mediante un trigger externo
 document.addEventListener('DOMContentLoaded', initPlantasMasks);
+
+/**
+ * Verifica la cédula ingresada contra los datos registrados de la planta.
+ * Solo permite continuar si la cédula coincide.
+ */
+function verificarCedulaPlanta() {
+    const cedulaInput = document.getElementById('cedulaPlanta');
+    const nombrePlanta = document.getElementById('nombrePlanta').value;
+    const rawCedula = cedulaInput.value.replace(/\D/g, '');
+
+    if (!rawCedula) return;
+
+    // Buscar la planta en los registros
+    const plantaRegistrada = currentPlantas.find(p =>
+        (p.PLANTA || '').toString().trim().toLowerCase() === nombrePlanta.trim().toLowerCase()
+    );
+
+    // Si la planta existe y tiene cédula registrada
+    if (plantaRegistrada && plantaRegistrada.CEDULA) {
+        const cedulaRegistrada = plantaRegistrada.CEDULA.toString().replace(/\D/g, '');
+        
+        if (rawCedula === cedulaRegistrada) {
+            // Cédula correcta: desbloquear campos
+            desbloquearCamposPlanta(plantaRegistrada);
+            Swal.fire({
+                title: 'Verificación Exitosa',
+                text: 'Cédula verificada. Ahora puede actualizar los datos.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } else {
+            // Cédula incorrecta: bloquear acceso
+            bloquearCamposPlanta();
+            Swal.fire({
+                title: 'Acceso Denegado',
+                text: 'La cédula ingresada no coincide con los registros de esta planta.',
+                icon: 'error',
+                confirmButtonColor: '#d33'
+            });
+            cedulaInput.value = '';
+        }
+    } else {
+        // Planta nueva sin registro previo: permitir registro
+        desbloquearCamposPlanta(null);
+    }
+}
+
+/**
+ * Desbloquea los campos del formulario y pre-llena con datos existentes.
+ * @param {Object|null} plantaData - Datos de la planta registrada o null si es nueva
+ */
+function desbloquearCamposPlanta(plantaData) {
+    const direccionInput = document.getElementById('direccionPlanta');
+    const telefonoInput = document.getElementById('telefonoPlanta');
+    const emailInput = document.getElementById('emailPlanta');
+    const submitBtn = document.querySelector('#actualizarDatosForm button[type="submit"]');
+
+    // Desbloquear campos
+    direccionInput.removeAttribute('readonly');
+    telefonoInput.removeAttribute('readonly');
+    emailInput.removeAttribute('readonly');
+    if (submitBtn) submitBtn.removeAttribute('disabled');
+
+    // Pre-llenar con datos existentes si los hay
+    if (plantaData) {
+        direccionInput.value = plantaData.DIRECCION || '';
+        
+        // Formatear teléfono
+        const tel = (plantaData.TELEFONO || '').replace(/\D/g, '');
+        if (tel.length === 10) {
+            telefonoInput.value = `(${tel.slice(0, 3)}) ${tel.slice(3, 6)}-${tel.slice(6, 10)}`;
+        } else {
+            telefonoInput.value = tel;
+        }
+        
+        emailInput.value = plantaData.EMAIL || '';
+    }
+
+    // Cambiar estilo visual para indicar que están desbloqueados
+    [direccionInput, telefonoInput, emailInput].forEach(input => {
+        input.style.backgroundColor = '#ffffff';
+        input.style.borderColor = '#ced4da';
+    });
+}
+
+/**
+ * Bloquea los campos del formulario para proteger datos.
+ */
+function bloquearCamposPlanta() {
+    const direccionInput = document.getElementById('direccionPlanta');
+    const telefonoInput = document.getElementById('telefonoPlanta');
+    const emailInput = document.getElementById('emailPlanta');
+    const submitBtn = document.querySelector('#actualizarDatosForm button[type="submit"]');
+
+    // Bloquear campos
+    direccionInput.setAttribute('readonly', true);
+    telefonoInput.setAttribute('readonly', true);
+    emailInput.setAttribute('readonly', true);
+    if (submitBtn) submitBtn.setAttribute('disabled', true);
+
+    // Limpiar valores
+    direccionInput.value = '';
+    telefonoInput.value = '';
+    emailInput.value = '';
+
+    // Cambiar estilo visual para indicar que están bloqueados
+    [direccionInput, telefonoInput, emailInput].forEach(input => {
+        input.style.backgroundColor = '#f8f9fa';
+        input.style.borderColor = '#dee2e6';
+    });
+}
 
 /**
  * Maneja el envío del formulario de Actualizar Datos de Planta.

@@ -300,21 +300,21 @@ function createSidebar() {
             <div class="sidebar-body">
                 <div class="sidebar-label">MENÚ DE ACCESO</div>
                 <a href="index.html" class="sidebar-link ${(!isResolutionPage && !isUsersPage) ? 'active' : ''}">
-                    <i class="fas fa-home"></i> Inicio / Reportes
+                    <i class="fas fa-home"></i> Reportes
                 </a>
                 ${(currentUser.ROL === 'ADMIN' || currentUser.ROL === 'USER-P') ? `
                     <a href="resolucion.html" class="sidebar-link ${isResolutionPage ? 'active' : ''}">
-                        <i class="fas fa-desktop"></i> Módulo de Resolución
+                        <i class="fas fa-desktop"></i> Novedades
                     </a>
                 ` : ''}
                 ${(currentUser.ROL === 'ADMIN' || currentUser.ROL === 'MODERATOR') ? `
                     <a href="calidad.html" class="sidebar-link ${path.includes('calidad.html') ? 'active' : ''}">
-                        <i class="fas fa-microscope"></i> Reportes de Calidad
+                        <i class="fas fa-microscope"></i> Calidad
                     </a>
                 ` : ''}
                 ${currentUser.ROL === 'ADMIN' ? `
                     <a href="usuarios.html" class="sidebar-link ${isUsersPage ? 'active' : ''}">
-                        <i class="fas fa-users-cog"></i> Gestión de Usuarios
+                        <i class="fas fa-users-cog"></i> Usuarios
                     </a>
                 ` : ''}
             </div>

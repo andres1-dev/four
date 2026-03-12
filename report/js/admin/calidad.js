@@ -335,8 +335,9 @@ function createReportCard(rep) {
     const div = document.createElement('div');
     div.className = 'report-card-lux';
     
-    // SOPORTE: imagen del reporte
-    const imgUrl = rep.SOPORTE || 'https://i.ibb.co/r34f0Z5/ORCA-GIFS.gif';
+    // SOPORTE: imagen o video del reporte
+    const soporteUrl = rep.SOPORTE || 'https://i.ibb.co/r34f0Z5/ORCA-GIFS.gif';
+    const esVideo = soporteUrl.includes('/preview') || soporteUrl.includes('drive.google.com/file');
     
     // FECHA: fecha del reporte
     const fecha = rep.FECHA || 'S/F';
@@ -363,10 +364,29 @@ function createReportCard(rep) {
         statusClass = 'bg-warning text-dark';
     }
 
+    // Contenido multimedia (imagen o video)
+    let mediaContent;
+    if (esVideo) {
+        mediaContent = `
+            <iframe src="${soporteUrl}" 
+                style="width:100%; height:100%; border:0;" 
+                allow="autoplay" 
+                loading="lazy">
+            </iframe>
+        `;
+    } else {
+        mediaContent = `
+            <img src="${soporteUrl}" 
+                alt="Calidad" 
+                loading="lazy" 
+                onerror="this.src='https://i.ibb.co/r34f0Z5/ORCA-GIFS.gif'">
+        `;
+    }
+
     div.innerHTML = `
         <span class="lote-tag-lux">${rep.LOTE || 'LOTE'}</span>
         <div class="report-img-container">
-            <img src="${imgUrl}" alt="Calidad" loading="lazy" onerror="this.src='https://i.ibb.co/r34f0Z5/ORCA-GIFS.gif'">
+            ${mediaContent}
         </div>
         <div class="report-content-lux">
             <h3 class="report-title-lux">${rep.REFERENCIA || 'REFERENCIA'}</h3>
@@ -523,6 +543,27 @@ function expandReport(timestamp) {
         tipoColor = '#ec4899';
     }
 
+    // Detectar si el soporte es video o imagen
+    const soporteUrl = rep.SOPORTE || '';
+    const esVideo = soporteUrl.includes('/preview') || soporteUrl.includes('drive.google.com/file');
+    
+    let mediaHTML = '';
+    if (soporteUrl) {
+        if (esVideo) {
+            mediaHTML = `
+                <div class="mt-4 overflow-hidden rounded-4 border shadow-sm" style="position: relative; padding-bottom: 56.25%; height: 0;">
+                    <iframe src="${soporteUrl}" 
+                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" 
+                        allow="autoplay; fullscreen" 
+                        allowfullscreen>
+                    </iframe>
+                </div>
+            `;
+        } else {
+            mediaHTML = `<div class="mt-4 overflow-hidden rounded-4 border shadow-sm"><img src="${soporteUrl}" style="width:100%;"></div>`;
+        }
+    }
+
     Swal.fire({
         title: null,
         html: `
@@ -596,7 +637,7 @@ function expandReport(timestamp) {
                     ` : ''}
                 </div>
 
-                ${rep.SOPORTE ? `<div class="mt-4 overflow-hidden rounded-4 border shadow-sm"><img src="${rep.SOPORTE}" style="width:100%;"></div>` : ''}
+                ${mediaHTML}
             </div>
         `,
         confirmButtonText: 'CERRAR',

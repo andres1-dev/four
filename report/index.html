@@ -300,11 +300,11 @@
               <i class="fas fa-camera file-dropzone__icon"></i>
               <div class="file-dropzone__text">
                 <span class="file-dropzone__action">Haz clic para subir soporte técnico</span>
-                <span class="file-dropzone__hint">Imagen o PDF (Máx 10MB)</span>
+                <span class="file-dropzone__hint">Imagen (JPG, PNG, WEBP) o Video (MP4, MOV - Máx 10 seg, 10MB)</span>
               </div>
               <span class="file-dropzone__name" id="soporteName"></span>
             </div>
-            <input type="file" id="soporte" class="file-dropzone__input" accept="image/*, .pdf" required>
+            <input type="file" id="soporte" class="file-dropzone__input" accept="image/*,video/mp4,video/quicktime" required>
           </div>
 
           <div class="mb-3 text-center">
@@ -319,11 +319,21 @@
       <form id="actualizarDatosForm">
         <div id="actualizarDatosSection" class="hidden">
 
+          <!-- Alerta de seguridad (solo visible cuando hay datos previos) -->
+          <div id="alertaVerificacion" class="alert alert-info" style="border-left: 4px solid #3F51B5; background-color: #e8eaf6; border-radius: 8px; margin-bottom: 20px; display: none;">
+            <i class="fas fa-shield-alt" style="color: #3F51B5;"></i>
+            <strong>Verificación de Seguridad:</strong> Para proteger los datos de la planta, primero debe verificar su identidad ingresando la cédula o NIT registrado.
+          </div>
 
           <div class="mb-3">
-            <label for="cedulaPlanta" class="form-label">NIT o Cédula de Ciudadanía:</label>
+            <label for="cedulaPlanta" class="form-label">
+              <i class="fas fa-id-card"></i> NIT o Cédula de Ciudadanía:
+            </label>
             <input type="text" id="cedulaPlanta" class="form-control"
               placeholder="Ingrese el número de identificación o NIT" required>
+            <div class="form-text small" id="cedulaHint" style="display: none;">
+              <i class="fas fa-info-circle"></i> Ingrese la cédula para verificar su identidad y desbloquear los campos.
+            </div>
           </div>
 
           <div class="mb-3">
@@ -333,7 +343,7 @@
 
           <div class="mb-3">
             <label for="direccionPlanta" class="form-label">Dirección:</label>
-            <input type="text" id="direccionPlanta" class="form-control" placeholder="Ej: CL 26 # 7-75" required>
+            <input type="text" id="direccionPlanta" class="form-control" placeholder="Ej: CL 26 # 7-75" required readonly style="background-color: #f8f9fa;">
           </div>
 
           <div class="mb-3">
@@ -345,7 +355,7 @@
                 <span class="phone-prefix-text">+57</span>
               </div>
               <input type="tel" id="telefonoPlanta" class="form-control" placeholder="(316) 800-7979" required
-                maxlength="15">
+                maxlength="15" readonly style="background-color: #f8f9fa;">
             </div>
             <div class="form-text small">Ingrese un número celular valido.</div>
           </div>
@@ -353,7 +363,7 @@
           <div class="mb-3">
             <label for="emailPlanta" class="form-label">Correo Electrónico:</label>
             <input type="email" id="emailPlanta" class="form-control" list="emailOptions"
-              placeholder="Ej: planta@empresa.com" required>
+              placeholder="Ej: planta@empresa.com" required readonly style="background-color: #f8f9fa;">
             <datalist id="emailOptions">
               <option value="@gmail.com">
               <option value="@outlook.com">
@@ -370,7 +380,7 @@
           </div>
 
           <div class="mb-3 text-center">
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn btn-primary" disabled>
               <i class="fas fa-save"></i> Guardar Datos
             </button>
           </div>

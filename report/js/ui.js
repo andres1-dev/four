@@ -467,36 +467,89 @@ function fillPlantaName() {
     const plantaValue = DOM.plantaSelect().value;
     DOM.nombrePlanta().value = plantaValue || '';
 
-    // Buscar si ya tenemos datos de esta planta para pre-llenar y que el usuario solo corrija
+    const direccionInput = document.getElementById('direccionPlanta');
+    const telefonoInput = document.getElementById('telefonoPlanta');
+    const emailInput = document.getElementById('emailPlanta');
+    const cedulaInput = document.getElementById('cedulaPlanta');
+    const submitBtn = document.querySelector('#actualizarDatosForm button[type="submit"]');
+    const alertaVerificacion = document.getElementById('alertaVerificacion');
+    const cedulaHint = document.getElementById('cedulaHint');
+
+    // Verificar si la planta ya tiene datos registrados
+    let plantaRegistrada = null;
     if (typeof currentPlantas !== 'undefined' && plantaValue) {
-        const info = currentPlantas.find(p => p.PLANTA === plantaValue);
-        if (info) {
-            const cedulaInput = document.getElementById('cedulaPlanta');
-            const direccionInput = document.getElementById('direccionPlanta');
-            const telefonoInput = document.getElementById('telefonoPlanta');
-            const emailInput = document.getElementById('emailPlanta');
+        plantaRegistrada = currentPlantas.find(p => 
+            (p.PLANTA || '').toString().trim().toLowerCase() === plantaValue.trim().toLowerCase()
+        );
+    }
 
-            if (cedulaInput) {
-                // Aplicar máscara de miles si existe el dato
-                const cedulaRaw = String(info.CEDULA || '').replace(/\D/g, '');
-                cedulaInput.value = cedulaRaw ? new Intl.NumberFormat('es-CO').format(cedulaRaw) : '';
-            }
-            if (direccionInput) direccionInput.value = info.DIRECCION || '';
-            if (emailInput) emailInput.value = info.EMAIL || '';
+    // Si la planta YA tiene datos registrados → BLOQUEAR y pedir verificación
+    if (plantaRegistrada && plantaRegistrada.CEDULA) {
+        // Mostrar alerta de verificación
+        if (alertaVerificacion) alertaVerificacion.style.display = 'block';
+        if (cedulaHint) cedulaHint.style.display = 'block';
 
-            if (telefonoInput) {
-                // Aplicar máscara de teléfono: (XXX) XXX-XXXX
-                let telRaw = String(info.TELEFONO || '').replace(/\D/g, '');
-                if (telRaw.startsWith('57')) telRaw = telRaw.slice(2); // Quitar prefijo si existe
+        // Limpiar y bloquear campos - NO MOSTRAR DATOS HASTA VERIFICAR
+        if (direccionInput) {
+            direccionInput.value = '';
+            direccionInput.setAttribute('readonly', true);
+            direccionInput.style.backgroundColor = '#f8f9fa';
+            direccionInput.style.borderColor = '#dee2e6';
+        }
+        if (telefonoInput) {
+            telefonoInput.value = '';
+            telefonoInput.setAttribute('readonly', true);
+            telefonoInput.style.backgroundColor = '#f8f9fa';
+            telefonoInput.style.borderColor = '#dee2e6';
+        }
+        if (emailInput) {
+            emailInput.value = '';
+            emailInput.setAttribute('readonly', true);
+            emailInput.style.backgroundColor = '#f8f9fa';
+            emailInput.style.borderColor = '#dee2e6';
+        }
+        if (submitBtn) submitBtn.setAttribute('disabled', true);
 
-                let formatted = '';
-                if (telRaw.length > 0) {
-                    formatted = '(' + telRaw.slice(0, 3);
-                    if (telRaw.length > 3) formatted += ') ' + telRaw.slice(3, 6);
-                    if (telRaw.length > 6) formatted += '-' + telRaw.slice(6, 10);
-                }
-                telefonoInput.value = formatted;
-            }
+        // Limpiar cédula y enfocar
+        if (cedulaInput) {
+            cedulaInput.value = '';
+            cedulaInput.removeAttribute('readonly');
+            cedulaInput.style.backgroundColor = '#ffffff';
+            cedulaInput.placeholder = 'Ingrese el número de identificación o NIT';
+            setTimeout(() => cedulaInput.focus(), 100);
+        }
+    } else {
+        // Planta NUEVA sin registro previo → DESBLOQUEAR todo para primer registro
+        // Ocultar alerta de verificación
+        if (alertaVerificacion) alertaVerificacion.style.display = 'none';
+        if (cedulaHint) cedulaHint.style.display = 'none';
+
+        if (direccionInput) {
+            direccionInput.value = '';
+            direccionInput.removeAttribute('readonly');
+            direccionInput.style.backgroundColor = '#ffffff';
+            direccionInput.style.borderColor = '#ced4da';
+        }
+        if (telefonoInput) {
+            telefonoInput.value = '';
+            telefonoInput.removeAttribute('readonly');
+            telefonoInput.style.backgroundColor = '#ffffff';
+            telefonoInput.style.borderColor = '#ced4da';
+        }
+        if (emailInput) {
+            emailInput.value = '';
+            emailInput.removeAttribute('readonly');
+            emailInput.style.backgroundColor = '#ffffff';
+            emailInput.style.borderColor = '#ced4da';
+        }
+        if (submitBtn) submitBtn.removeAttribute('disabled');
+
+        // Cédula también desbloqueada para primer registro
+        if (cedulaInput) {
+            cedulaInput.value = '';
+            cedulaInput.removeAttribute('readonly');
+            cedulaInput.style.backgroundColor = '#ffffff';
+            cedulaInput.placeholder = 'Ingrese el número de identificación o NIT';
         }
     }
 }

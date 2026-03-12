@@ -2,6 +2,7 @@
    forms/dropzone.js — Lógica del selector de archivos personalizado
    Conecta cada .file-dropzone con su <input type="file"> oculto,
    y muestra el nombre del archivo seleccionado en la UI.
+   Incluye validación de duración para videos (máx 10 segundos).
 
    Llamado desde app.js → initDropzones() en window.onload.
    ========================================================================== */
@@ -15,9 +16,51 @@
  */
 function initDropzones() {
     // Par imagen
-    _bindDropzone('imagenDropzone', 'imagen', 'imagenName');
-    // Par soporte
-    _bindDropzone('soporteDropzone', 'soporte', 'soporteName');
+    _bindDropzone('imagenDropzone', 'imagen', 'imagenName', false);
+    // Par soporte (con validación de video)
+    _bindDropzone('soporteDropzone', 'soporte', 'soporteName', true);
+}
+
+/**
+ * Valida la duración de un archivo de video.
+ * @param {File} file - Archivo de video a validar
+ * @returns {Promise<boolean>} - true si es válido (≤10 seg), false si no
+ */
+async function validateVideoDuration(file) {
+    return new Promise((resolve) => {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        
+        video.onloadedmetadata = function() {
+            window.URL.revokeObjectURL(video.src);
+            const duration = video.duration;
+            
+            if (duration > 10) {
+                Swal.fire({
+                    title: 'Video muy largo',
+                    text: `El video tiene ${duration.toFixed(1)} segundos. El máximo permitido es 10 segundos.`,
+                    icon: 'warning',
+                    confirmButtonColor: '#3F51B5'
+                });
+                resolve(false);
+            } else {
+                resolve(true);
+            }
+        };
+        
+        video.onerror = function() {
+            window.URL.revokeObjectURL(video.src);
+            Swal.fire({
+                title: 'Error',
+                text: 'No se pudo validar el video. Intente con otro archivo.',
+                icon: 'error',
+                confirmButtonColor: '#3F51B5'
+            });
+            resolve(false);
+        };
+        
+        video.src = URL.createObjectURL(file);
+    });
 }
 
 /**
@@ -25,8 +68,9 @@ function initDropzones() {
  * @param {string} zoneId   — ID del div.file-dropzone
  * @param {string} inputId  — ID del input[type="file"] real
  * @param {string} nameId   — ID del span que muestra el nombre
+ * @param {boolean} validateVideo — Si debe validar duración de videos
  */
-function _bindDropzone(zoneId, inputId, nameId) {
+function _bindDropzone(zoneId, inputId, nameId, validateVideo = false) {
     const zone = document.getElementById(zoneId);
     const input = document.getElementById(inputId);
     const nameEl = document.getElementById(nameId);
@@ -45,9 +89,35 @@ function _bindDropzone(zoneId, inputId, nameId) {
     });
 
     // Cuando el usuario elige un archivo
-    input.addEventListener('change', () => {
+    input.addEventListener('change', async () => {
         const file = input.files && input.files[0];
         if (file) {
+            // Validar tamaño (10MB máximo)
+            if (file.size > 10 * 1024 * 1024) {
+                Swal.fire({
+                    title: 'Archivo muy grande',
+                    text: 'El archivo no debe superar los 10MB.',
+                    icon: 'warning',
+                    confirmButtonColor: '#3F51B5'
+                });
+                input.value = '';
+                zone.classList.remove('has-file');
+                if (nameEl) nameEl.textContent = '';
+                return;
+            }
+
+            // Si es video y debe validarse, verificar duración
+            if (validateVideo && file.type.startsWith('video/')) {
+                const isValid = await validateVideoDuration(file);
+                if (!isValid) {
+                    input.value = '';
+                    zone.classList.remove('has-file');
+                    if (nameEl) nameEl.textContent = '';
+                    return;
+                }
+            }
+
+            // Archivo válido
             zone.classList.add('has-file');
             if (nameEl) nameEl.textContent = file.name;
         } else {
@@ -68,17 +138,38 @@ function _bindDropzone(zoneId, inputId, nameId) {
         }
     });
 
-    zone.addEventListener('drop', (e) => {
+    zone.addEventListener('drop', async (e) => {
         e.preventDefault();
         const files = e.dataTransfer.files;
         if (files && files[0]) {
+            const file = files[0];
+            
+            // Validar tamaño
+            if (file.size > 10 * 1024 * 1024) {
+                Swal.fire({
+                    title: 'Archivo muy grande',
+                    text: 'El archivo no debe superar los 10MB.',
+                    icon: 'warning',
+                    confirmButtonColor: '#3F51B5'
+                });
+                return;
+            }
+
+            // Si es video y debe validarse, verificar duración
+            if (validateVideo && file.type.startsWith('video/')) {
+                const isValid = await validateVideoDuration(file);
+                if (!isValid) {
+                    return;
+                }
+            }
+
             // Transferir al input nativo (requiere DataTransfer trick)
             try {
                 const dt = new DataTransfer();
-                dt.items.add(files[0]);
+                dt.items.add(file);
                 input.files = dt.files;
                 zone.classList.add('has-file');
-                if (nameEl) nameEl.textContent = files[0].name;
+                if (nameEl) nameEl.textContent = file.name;
             } catch (_) {
                 // Fallback: algunos navegadores no permiten asignar input.files
                 console.warn('[dropzone] Drag & Drop no soportado completamente en este navegador');
