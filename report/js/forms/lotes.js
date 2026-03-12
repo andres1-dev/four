@@ -58,11 +58,10 @@ function verificarRegistroPlanta(plantaNombre) {
     const editBtn = DOM.editPlantaBtn();
 
     // Verificamos si ya tiene los campos obligatorios
-    // Nota: Según SHEET_PLANTAS en config.js, el header es EMAIL (mapped de CORREO)
     const tieneDatos = infoPlanta &&
         infoPlanta.DIRECCION &&
         infoPlanta.TELEFONO &&
-        (infoPlanta.EMAIL || infoPlanta.CORREO);
+        infoPlanta.EMAIL;
 
     if (!tieneDatos) {
         // Si la planta no tiene datos, forzar actualización

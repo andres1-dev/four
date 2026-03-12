@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>NOVEDADES</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <!-- ── Vendor CSS ── -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- ── App CSS ── -->
+    <link rel="stylesheet" href="css/main.css?v=6">
+    <link rel="stylesheet" href="css/login.css?v=6">
+</head>
+
+<body>
+    <!-- ── Fondo de partículas ── -->
+    <div id="particles-js"></div>
+
+    <div class="login-page-wrapper">
+        <div class="login-card">
+            <div class="login-header">
+                <img src="icons/icon-any.svg" alt="Logo TMD" class="login-logo">
+                <div class="brand-divider"></div>
+                <p class="login-subtitle">NOVEDADES</p>
+            </div>
+
+            <!-- ── SECCIÓN: INICIO DE SESIÓN ── -->
+            <div id="login-section" class="auth-section">
+                <div class="form-floating-group">
+                    <i class="fas fa-id-card input-icon"></i>
+                    <input type="text" id="login-user" placeholder="Identificación o Cédula" required
+                        autocomplete="username">
+                </div>
+                <div class="form-floating-group">
+                    <i class="fas fa-lock input-icon"></i>
+                    <input type="password" id="login-pass" placeholder="Contraseña" required
+                        autocomplete="current-password">
+                    <i class="fas fa-eye toggle-pass" onclick="togglePassword('login-pass')"></i>
+                </div>
+
+                <button class="btn-auth-primary" id="loginBtn" onclick="processLogin()">
+                    <span class="btn-text">INGRESAR AL SISTEMA</span>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+
+                <div class="auth-footer-links">
+                    <a href="javascript:void(0)" onclick="switchAuth('reset')">¿Olvidó su contraseña?</a>
+                    <span class="dot-separator">•</span>
+                    <a href="javascript:void(0)" onclick="switchAuth('register')">Crear cuenta</a>
+                </div>
+            </div>
+
+            <!-- ── SECCIÓN: REGISTRO ── -->
+            <div id="register-section" class="auth-section hidden">
+                <div class="section-title">Solicitud de Acceso</div>
+                <p class="section-hint">Complete todos los campos para solicitar su ingreso.</p>
+
+                <div class="form-floating-group">
+                    <i class="fas fa-id-badge input-icon"></i>
+                    <input type="text" id="reg-id" placeholder="NIT o Cédula de Ciudadanía" required>
+                </div>
+
+                <button class="btn-auth-primary" id="btnCheckId" onclick="validateRegistrationId()">
+                    <span class="btn-text">CONTINUAR</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+
+                <!-- Campos ocultos inicialmente -->
+                <div id="registration-details" class="hidden">
+                    <div class="form-floating-group">
+                        <i class="fas fa-user-edit input-icon"></i>
+                        <input type="text" id="reg-name" placeholder="Nombre completo" required>
+                    </div>
+
+                    <div class="form-floating-group">
+                        <i class="fas fa-envelope input-icon"></i>
+                        <input type="email" id="reg-email" placeholder="Correo electrónico" required>
+                    </div>
+
+                    <div class="form-floating-group">
+                        <i class="fas fa-phone input-icon"></i>
+                        <input type="tel" id="reg-tel" placeholder="Número Celular" required>
+                    </div>
+
+                    <div class="form-floating-group">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" id="reg-pass" placeholder="Defina su Contraseña" required>
+                        <i class="fas fa-eye toggle-pass" onclick="togglePassword('reg-pass')"></i>
+                    </div>
+
+                    <button class="btn-auth-primary" id="regBtn" onclick="requestRegister()">
+                        <span class="btn-text">ENVIAR SOLICITUD</span>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+
+                <div class="auth-footer-links">
+                    <a href="javascript:void(0)" onclick="switchAuth('login')">Volver al inicio</a>
+                </div>
+            </div>
+
+            <!-- ── SECCIÓN: RECUPERACIÓN ── -->
+            <div id="reset-section" class="auth-section hidden">
+                <div class="section-title">Recuperar Acceso</div>
+                <p class="section-hint">Ingrese su identificación para validar su cuenta.</p>
+                <div class="form-floating-group">
+                    <i class="fas fa-search-id input-icon"></i>
+                    <input type="text" id="reset-id" placeholder="Número de Identificación">
+                </div>
+                <button class="btn-auth-primary" onclick="requestReset()">
+                    <span class="btn-text">VALIDAR CUENTA</span>
+                </button>
+                <div class="auth-footer-links">
+                    <a href="javascript:void(0)" onclick="switchAuth('login')">Volver al inicio</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="login-footer-credits">
+            <p>Developed by Andrés Mendoza © 2026</p>
+            <p class="system-version">v2.4.0 • Enterprise Edition</p>
+        </div>
+    </div>
+
+    <!-- ── Vendor Scripts ── -->
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+
+    <!-- ── App Logic ── -->
+    <script src="js/config.js?v=4"></script>
+    <script src="js/api.js?v=4"></script>
+    <script src="js/forms/gas.js?v=4"></script>
+    <script src="js/auth.js?v=5"></script>
+    <script src="js/particles-config.js?v=4"></script>
+
+    <script>
+        // Inicialización al cargar
+        window.onload = async () => {
+            if (typeof initParticles === 'function') initParticles();
+
+            try {
+                // Verificar si ya hay una sesión activa
+                if (localStorage.getItem('sispro_user')) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                // Cargar llaves y usuarios en segundo plano
+                await fetchSecureConfig();
+                await loadUsers();
+            } catch (err) {
+                console.error("Error en inicialización:", err);
+            }
+        };
+
+        function switchAuth(target) {
+            const sections = document.querySelectorAll('.auth-section');
+            sections.forEach(s => s.classList.add('hidden'));
+
+            // Resetear estado de validación si volvemos a registro
+            if (target === 'register') {
+                const details = document.getElementById('registration-details');
+                const btnCheck = document.getElementById('btnCheckId');
+                const idInput = document.getElementById('reg-id');
+
+                if (details) details.classList.add('hidden');
+                if (btnCheck) btnCheck.classList.remove('hidden');
+                if (idInput) {
+                    idInput.readOnly = false;
+                    idInput.value = '';
+                }
+            }
+
+            const active = document.getElementById(target + '-section');
+            if (active) active.classList.remove('hidden');
+        }
+
+        function togglePassword(id) {
+            const input = document.getElementById(id);
+            const icon = event.target;
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+
+        async function processLogin() {
+            const userId = document.getElementById('login-user').value;
+            const pass = document.getElementById('login-pass').value;
+            const btn = document.getElementById('loginBtn');
+
+            if (!userId || !pass) {
+                Swal.fire({
+                    title: 'Campos Incompletos',
+                    text: 'Por favor ingrese su identificación y contraseña.',
+                    icon: 'warning',
+                    confirmButtonColor: '#3F51B5'
+                });
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> VALIDANDO...';
+
+            if (allUsers.length === 0) {
+                await loadUsers(); // Asegurar datos cargados si el usuario teclea rápido
+            }
+
+            // Llamar a la lógica central en auth.js
+            handleLogin(userId, pass, true);
+
+            // Si falla, el botón se restaura después (podríamos mejorar esto con un callback)
+            setTimeout(() => {
+                if (btn.disabled) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span class="btn-text">INGRESAR AL SISTEMA</span><i class="fas fa-chevron-right"></i>';
+                }
+            }, 3000);
+        }
+
+        async function requestRegister() {
+            const id = document.getElementById('reg-id').value.trim();
+            const name = document.getElementById('reg-name').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            const tel = document.getElementById('reg-tel').value.trim();
+            const pass = document.getElementById('reg-pass').value.trim();
+            const btn = document.getElementById('regBtn');
+
+            if (!id || !name || !email || !tel || !pass) {
+                Swal.fire('Atención', 'Todos los campos son obligatorios para el registro.', 'warning');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PROCESANDO...';
+
+            try {
+                const payload = {
+                    hoja: 'USUARIOS', // Definido en SHEETS_DESTINO aunque aquí lo pasamos directo para seguridad
+                    id: id,
+                    usuario: name,
+                    correo: email,
+                    telefono: tel,
+                    rol: 'PENDIENTE', // El ADMIN le asignará el rol después
+                    password: pass
+                };
+
+                const result = await sendToGAS(payload);
+
+                if (result.success) {
+                    Swal.fire({
+                        title: '¡SOLICITUD ENVIADA!',
+                        text: 'Sus datos han sido registrados. El administrador le asignará un rol pronto.',
+                        icon: 'success',
+                        confirmButtonColor: '#3F51B5'
+                    }).then(() => {
+                        switchAuth('login');
+                        // Limpiar campos
+                        document.getElementById('reg-id').value = '';
+                        document.getElementById('reg-name').value = '';
+                        document.getElementById('reg-email').value = '';
+                        document.getElementById('reg-tel').value = '';
+                        document.getElementById('reg-pass').value = '';
+                    });
+                } else {
+                    // Aquí mostramos el mensaje de validación del servidor (ej: "Su solicitud está PENDIENTE")
+                    Swal.fire({
+                        title: 'Atención',
+                        text: result.message || 'No se pudo completar el registro.',
+                        icon: 'info',
+                        confirmButtonColor: '#3F51B5'
+                    });
+                }
+
+            } catch (error) {
+                console.error("Error al registrar usuario:", error);
+                Swal.fire('Error', 'No se pudo enviar la solicitud. Intente nuevamente.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span class="btn-text">ENVIAR SOLICITUD</span><i class="fas fa-paper-plane"></i>';
+            }
+        }
+
+        async function validateRegistrationId() {
+            const idInput = document.getElementById('reg-id');
+            const detailsDiv = document.getElementById('registration-details');
+            const btnCheck = document.getElementById('btnCheckId');
+            const id = idInput.value.trim();
+
+            if (!id) {
+                Swal.fire('Atención', 'Por favor ingrese su identificación', 'warning');
+                return;
+            }
+
+            if (allUsers.length === 0) {
+                await loadUsers(); // Asegurar datos cargados
+            }
+
+            const existingUser = allUsers.find(u => String(u.ID).trim() === String(id));
+
+            if (existingUser) {
+                detailsDiv.classList.add('hidden');
+                btnCheck.classList.remove('hidden');
+
+                let text = "Usted ya se encuentra registrado.";
+                if (existingUser.ROL === 'PENDIENTE') {
+                    text = "Su solicitud aún está PENDIENTE de aprobación por el administrador.";
+                } else {
+                    text = `Ya tiene una cuenta activa con el rol: ${existingUser.ROL}. Por favor inicie sesión.`;
+                }
+
+                Swal.fire({
+                    title: 'Identificación ya registrada',
+                    text: text,
+                    icon: 'info',
+                    confirmButtonColor: '#3F51B5'
+                });
+            } else {
+                // USUARIO NUEVO -> Mostrar resto del formulario
+                detailsDiv.classList.remove('hidden');
+                btnCheck.classList.add('hidden');
+                idInput.readOnly = true; // Bloquear ID para evitar cambios después de validar
+                
+                // Animación css-native enfocando el siguiente input
+                setTimeout(() => {
+                    const nameInput = document.getElementById('reg-nombre');
+                    if (nameInput) nameInput.focus();
+                }, 50);
+            }
+        }
+
+        function requestReset() {
+            Swal.fire({
+                title: 'Verificando...',
+                text: 'Si el ID es válido, recibirá instrucciones pronto.',
+                icon: 'info',
+                confirmButtonColor: '#3F51B5'
+            }).then(() => switchAuth('login'));
+        }
+    </script>
+</body>
+
+</html>

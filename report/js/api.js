@@ -9,7 +9,20 @@
  */
 async function fetchSecureConfig() {
     try {
-        // Usamos una petición POST para mayor seguridad en la transferencia
+        const cachedConfig = localStorage.getItem('app_secure_config');
+        const now = new Date().getTime();
+        
+        // Retornar si hay llaves válidas en caché (menos de 24 hs de antigüedad)
+        if (cachedConfig) {
+            const parsed = JSON.parse(cachedConfig);
+            if (now - parsed.timestamp < 86400000 && parsed.API_KEY && parsed.GEMINI_KEY) {
+                CONFIG.API_KEY = parsed.API_KEY;
+                CONFIG.GEMINI_KEY = parsed.GEMINI_KEY;
+                return;
+            }
+        }
+
+        // Si no hay caché válido, solicitar vía POST (Lento)
         const res = await fetch(GAS_ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -23,11 +36,18 @@ async function fetchSecureConfig() {
         if (data && data.API_KEY && data.GEMINI_KEY) {
             CONFIG.API_KEY = data.API_KEY;
             CONFIG.GEMINI_KEY = data.GEMINI_KEY;
+            
+            // Guardar en caché local
+            localStorage.setItem('app_secure_config', JSON.stringify({
+                API_KEY: data.API_KEY,
+                GEMINI_KEY: data.GEMINI_KEY,
+                timestamp: now
+            }));
         } else {
             throw new Error('Configuración incompleta: Faltan llaves de API en el servidor.');
         }
     } catch (error) {
-        throw error; // Re-lanzar para que app.js lo maneje
+        throw error;
     }
 }
 
@@ -45,7 +65,7 @@ async function fetchSheetData(sheetName, indices, headers) {
         `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}` +
         `/values/${sheetName}!A:AF?key=${CONFIG.API_KEY}&majorDimension=ROWS`;
 
-    const response = await fetch(url);
+    const response = await fetch(url, { cache: 'no-store' });
 
     if (!response.ok) {
         throw new Error(`HTTP ${response.status} al obtener ${sheetName}`);

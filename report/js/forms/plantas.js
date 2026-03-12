@@ -125,13 +125,13 @@ async function handleActualizarDatosSubmit(e) {
 
         await sendToGAS(payload);
 
-        // Actualizar estado local
+        // Actualizar estado local (usando las mismas claves que SHEET_PLANTAS.headers)
         const nuevaPlanta = {
             PLANTA: nombrePlanta,
-            ID: rawCedula,
+            CEDULA: rawCedula,
             DIRECCION: direccion,
             TELEFONO: rawTelefono,
-            CORREO: emailPlanta
+            EMAIL: emailPlanta
         };
 
         const idx = currentPlantas.findIndex(p => p.PLANTA === nombrePlanta);

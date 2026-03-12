@@ -3,11 +3,13 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Resolución de Novedades - Grupo TMD</title>
+    <title>RESOLUCIÓN</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/theme.css">
@@ -58,14 +60,14 @@
             padding: 8px 16px;
             border-radius: 12px;
             border: 1px solid #f1f5f9;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
             min-width: 170px;
             transition: all 0.2s ease;
         }
 
         .stat-card-mini:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             border-color: #e2e8f0;
         }
 
@@ -79,17 +81,65 @@
             font-size: 0.95rem;
         }
 
-        .stat-icon.pending { background: #fee2e2; color: #ef4444; }
-        .stat-icon.process { background: #fffbeb; color: #f59e0b; }
-        .stat-icon.done { background: #ecfdf5; color: #10b981; }
+        .stat-icon.pending {
+            background: #fee2e2;
+            color: #ef4444;
+        }
 
-        .stat-info { display: flex; flex-direction: column; justify-content: center; }
-        .stat-val-container { display: flex; align-items: center; gap: 6px; }
-        .stat-val { font-size: 1.2rem; font-weight: 800; color: #0f172a; line-height: 1; letter-spacing: -0.5px; }
-        .stat-qty-badge { font-size: 0.6rem; font-weight: 700; color: #64748b; background: #f1f5f9; padding: 1px 6px; border-radius: 4px; }
-        .stat-lab { font-size: 0.6rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-top: 2px; letter-spacing: 0.5px; }
+        .stat-icon.process {
+            background: #fffbeb;
+            color: #f59e0b;
+        }
 
-        .divider-v { width: 1px; height: 30px; background: #f1f5f9; margin: 0 10px; }
+        .stat-icon.done {
+            background: #ecfdf5;
+            color: #10b981;
+        }
+
+        .stat-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .stat-val-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat-val {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1;
+            letter-spacing: -0.5px;
+        }
+
+        .stat-qty-badge {
+            font-size: 0.6rem;
+            font-weight: 700;
+            color: #64748b;
+            background: #f1f5f9;
+            padding: 1px 6px;
+            border-radius: 4px;
+        }
+
+        .stat-lab {
+            font-size: 0.6rem;
+            color: #94a3b8;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-top: 2px;
+            letter-spacing: 0.5px;
+        }
+
+        .divider-v {
+            width: 1px;
+            height: 30px;
+            background: #f1f5f9;
+            margin: 0 10px;
+        }
 
         /* ── Seamless Unified Search Bar ── */
         .unified-tool-bar {
@@ -102,7 +152,7 @@
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             max-width: 600px;
             margin: 2rem 0;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
         }
 
         .unified-tool-bar:focus-within {
@@ -121,7 +171,9 @@
             font-weight: 500;
         }
 
-        .search-input-clean:focus { outline: none; }
+        .search-input-clean:focus {
+            outline: none;
+        }
 
         .search-input-clean::placeholder {
             color: #94a3b8;
@@ -138,7 +190,8 @@
             border-radius: 14px;
             margin-left: 12px;
             user-select: none;
-            height: 34px; /* Fix height for perfect centering */
+            height: 34px;
+            /* Fix height for perfect centering */
         }
 
         .switch-label-lux {
@@ -149,7 +202,8 @@
             letter-spacing: 0.8px;
             white-space: nowrap;
             margin: 0;
-            line-height: 1; /* Match centered layout */
+            line-height: 1;
+            /* Match centered layout */
             display: flex;
             align-items: center;
         }
@@ -166,7 +220,8 @@
         .integrated-switch .form-check-input {
             width: 32px !important;
             height: 18px !important;
-            margin: 0 !important; /* Remove all default bootstrap margins */
+            margin: 0 !important;
+            /* Remove all default bootstrap margins */
             cursor: pointer;
             border-color: #cbd5e1;
             background-color: #e2e8f0;
@@ -186,7 +241,7 @@
             margin-bottom: 0.85rem;
             display: flex;
             overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
             transition: all 0.2s ease;
             min-height: 130px;
             height: auto;
@@ -195,14 +250,25 @@
 
         .novedad-card-ultra:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
             border-color: #cbd5e1;
         }
 
         /* Torre de Acciones con Color por Estado */
-        .status-pendiente .actions-tower-ultra { background-color: rgba(245, 158, 11, 0.05); border-left: 1px solid rgba(245, 158, 11, 0.15); }
-        .status-elaboracion .actions-tower-ultra { background-color: rgba(251, 191, 36, 0.1); border-left: 1px solid rgba(251, 191, 36, 0.25); }
-        .status-finalizado .actions-tower-ultra { background-color: rgba(34, 197, 94, 0.05); border-left: 1px solid rgba(34, 197, 94, 0.15); }
+        .status-pendiente .actions-tower-ultra {
+            background-color: rgba(245, 158, 11, 0.05);
+            border-left: 1px solid rgba(245, 158, 11, 0.15);
+        }
+
+        .status-elaboracion .actions-tower-ultra {
+            background-color: rgba(251, 191, 36, 0.1);
+            border-left: 1px solid rgba(251, 191, 36, 0.25);
+        }
+
+        .status-finalizado .actions-tower-ultra {
+            background-color: rgba(34, 197, 94, 0.05);
+            border-left: 1px solid rgba(34, 197, 94, 0.15);
+        }
 
         .card-visual-ultra {
             width: 140px;
@@ -210,14 +276,15 @@
             background: #f8fafc;
             cursor: zoom-in;
             border-right: 1px solid #f1f5f9;
-            overflow: hidden; /* Para contener el zoom del hover */
+            overflow: hidden;
+            /* Para contener el zoom del hover */
             position: relative;
         }
 
-        .card-visual-ultra img { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: cover; 
+        .card-visual-ultra img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
@@ -238,7 +305,7 @@
             font-size: 1.5rem;
             opacity: 0;
             transition: all 0.3s ease;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
             pointer-events: none;
         }
 
@@ -306,13 +373,19 @@
             gap: 5px;
         }
 
-        .tech-pill-highlight i { font-size: 0.6rem; color: #3b82f6; }
+        .tech-pill-highlight i {
+            font-size: 0.6rem;
+            color: #3b82f6;
+        }
 
-        .tech-pill-lux i { font-size: 0.6rem; color: #94a3b8; }
+        .tech-pill-lux i {
+            font-size: 0.6rem;
+            color: #94a3b8;
+        }
 
         .card-desc-ultra {
             font-size: 0.85rem;
-            line-height: 1.5; 
+            line-height: 1.5;
             color: #1e293b;
             font-weight: 500;
             margin: 12px 0;
@@ -356,7 +429,8 @@
             border-radius: 50%;
             cursor: pointer;
             transition: all 0.2s ease;
-            vertical-align: super; /* Estilo hiperíndice */
+            vertical-align: super;
+            /* Estilo hiperíndice */
             margin-left: 4px;
             border: 1px solid rgba(59, 130, 246, 0.2);
             font-weight: 900;
@@ -417,18 +491,30 @@
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             width: 100%;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
             border: none;
         }
 
-        .status-btn-lux.p { background: #ef4444; } /* Solid Red */
-        .status-btn-lux.w { background: #f59e0b; } /* Solid Amber */
-        .status-btn-lux.d { background: #10b981; } /* Solid Emerald */
+        .status-btn-lux.p {
+            background: #ef4444;
+        }
+
+        /* Solid Red */
+        .status-btn-lux.w {
+            background: #f59e0b;
+        }
+
+        /* Solid Amber */
+        .status-btn-lux.d {
+            background: #10b981;
+        }
+
+        /* Solid Emerald */
 
         .status-btn-lux:hover {
             transform: translateY(-1px);
             filter: brightness(1.1);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
         }
 
         .status-btn-lux i {
@@ -477,14 +563,37 @@
             transition: all 0.2s ease;
         }
 
-        .novedad-card-ultra.is-finalized { opacity: 0.7; background: #fafafa; }
+        .novedad-card-ultra.is-finalized {
+            opacity: 0.7;
+            background: #fafafa;
+        }
 
         @media (max-width: 992px) {
-            .novedad-card-ultra { height: auto; flex-direction: column; }
-            .card-visual-ultra { width: 100%; height: 120px; }
-            .actions-tower-ultra { width: 100%; border-left: none; border-top: 1px solid #f1f5f9; padding: 1rem; flex-direction: row; }
-            .stats-container-main { flex-wrap: wrap; justify-content: center; gap: 10px; }
+            .novedad-card-ultra {
+                height: auto;
+                flex-direction: column;
+            }
+
+            .card-visual-ultra {
+                width: 100%;
+                height: 120px;
+            }
+
+            .actions-tower-ultra {
+                width: 100%;
+                border-left: none;
+                border-top: 1px solid #f1f5f9;
+                padding: 1rem;
+                flex-direction: row;
+            }
+
+            .stats-container-main {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 10px;
+            }
         }
+
         /* ── Pagination Luxury ── */
         .pagination-container-lux {
             display: flex;
@@ -495,7 +604,7 @@
             padding: 1rem;
             background: white;
             border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
             border: 1px solid #f1f5f9;
         }
 
@@ -567,7 +676,8 @@
                     <div class="stat-info">
                         <div class="stat-val-container">
                             <span class="stat-val" id="stat-process">0</span>
-                            <span class="stat-qty-badge" id="stat-process-qty" style="color: #d97706; background: #fffbeb;">0 UND</span>
+                            <span class="stat-qty-badge" id="stat-process-qty"
+                                style="color: #d97706; background: #fffbeb;">0 UND</span>
                         </div>
                         <span class="stat-lab">ELABORACIÓN</span>
                     </div>
@@ -578,7 +688,8 @@
                     <div class="stat-info">
                         <div class="stat-val-container">
                             <span class="stat-val" id="stat-done">0</span>
-                            <span class="stat-qty-badge" id="stat-done-qty" style="color: #059669; background: #ecfdf5;">0 UND</span>
+                            <span class="stat-qty-badge" id="stat-done-qty"
+                                style="color: #059669; background: #ecfdf5;">0 UND</span>
                         </div>
                         <span class="stat-lab">Cerradas</span>
                     </div>
@@ -589,12 +700,14 @@
         <!-- ── Seamless Unified Tool Bar ── -->
         <div class="unified-tool-bar">
             <i class="fas fa-search text-muted me-3" style="font-size: 0.9rem;"></i>
-            <input type="text" id="searchInput" class="search-input-clean" placeholder="Filtrar por lote, planta, radicado o descripción..." oninput="handleFilter()">
-            
+            <input type="text" id="searchInput" class="search-input-clean"
+                placeholder="Filtrar por lote, planta, radicado o descripción..." oninput="handleFilter()">
+
             <div class="integrated-switch">
                 <label class="switch-label-lux" for="toggleFinalizados">Ver Cerradas</label>
                 <div class="form-check form-switch mb-0">
-                    <input class="form-check-input" type="checkbox" id="toggleFinalizados" onchange="gsCurrentPage=1; renderTabla()">
+                    <input class="form-check-input" type="checkbox" id="toggleFinalizados"
+                        onchange="gsCurrentPage=1; renderTabla()">
                 </div>
             </div>
         </div>
@@ -617,10 +730,11 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
-    <script src="js/config.js"></script>
-    <script src="js/api.js"></script>
+    <script src="js/config.js?v=7"></script>
+    <script src="js/api.js?v=7"></script>
     <script src="js/ui.js"></script>
-    <script src="js/auth.js"></script>
+    <script src="js/auth.js?v=7"></script>
+    <script src="js/admin/usuarios.js?v=7"></script>
     <script src="js/particles-config.js"></script>
     <script src="js/resolucion.js"></script>
 </body>

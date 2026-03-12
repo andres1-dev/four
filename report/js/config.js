@@ -79,7 +79,7 @@ const SHEET_USUARIOS = Object.freeze({
  * @readonly
  */
 const LOGOS = Object.freeze([
-    'https://i.ibb.co/nD9wcPv/GRUPO-TMD-FULL.png',
+    'icons/icon-any.svg',
     'https://i.ibb.co/r34f0Z5/ORCA-GIFS.gif',
     'https://i.ibb.co/jr1GBKy/ORCAGIFS-imageonline-co-47703-1.png',
 ]);

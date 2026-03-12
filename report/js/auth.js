@@ -6,84 +6,80 @@ let currentUser = null;
 let allUsers = [];
 
 /**
- * Carga los usuarios desde la API.
+ * Redirige al portal de acceso profesional.
+ */
+function showLoginPrompt() {
+    window.location.href = 'login.html';
+}
+
+/**
+ * Carga los usuarios y verifica sesión activa.
  */
 async function loadUsers() {
     try {
-        // PASO 1: Asegurar que tenemos las llaves antes de pedir usuarios
         if (!CONFIG.API_KEY) {
             await fetchSecureConfig();
         }
 
         allUsers = await fetchUsuariosData();
 
-        // Verificar si hay una sesión previa en localStorage
         const savedUser = localStorage.getItem('sispro_user');
         if (savedUser) {
-            currentUser = JSON.parse(savedUser);
-            applyAccessControl();
-        }
-    } catch (error) {
-        // Error silencioso para no interrumpir la experiencia de usuario si falla la red
-    }
-}
-
-/**
- * Muestra el prompt de login usando SweetAlert2.
- */
-function showLoginPrompt() {
-    Swal.fire({
-        title: 'INICIAR SESIÓN',
-        html: `
-            <div class="text-start">
-                <label class="form-label mb-1">Cédula o ID:</label>
-                <input type="text" id="swal-user" class="form-control mb-3" placeholder="Ej: 1144167164">
-                <label class="form-label mb-1">Contraseña:</label>
-                <input type="password" id="swal-pass" class="form-control" placeholder="••••••">
-            </div>
-        `,
-        confirmButtonText: 'INGRESAR',
-        showCancelButton: true,
-        cancelButtonText: 'CANCELAR',
-        confirmButtonColor: '#3F51B5',
-        focusConfirm: false,
-        preConfirm: () => {
-            const user = document.getElementById('swal-user').value;
-            const pass = document.getElementById('swal-pass').value;
-            if (!user || !pass) {
-                Swal.showValidationMessage('Por favor ingrese ambos campos');
+            let parsedUser = JSON.parse(savedUser);
+            // Sincronizar en caliente los datos cacheados con el último listado descargado de DB
+            const realUser = allUsers.find(u => String(u.ID).trim() === String(parsedUser.ID).trim());
+            
+            if (realUser) {
+                currentUser = realUser;
+                localStorage.setItem('sispro_user', JSON.stringify(currentUser)); // Forzar refresco
+            } else {
+                // Usuario fue eliminado de la DB, destruir sesión zombi
+                currentUser = null;
+                localStorage.removeItem('sispro_user');
             }
-            return { user, pass };
         }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            handleLogin(result.value.user, result.value.pass);
-        }
-    });
+        applyAccessControl();
+    } catch (error) {
+        console.error("Error al cargar sesión:", error);
+    }
 }
 
 /**
  * Valida las credenciales.
  */
-function handleLogin(userId, password) {
+function handleLogin(userId, password, isLoginPage = false) {
     const userFound = allUsers.find(u =>
         String(u.ID).trim() === String(userId).trim() &&
         String(u.PASSWORD).trim() === String(password).trim()
     );
 
     if (userFound) {
+        // Bloquear acceso a cuentas no aprobadas
+        if (userFound.ROL === 'PENDIENTE') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Acceso Restringido',
+                text: 'Su solicitud de acceso aún se encuentra PENDIENTE de aprobación por el Administrador.',
+                confirmButtonColor: '#3F51B5'
+            });
+            return;
+        }
+
         currentUser = userFound;
         localStorage.setItem('sispro_user', JSON.stringify(currentUser));
 
-        Swal.fire({
-            icon: 'success',
-            title: '¡BIENVENIDO!',
-            text: `Sesión iniciada como ${userFound.ROL}`,
-            timer: 2000,
-            showConfirmButton: false
-        });
-
-        applyAccessControl();
+        if (isLoginPage) {
+            window.location.href = 'index.html';
+        } else {
+            Swal.fire({
+                icon: 'success',
+                title: '¡BIENVENIDO!',
+                text: `Sesión iniciada como ${userFound.ROL}`,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            applyAccessControl();
+        }
     } else {
         Swal.fire({
             icon: 'error',
@@ -176,6 +172,20 @@ function checkRouteAccess(role) {
             });
         }
     }
+    
+    // Proteger usuarios.html
+    if (path.includes('usuarios.html')) {
+        if (role !== 'ADMIN') {
+            Swal.fire({
+                icon: 'error',
+                title: 'ACCESO DENEGADO',
+                text: 'Este módulo es de uso exclusivo para Administradores.',
+                confirmButtonColor: '#3F51B5'
+            }).then(() => {
+                window.location.href = 'index.html';
+            });
+        }
+    }
 }
 
 /**
@@ -192,6 +202,9 @@ function logout() {
  * Actualiza el indicador de usuario en la interfaz.
  */
 function updateAuthUI() {
+    // Si estamos en la página de login, abortamos para no destruir su diseño puro
+    if (window.location.pathname.includes('login.html')) return;
+
     let navContainer = document.getElementById('app-top-nav');
     if (!navContainer) {
         navContainer = document.createElement('div');
@@ -211,9 +224,10 @@ function updateAuthUI() {
         else if (currentUser.ROL === 'USER-P') iconClass = 'fas fa-user';
     }
 
+    // Renderizar Header HTML
     navContainer.innerHTML = `
         <div class="nav-brand-area">
-            <img src="https://i.ibb.co/nD9wcPv/GRUPO-TMD-FULL.png" alt="Logo TMD" class="nav-logo">
+            <img src="icons/icon-any.svg" alt="Logo TMD" class="nav-logo">
             <span class="brand-tag">NOVEDADES</span>
         </div>
         <div class="nav-user-area">
@@ -249,7 +263,9 @@ function createSidebar() {
     if (currentUser) {
         let roleIcon = 'fas fa-user';
         let roleClass = currentUser.ROL.toLowerCase();
-        const isResolutionPage = window.location.pathname.includes('resolucion.html');
+        const path = window.location.pathname;
+        const isResolutionPage = path.includes('resolucion.html');
+        const isUsersPage = path.includes('usuarios.html');
 
         if (currentUser.ROL === 'ADMIN') roleIcon = 'fas fa-user-shield';
         else if (currentUser.ROL === 'USER-C') roleIcon = 'fas fa-user-check';
@@ -267,12 +283,17 @@ function createSidebar() {
             </div>
             <div class="sidebar-body">
                 <div class="sidebar-label">MENÚ DE ACCESO</div>
-                <a href="index.html" class="sidebar-link ${!isResolutionPage ? 'active' : ''}">
+                <a href="index.html" class="sidebar-link ${(!isResolutionPage && !isUsersPage) ? 'active' : ''}">
                     <i class="fas fa-home"></i> Inicio / Reportes
                 </a>
                 ${(currentUser.ROL === 'ADMIN' || currentUser.ROL === 'USER-P') ? `
                     <a href="resolucion.html" class="sidebar-link ${isResolutionPage ? 'active' : ''}">
                         <i class="fas fa-desktop"></i> Módulo de Resolución
+                    </a>
+                ` : ''}
+                ${currentUser.ROL === 'ADMIN' ? `
+                    <a href="usuarios.html" class="sidebar-link ${isUsersPage ? 'active' : ''}">
+                        <i class="fas fa-users-cog"></i> Gestión de Usuarios
                     </a>
                 ` : ''}
             </div>

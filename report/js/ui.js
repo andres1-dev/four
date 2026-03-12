@@ -185,7 +185,296 @@ function toggleActionSections(action) {
     if (action === 'ACTUALIZAR_DATOS') {
         fillPlantaName();
     }
+    
+    // Auto-llenar el correo y la localización GPS en el formulario de Calidad
+    if (action === 'CALIDAD') {
+        const emailInput = document.getElementById('email');
+        if (emailInput && typeof currentUser !== 'undefined' && currentUser) {
+            emailInput.value = currentUser.CORREO || '';
+            emailInput.readOnly = true;
+            emailInput.classList.add('bg-light');
+        }
+        // Capturar coordenadas GPS en el momento de abrir el formulario
+        requestCalidadLocation();
+    }
 }
+
+/* ── GPS Permission Manager ── */
+
+/**
+ * Clave única de preferencia GPS por usuario.
+ */
+function getGpsKey() {
+    const userId = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.ID : 'guest';
+    return `gps_calidad_${userId}`;
+}
+
+/**
+ * Habilita o deshabilita todos los campos del formulario de Calidad.
+ * @param {boolean} disabled — true si el GPS no está activo
+ */
+function setCalidadFieldsDisabled(disabled) {
+    const ids = ['email', 'tipoVisita', 'conclusion', 'observacionesCalidad', 'soporte'];
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.disabled = disabled;
+        if (disabled) {
+            el.style.opacity = '0.45';
+            el.style.cursor  = 'not-allowed';
+        } else {
+            el.style.opacity = '';
+            el.style.cursor  = '';
+        }
+    });
+    const submitBtn = document.querySelector('#calidadForm button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = disabled;
+}
+
+/**
+ * Aplica el estado visual ON/OFF del toggle GPS con estilo minimalista (dot + texto).
+ * @param {boolean} enabled
+ */
+function applyGpsToggleUI(enabled) {
+    const label  = document.getElementById('gps-status-label');
+    const slider = document.getElementById('gps-toggle-slider');
+    const knob   = document.getElementById('gps-toggle-knob');
+    if (!label || !slider || !knob) return;
+
+    if (enabled) {
+        // Badge minimalista: dot verde + texto discreto
+        label.innerHTML = `
+            <span style="
+                display:inline-flex; align-items:center; gap:5px;
+                background:#f0fdf4; color:#16a34a;
+                font-size:0.72rem; font-weight:600;
+                padding:2px 8px; border-radius:20px;
+                border:1px solid #bbf7d0; letter-spacing:0.2px;
+            ">
+                <span style="width:6px; height:6px; border-radius:50%; background:#16a34a; display:inline-block;"></span>
+                Ubicación activa
+            </span>`;
+        slider.style.background = '#16a34a';
+        knob.style.transform    = 'translateX(20px)';
+        setCalidadFieldsDisabled(false);
+    } else {
+        // Badge rojo
+        label.innerHTML = `
+            <span style="
+                display:inline-flex; align-items:center; gap:5px;
+                background:#fef2f2; color:#dc2626;
+                font-size:0.72rem; font-weight:600;
+                padding:2px 8px; border-radius:20px;
+                border:1px solid #fecaca; letter-spacing:0.2px;
+            ">
+                <span style="width:6px; height:6px; border-radius:50%; background:#dc2626; display:inline-block;"></span>
+                Sin ubicación
+            </span>`;
+        slider.style.background = '#dc2626';
+        knob.style.transform    = 'translateX(0)';
+        setCalidadFieldsDisabled(true);
+    }
+}
+
+/**
+ * Muestra el bloqueo del mapa cuando GPS está desactivado.
+ */
+function showGpsBlockedOverlay() {
+    const mapaCard = document.getElementById('mapa-calidad-card');
+    if (mapaCard) {
+        mapaCard.innerHTML = `
+            <div style="text-align:center; padding:2rem;">
+                <div style="
+                    width:48px; height:48px; border-radius:50%;
+                    background:#fef2f2; border:1.5px solid #fecaca;
+                    display:flex; align-items:center; justify-content:center;
+                    margin:0 auto 12px;
+                ">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 9-9c2.52 0 4.8 1.04 6.44 2.72"></path>
+                    </svg>
+                </div>
+                <p style="margin:0; font-weight:700; color:#374151; font-size:0.88rem;">Ubicación desactivada</p>
+                <p style="margin:6px 0 0; color:#9ca3af; font-size:0.78rem; line-height:1.5;">
+                    Active la ubicación GPS con el toggle<br>para poder registrar la visita.
+                </p>
+            </div>
+        `;
+    }
+    document.getElementById('localizacion').value = '';
+    setCalidadFieldsDisabled(true);
+}
+
+/**
+ * Toggle manual: activa o desactiva el GPS para este usuario y actualiza la UI.
+ */
+function toggleGpsPermission() {
+    const key     = getGpsKey();
+    const current = localStorage.getItem(key);
+    const newState = (current === 'enabled') ? 'disabled' : 'enabled';
+    localStorage.setItem(key, newState);
+    applyGpsToggleUI(newState === 'enabled');
+
+    if (newState === 'enabled') {
+        const submitBtn = document.querySelector('#calidadForm button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = false;
+        requestCalidadLocation(); // Cargar el mapa tras reactivar
+    } else {
+        showGpsBlockedOverlay();
+    }
+}
+
+// Clave de caché de coordenadas globales (compartida por sesión, no por usuario)
+const GPS_COORDS_CACHE_KEY = 'gps_coords_cache';
+const GPS_COORDS_MAX_AGE_MS = 2 * 60 * 60 * 1000; // 2 horas
+
+/**
+ * Muestra el mapa con las coordenadas dadas sin hacer ninguna petición al navegador.
+ */
+function _renderMapCard(lat, lng, locInput, mapaCard) {
+    locInput.value = `${lat}, ${lng}`;
+    const mapSrc = `https://maps.google.com/maps?q=${lat},${lng}&z=16&output=embed`;
+    mapaCard.innerHTML = `
+        <div style="width:100%; position:relative;">
+            <iframe
+                src="${mapSrc}"
+                width="100%" height="220"
+                style="border:0; display:block;"
+                allowfullscreen="" loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"
+            ></iframe>
+            <div style="
+                position:absolute; bottom:10px; left:50%; transform:translateX(-50%);
+                background:rgba(38,82,219,0.88); color:#fff;
+                font-size:0.72rem; font-weight:700; padding:4px 12px;
+                border-radius:20px; pointer-events:none; white-space:nowrap;
+                box-shadow:0 2px 8px rgba(0,0,0,0.25);
+            ">
+                <i class="fas fa-crosshairs me-1"></i> ${lat}, ${lng}
+            </div>
+        </div>
+    `;
+    // Mostrar botón de refrescar
+    const refreshBtn = document.getElementById('gps-refresh-btn');
+    if (refreshBtn) refreshBtn.style.display = 'inline-flex';
+}
+
+/**
+ * Solicita la ubicación GPS cuando el usuario lo activa voluntariamente.
+ * Solo se llama al abrir CALIDAD por primera vez (sin cache) o al hacer clic en "Actualizar".
+ */
+function requestCalidadLocation() {
+    const locInput  = document.getElementById('localizacion');
+    const mapaCard  = document.getElementById('mapa-calidad-card');
+    const submitBtn = document.querySelector('#calidadForm button[type="submit"]');
+    if (!locInput || !mapaCard) return;
+
+    const key  = getGpsKey();
+    const pref = localStorage.getItem(key);
+
+    // Si el usuario desactivó manualmente → bloquear módulo
+    if (pref === 'disabled') {
+        applyGpsToggleUI(false);
+        showGpsBlockedOverlay();
+        return;
+    }
+
+    applyGpsToggleUI(true);
+    if (submitBtn) submitBtn.disabled = false;
+
+    // ── ESTRATEGIA CACHE-FIRST ──
+    // Buscar coordenadas guardadas previamente en localStorage
+    try {
+        const cached = JSON.parse(localStorage.getItem(GPS_COORDS_CACHE_KEY));
+        const age = Date.now() - (cached?.ts || 0);
+        if (cached && cached.lat && cached.lng && age < GPS_COORDS_MAX_AGE_MS) {
+            // Coords en caché vigentes → mostrar mapa directamente, sin tocar el navegador
+            _renderMapCard(cached.lat, cached.lng, locInput, mapaCard);
+            return;
+        }
+    } catch (_) { /* caché corrupto, ignorar */ }
+
+    // Sin caché vigente → mostrar botón para que el usuario active consciente
+    if (!navigator.geolocation) {
+        mapaCard.innerHTML = `<span><i class="fas fa-exclamation-triangle me-2 text-warning"></i> Geolocalización no soportada.</span>`;
+        locInput.value = 'No soportado';
+        return;
+    }
+
+    if (submitBtn) submitBtn.disabled = true;
+    mapaCard.innerHTML = `
+        <div style="text-align:center; padding:2rem;">
+            <i class="fas fa-map-location-dot" style="font-size:2.5rem; color:#3b82f6; margin-bottom:12px;"></i>
+            <p style="margin:0 0 14px; color:#475569; font-size:0.9rem; font-weight:600;">
+                Activa la ubicación para registrar la visita de Calidad.
+            </p>
+            <button onclick="activarGpsManual()" style="
+                background:linear-gradient(135deg,#3b82f6,#6366f1);
+                color:#fff; border:none; padding:10px 24px;
+                border-radius:10px; font-weight:700; font-size:0.85rem;
+                cursor:pointer; box-shadow:0 4px 12px rgba(59,130,246,0.35);
+            ">
+                <i class="fas fa-location-crosshairs me-2"></i> Activar GPS
+            </button>
+            <p style="margin:10px 0 0; font-size:0.72rem; color:#94a3b8;">
+                Solo se pedirá una vez. La ubicación se guarda automáticamente.
+            </p>
+        </div>
+    `;
+}
+
+/**
+ * Llamado desde el botón "Activar GPS" o "Actualizar".
+ * El usuario hace clic conscientemente → navegador solo pregunta si es la primera vez.
+ */
+function activarGpsManual() {
+    const locInput  = document.getElementById('localizacion');
+    const mapaCard  = document.getElementById('mapa-calidad-card');
+    const submitBtn = document.querySelector('#calidadForm button[type="submit"]');
+    const key = getGpsKey();
+
+    mapaCard.innerHTML = `<span><i class="fas fa-spinner fa-spin me-2"></i> Obteniendo coordenadas...</span>`;
+    if (submitBtn) submitBtn.disabled = true;
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const lat = position.coords.latitude.toFixed(6);
+            const lng = position.coords.longitude.toFixed(6);
+
+            // Guardar en caché con timestamp para no volver a pedir permiso
+            localStorage.setItem(GPS_COORDS_CACHE_KEY, JSON.stringify({ lat, lng, ts: Date.now() }));
+            localStorage.setItem(key, 'enabled');
+            applyGpsToggleUI(true);
+            if (submitBtn) submitBtn.disabled = false;
+
+            _renderMapCard(lat, lng, locInput, mapaCard);
+        },
+        (error) => {
+            console.warn('[GPS]', error.message);
+            if (submitBtn) submitBtn.disabled = false;
+            if (error.code === error.PERMISSION_DENIED) {
+                localStorage.setItem(key, 'disabled');
+                applyGpsToggleUI(false);
+                showGpsBlockedOverlay();
+            } else {
+                locInput.value = 'No disponible';
+                mapaCard.innerHTML = `
+                    <div style="text-align:center; padding:1.5rem;">
+                        <i class="fas fa-map-marker-alt" style="font-size:2rem; color:#cbd5e1; margin-bottom:10px;"></i>
+                        <p style="margin:0; color:#94a3b8; font-size:0.85rem;">
+                            No se pudo obtener la ubicación.<br>
+                            <small>Verifique los permisos del navegador e intente de nuevo.</small>
+                        </p>
+                    </div>
+                `;
+            }
+        },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+    );
+}
+
+
 
 /**
  * Llena automáticamente el nombre y otros datos conocidos de la planta seleccionada

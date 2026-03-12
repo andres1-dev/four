@@ -24,6 +24,7 @@ async function handleCalidadSubmit(e) {
 
         // ── Datos específicos de calidad ──
         const email = document.getElementById('email').value;
+        const localizacion = document.getElementById('localizacion')?.value || 'No disponible';
         const tipoVisita = document.getElementById('tipoVisita').value;
         const conclusion = document.getElementById('conclusion').value;
         const observaciones = document.getElementById('observacionesCalidad').value;
@@ -39,6 +40,7 @@ async function handleCalidadSubmit(e) {
             hoja: SHEETS_DESTINO.CALIDAD,
             ...lotData,
             email,
+            localizacion,
             tipoVisita,
             conclusion,
             observaciones,
