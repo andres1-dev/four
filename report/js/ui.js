@@ -242,37 +242,21 @@ function applyGpsToggleUI(enabled) {
     if (!label || !slider || !knob) return;
 
     if (enabled) {
-        // Badge minimalista: dot verde + texto discreto
-        label.innerHTML = `
-            <span style="
-                display:inline-flex; align-items:center; gap:5px;
-                background:#f0fdf4; color:#16a34a;
-                font-size:0.72rem; font-weight:600;
-                padding:2px 8px; border-radius:20px;
-                border:1px solid #bbf7d0; letter-spacing:0.2px;
-            ">
-                <span style="width:6px; height:6px; border-radius:50%; background:#16a34a; display:inline-block;"></span>
-                Ubicación activa
-            </span>`;
+        // Dot verde sin texto
+        label.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:#16a34a;display:inline-block;box-shadow:0 0 0 2px #bbf7d0;"></span>`;
         slider.style.background = '#16a34a';
         knob.style.transform    = 'translateX(20px)';
         setCalidadFieldsDisabled(false);
+        const rb = document.getElementById('gps-refresh-btn');
+        if (rb) rb.style.display = 'inline-block';
     } else {
-        // Badge rojo
-        label.innerHTML = `
-            <span style="
-                display:inline-flex; align-items:center; gap:5px;
-                background:#fef2f2; color:#dc2626;
-                font-size:0.72rem; font-weight:600;
-                padding:2px 8px; border-radius:20px;
-                border:1px solid #fecaca; letter-spacing:0.2px;
-            ">
-                <span style="width:6px; height:6px; border-radius:50%; background:#dc2626; display:inline-block;"></span>
-                Sin ubicación
-            </span>`;
+        // Dot rojo sin texto
+        label.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:#dc2626;display:inline-block;box-shadow:0 0 0 2px #fecaca;"></span>`;
         slider.style.background = '#dc2626';
         knob.style.transform    = 'translateX(0)';
         setCalidadFieldsDisabled(true);
+        const rb = document.getElementById('gps-refresh-btn');
+        if (rb) rb.style.display = 'none';
     }
 }
 
@@ -446,7 +430,6 @@ function activarGpsManual() {
             localStorage.setItem(GPS_COORDS_CACHE_KEY, JSON.stringify({ lat, lng, ts: Date.now() }));
             localStorage.setItem(key, 'enabled');
             applyGpsToggleUI(true);
-            if (submitBtn) submitBtn.disabled = false;
 
             _renderMapCard(lat, lng, locInput, mapaCard);
         },

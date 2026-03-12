@@ -3,6 +3,8 @@
    ========================================================================== */
 
 let gsUserList = [];
+let gsCurrentPage = 1;
+const gsRecordsPerPage = 3; // Solicitado: más de 3 activa paginación
 
 /**
  * Se inicializa cuando carga la página usuarios.html
@@ -69,59 +71,238 @@ function updateUserStats() {
  * Renderiza la tabla de usuarios en usuarios.html
  */
 function renderUserTable(usersToRender) {
+
     const tbody = document.getElementById('userTableBody');
+    const pagContainer = document.getElementById('paginationUsers');
     if (!tbody) return;
 
+    if (pagContainer) pagContainer.innerHTML = '';
+
     if (!usersToRender || usersToRender.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center fw-bold py-4 text-muted">No existen usuarios registrados.</td></tr>';
+        tbody.innerHTML = `
+            <div style="
+                text-align:center; padding:3rem 1rem;
+                color:#94a3b8; font-weight:600; font-size:0.9rem;
+            ">
+                <div style="font-size:2rem; margin-bottom:12px;">👤</div>
+                No existen usuarios registrados.
+            </div>`;
         return;
     }
 
-    tbody.innerHTML = usersToRender.map(user => {
-        const isPending = user.ROL === 'PENDIENTE';
-        const badgeColor = isPending ? '#f59e0b' : (user.ROL === 'ADMIN' ? '#ef4444' : '#3b82f6');
-        const badgeBg = isPending ? '#fffbeb' : (user.ROL === 'ADMIN' ? '#fef2f2' : '#eff6ff');
-        
-        // Regla de Seguridad: Ningún admin puede editar a otro admin.
-        const cUserID = (typeof currentUser !== 'undefined' && currentUser) ? String(currentUser.ID).trim() : null;
-        const targetID = String(user.ID).trim();
-        const isAdmin = user.ROL === 'ADMIN';
-        const isSelf = cUserID === targetID;
-        const canEdit = !isAdmin || isSelf;
+    // Lógica de Paginación
+    const totalRecords = usersToRender.length;
+    const sliceStart = (gsCurrentPage - 1) * gsRecordsPerPage;
+    const sliceEnd = sliceStart + gsRecordsPerPage;
+    const paginatedData = usersToRender.slice(sliceStart, sliceEnd);
 
-        return `
-        <tr class="user-row" style="border-bottom: 1px solid #f1f5f9;">
-            <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: #475569;">${user.ID}</td>
-            <td>
-                <div style="font-weight: 800; color: #0f172a; margin-bottom: 2px; text-transform: uppercase;">${user.USUARIO}</div>
-                <div style="font-size: 0.75rem; color: #64748b; font-weight: 500;">
-                    <i class="fas fa-envelope me-1"></i> ${user.CORREO} <br/>
-                    <i class="fas fa-phone me-1 mt-1"></i> ${user.TELEFONO}
+    if (totalRecords > gsRecordsPerPage) {
+        renderPaginacion(totalRecords, usersToRender);
+    }
+
+    const ROL_META = {
+        'ADMIN':     { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', icon: 'fa-shield-halved' },
+        'USER-P':    { color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe', icon: 'fa-industry'       },
+        'USER-C':    { color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', icon: 'fa-magnifying-glass' },
+        'GUEST':     { color: '#64748b', bg: '#f8fafc', border: '#e2e8f0', icon: 'fa-user'            },
+        'PENDIENTE': { color: '#d97706', bg: '#fffbeb', border: '#fde68a', icon: 'fa-user-clock'      },
+    };
+
+    const cUserID = (typeof currentUser !== 'undefined' && currentUser) ? String(currentUser.ID).trim() : null;
+
+    tbody.innerHTML = `
+        <div style="
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            padding: 2px;
+        ">
+        ${paginatedData.map(user => {
+            const isAdmin  = user.ROL === 'ADMIN';
+            const isSelf   = cUserID === String(user.ID).trim();
+            const canEdit  = !isAdmin || isSelf;
+            const meta     = ROL_META[user.ROL] || ROL_META['GUEST'];
+            const initial  = (user.USUARIO || '?').charAt(0).toUpperCase();
+            const avatarBg = meta.bg;
+            const isPending = user.ROL === 'PENDIENTE';
+
+            return `
+            <div style="
+                background: #fff;
+                border: 1px solid #f1f5f9;
+                border-radius: 16px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+                overflow: hidden;
+                transition: box-shadow 0.2s, transform 0.2s;
+                display: flex;
+                flex-direction: column;
+            " onmouseover="this.style.boxShadow='0 6px 20px rgba(0,0,0,0.08)';this.style.transform='translateY(-2px)'"
+               onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.04)';this.style.transform='translateY(0)'">
+
+                <!-- Card Header: Avatar + name + role badge -->
+                <div style="
+                    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+                    padding: 16px 16px 12px;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    border-bottom: 1px solid #f1f5f9;
+                ">
+                    <!-- Avatar -->
+                    <div style="
+                        width: 44px; height: 44px;
+                        border-radius: 50%;
+                        background: ${meta.bg};
+                        border: 2px solid ${meta.border};
+                        display: flex; align-items: center; justify-content: center;
+                        font-size: 1.1rem; font-weight: 800;
+                        color: ${meta.color};
+                        flex-shrink: 0;
+                        letter-spacing: -0.5px;
+                    ">${initial}</div>
+
+                    <div style="flex:1; min-width:0;">
+                        <div style="
+                            font-weight: 800; font-size: 0.88rem;
+                            color: #0f172a; text-transform: uppercase;
+                            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                        ">${user.USUARIO || '—'}</div>
+                        <div style="
+                            font-family: 'JetBrains Mono', monospace;
+                            font-size: 0.65rem; color: #94a3b8;
+                            font-weight: 600; margin-top: 2px;
+                        "># ${user.ID}</div>
+                    </div>
+
+                    <!-- Role badge -->
+                    <span style="
+                        background: ${meta.bg};
+                        color: ${meta.color};
+                        border: 1px solid ${meta.border};
+                        padding: 3px 9px; border-radius: 20px;
+                        font-size: 0.6rem; font-weight: 800;
+                        text-transform: uppercase; letter-spacing: 0.5px;
+                        flex-shrink: 0;
+                        display: flex; align-items: center; gap: 5px;
+                    ">
+                        <i class="fas ${meta.icon}" style="font-size:0.55rem;"></i>
+                        ${user.ROL || '?'}
+                    </span>
                 </div>
-            </td>
-            <td>
-                <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 0.75rem;">
-                    ${user.ROL || 'DESCONOCIDO'}
-                </span>
-            </td>
-            <td class="text-center role-actions">
-                ${canEdit ? `
-                <button class="btn btn-sm" style="background: #eff6ff; color: #3b82f6; border: none; font-weight: 700; font-size: 0.8rem; padding: 6px 14px;" onclick="openEditUserModal('${user.ID}')">
-                    <i class="fas fa-user-edit me-1"></i> Editar
-                </button>
-                ` : `
-                <span class="text-muted small fw-bold" title="Bloqueado por seguridad de jerarquía"><i class="fas fa-lock me-1"></i> Intocable</span>
-                `}
-            </td>
-        </tr>
-        `;
-    }).join('');
+
+                <!-- Card Body: contact info -->
+                <div style="padding: 12px 16px; flex:1; display:flex; flex-direction:column; gap:7px;">
+                    <div style="display:flex; align-items:center; gap:8px; font-size:0.8rem; color:#475569;">
+                        <div style="
+                            width:26px; height:26px; border-radius:8px;
+                            background:#f1f5f9; display:flex;
+                            align-items:center; justify-content:center; flex-shrink:0;
+                        ">
+                            <i class="fas fa-envelope" style="font-size:0.65rem; color:#94a3b8;"></i>
+                        </div>
+                        <span style="font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:0.78rem;">
+                            ${user.CORREO || '—'}
+                        </span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px; font-size:0.8rem; color:#475569;">
+                        <div style="
+                            width:26px; height:26px; border-radius:8px;
+                            background:#f1f5f9; display:flex;
+                            align-items:center; justify-content:center; flex-shrink:0;
+                        ">
+                            <i class="fas fa-phone" style="font-size:0.65rem; color:#94a3b8;"></i>
+                        </div>
+                        <span style="font-weight:500; font-size:0.78rem;">
+                            ${user.TELEFONO || '—'}
+                        </span>
+                    </div>
+
+                    ${isPending ? `
+                    <div style="
+                        margin-top:4px;
+                        background:#fffbeb; border:1px solid #fde68a;
+                        border-radius:8px; padding:6px 10px;
+                        font-size:0.7rem; color:#92400e; font-weight:600;
+                        display:flex; align-items:center; gap:6px;
+                    ">
+                        <i class="fas fa-circle-exclamation" style="font-size:0.7rem;"></i>
+                        Pendiente de aprobación
+                    </div>` : ''}
+                </div>
+
+                <!-- Card Footer: action button -->
+                <div style="
+                    padding: 10px 16px;
+                    border-top: 1px solid #f8fafc;
+                    background: #fafbfc;
+                ">
+                    ${canEdit ? `
+                    <button onclick="openEditUserModal('${user.ID}')" style="
+                        width: 100%; padding: 8px 0;
+                        background: linear-gradient(135deg, #3b82f6, #6366f1);
+                        color: #fff; border: none;
+                        border-radius: 10px;
+                        font-size: 0.75rem; font-weight: 700;
+                        cursor: pointer; letter-spacing: 0.2px;
+                        display: flex; align-items: center; justify-content: center; gap: 7px;
+                        transition: filter 0.15s, transform 0.15s;
+                    " onmouseover="this.style.filter='brightness(1.08)';this.style.transform='scale(1.01)'"
+                       onmouseout="this.style.filter='';this.style.transform=''">
+                        <i class="fas fa-user-pen" style="font-size:0.75rem;"></i>
+                        Editar usuario
+                    </button>
+                    ` : `
+                    <div style="
+                        width:100%; text-align:center;
+                        font-size:0.72rem; font-weight:700;
+                        color:#94a3b8; letter-spacing:0.3px;
+                        display:flex; align-items:center; justify-content:center; gap:6px;
+                        padding:6px 0;
+                    ">
+                        <i class="fas fa-lock"></i> Protegido por jerarquía
+                    </div>
+                    `}
+                </div>
+            </div>`;
+        }).join('')}
+        </div>
+    `;
 }
 
-/**
- * Filtra los usuarios en vivo en la pantalla.
- */
+function renderPaginacion(totalRecords, dataRef) {
+    const pagContainer = document.getElementById('paginationUsers');
+    if (!pagContainer) return;
+
+    const totalPages = Math.ceil(totalRecords / gsRecordsPerPage);
+    if (totalPages <= 1) return;
+
+    const nav = document.createElement('div');
+    nav.className = 'pagination-container-lux';
+
+    const btnPrev = document.createElement('button');
+    btnPrev.className = 'page-btn-lux';
+    btnPrev.disabled = gsCurrentPage === 1;
+    btnPrev.innerHTML = `<i class="fas fa-chevron-left"></i> Anterior`;
+    btnPrev.onclick = () => { gsCurrentPage--; renderUserTable(dataRef); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+    nav.appendChild(btnPrev);
+
+    const info = document.createElement('span');
+    info.className = 'page-info-lux';
+    info.textContent = `Página ${gsCurrentPage} de ${totalPages}`;
+    nav.appendChild(info);
+
+    const btnNext = document.createElement('button');
+    btnNext.className = 'page-btn-lux';
+    btnNext.disabled = gsCurrentPage === totalPages;
+    btnNext.innerHTML = `Siguiente <i class="fas fa-chevron-right"></i>`;
+    btnNext.onclick = () => { gsCurrentPage++; renderUserTable(dataRef); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+    nav.appendChild(btnNext);
+
+    pagContainer.appendChild(nav);
+}
+
 function handleUserFilter() {
+    gsCurrentPage = 1;
     const term = (document.getElementById('userSearchInput')?.value || '').toLowerCase().trim();
     
     const divisa = gsUserList.filter(u => {
@@ -134,52 +315,137 @@ function handleUserFilter() {
     renderUserTable(divisa);
 }
 
+
+
 /**
- * Abre la ventana modal para editar todos los datos del usuario.
+ * Abre la ventana modal para editar todos los datos del usuario de forma estética.
  */
 async function openEditUserModal(userId) {
     const user = gsUserList.find(u => String(u.ID).trim() === String(userId).trim());
     if (!user) return;
 
     const html = `
-        <div class="text-start p-1">
-            <label class="form-label small fw-bold text-muted mb-1">Nombre Completo</label>
-            <input type="text" id="edit-nombre" class="form-control mb-3" style="font-weight: 600;" value="${user.USUARIO || ''}">
+        <style>
+            .edit-modal-lux { font-family: 'Inter', sans-serif; text-align: left; }
+            .field-container-lux {
+                margin-bottom: 20px;
+                position: relative;
+            }
+            .label-lux {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 0.75rem;
+                font-weight: 700;
+                color: #64748b;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 6px;
+            }
+            .label-lux i { color: #3b82f6; font-size: 0.85rem; }
+            .input-lux {
+                width: 100%;
+                padding: 12px 16px;
+                border-radius: 12px;
+                border: 1.5px solid #e2e8f0;
+                background: #f8fafc;
+                font-size: 0.95rem;
+                font-weight: 600;
+                color: #1e293b;
+                transition: all 0.2s;
+            }
+            .input-lux:focus {
+                outline: none;
+                border-color: #3b82f6;
+                background: white;
+                box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08);
+            }
+            .select-lux {
+                height: 48px;
+                cursor: pointer;
+            }
+            .pwd-hint {
+                font-size: 0.65rem;
+                color: #94a3b8;
+                margin-top: 6px;
+                line-height: 1.4;
+            }
+            .header-grad-lux {
+                background: linear-gradient(135deg, #3f51b5 0%, #3b82f6 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                font-weight: 900;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                font-size: 1.35rem;
+                border-bottom: 2px solid #eff6ff;
+                padding-bottom: 12px;
+                margin-bottom: 20px;
+            }
+        </style>
+
+        <div class="edit-modal-lux">
+            <div class="header-grad-lux">
+                <i class="fas fa-user-gear"></i> Gestión de Perfil
+            </div>
+
+            <div class="field-container-lux">
+                <label class="label-lux"><i class="fas fa-signature"></i> Nombre del Usuario</label>
+                <input type="text" id="edit-nombre" class="input-lux" value="${user.USUARIO || ''}" placeholder="Ej. Juan Pérez">
+            </div>
             
-            <label class="form-label small fw-bold text-muted mb-1">Correo Electrónico</label>
-            <input type="email" id="edit-correo" class="form-control mb-3" style="font-weight: 600;" value="${user.CORREO || ''}">
+            <div class="field-container-lux">
+                <label class="label-lux"><i class="fas fa-envelope"></i> Correo de Contacto</label>
+                <input type="email" id="edit-correo" class="input-lux" value="${user.CORREO || ''}" placeholder="usuario@dominio.com">
+            </div>
             
-            <label class="form-label small fw-bold text-muted mb-1">Teléfono</label>
-            <input type="tel" id="edit-telefono" class="form-control mb-3" style="font-weight: 600;" value="${user.TELEFONO || ''}">
+            <div class="field-container-lux">
+                <label class="label-lux"><i class="fas fa-phone"></i> Teléfono / Celular</label>
+                <input type="tel" id="edit-telefono" class="input-lux" value="${user.TELEFONO || ''}" placeholder="+57 300...">
+            </div>
             
-            <label class="form-label small fw-bold text-muted mb-1">Rol del Sistema</label>
-            <select id="edit-rol" class="form-select mb-3" style="font-weight: 600;">
-                <option value="ADMIN" ${user.ROL === 'ADMIN' ? 'selected' : ''}>ADMIN - Administrador</option>
-                <option value="USER-P" ${user.ROL === 'USER-P' ? 'selected' : ''}>USER-P - Producción</option>
-                <option value="USER-C" ${user.ROL === 'USER-C' ? 'selected' : ''}>USER-C - Calidad</option>
-                <option value="GUEST" ${user.ROL === 'GUEST' ? 'selected' : ''}>GUEST - Invitado</option>
-                <option value="PENDIENTE" ${user.ROL === 'PENDIENTE' ? 'selected' : ''}>PENDIENTE - Sin Acceso</option>
-            </select>
+            <div class="field-container-lux">
+                <label class="label-lux"><i class="fas fa-shield-halved"></i> Rol en el Sistema</label>
+                <select id="edit-rol" class="input-lux select-lux">
+                    <option value="ADMIN" ${user.ROL === 'ADMIN' ? 'selected' : ''}>ADMIN — Control Total</option>
+                    <option value="USER-P" ${user.ROL === 'USER-P' ? 'selected' : ''}>USER-P — Producción</option>
+                    <option value="USER-C" ${user.ROL === 'USER-C' ? 'selected' : ''}>USER-C — Calidad</option>
+                    <option value="GUEST" ${user.ROL === 'GUEST' ? 'selected' : ''}>GUEST — Visualizador</option>
+                    <option value="PENDIENTE" ${user.ROL === 'PENDIENTE' ? 'selected' : ''}>PENDIENTE — Sin Acceso</option>
+                </select>
+            </div>
             
-            <label class="form-label small fw-bold text-muted mb-1">Contraseña de Acceso <span style="font-size:0.75rem; font-weight:normal; color:#9ca3af;">(opcional)</span></label>
-            <input type="text" id="edit-password" class="form-control" style="font-weight: 600; font-family: monospace;" placeholder="Escriba aquí para cambiarla">
-            <small class="text-muted mt-1 d-block" style="font-size: 0.7rem;">Deje este campo en blanco si no desea modificar la contraseña actual.</small>
+            <div class="field-container-lux">
+                <label class="label-lux"><i class="fas fa-key"></i> Nueva Contraseña</label>
+                <input type="text" id="edit-password" class="input-lux" style="font-family: monospace;" placeholder="Dejar en blanco para no cambiar">
+                <div class="pwd-hint">Solo escriba aquí si desea establecer una nueva clave. De lo contrario, no se modificará la actual.</div>
+            </div>
         </div>
     `;
 
     const { value: formValues } = await Swal.fire({
-        title: '<i class="fas fa-user-cog" style="color: #3f51b5;"></i> Panel de Usuario',
+        title: null,
         html: html,
         focusConfirm: false,
         showCancelButton: true,
-        confirmButtonText: 'Guardar Cambios',
-        cancelButtonText: 'Cancelar',
+        confirmButtonText: '<i class="fas fa-save me-2"></i> ACTUALIZAR DATOS',
+        cancelButtonText: 'SALIR',
         confirmButtonColor: '#3F51B5',
-        customClass: { popup: 'rounded-4 shadow-lg' },
+        width: '500px',
+        padding: '2rem',
+        background: '#ffffff',
+        showCloseButton: false,
+        backdrop: 'rgba(15, 23, 42, 0.4)',
+        customClass: {
+            popup: 'shadow-2xl border-0 rounded-4 animate__animated animate__fadeInDown',
+            confirmButton: 'rounded-pill px-4 py-2 fw-bold',
+            cancelButton: 'rounded-pill px-4 py-2 fw-bold'
+        },
         preConfirm: () => {
             const nombre = document.getElementById('edit-nombre').value.trim();
             if(!nombre) {
-                Swal.showValidationMessage('El nombre no puede estar vacío');
+                Swal.showValidationMessage('El nombre es un campo obligatorio');
                 return false;
             }
             return {

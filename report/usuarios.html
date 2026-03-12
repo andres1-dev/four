@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/mobile.css">
     <style>
         :root {
             --glass-bg: rgba(255, 255, 255, 0.88);
@@ -28,7 +29,7 @@
 
         .wrapper-dashboard {
             width: 96%;
-            max-width: 1200px;
+            max-width: 1600px;
             margin: 80px auto 2rem;
             padding: 2rem;
             background: var(--glass-bg);
@@ -218,6 +219,54 @@
                 padding: 8px 0;
             }
         }
+
+        /* ── Pagination Luxury ── */
+        .pagination-container-lux {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin: 2rem 0;
+            padding: 1rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            border: 1px solid #f1f5f9;
+        }
+
+        .page-btn-lux {
+            border: 1px solid #e2e8f0;
+            background: white;
+            color: #475569;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .page-btn-lux:hover:not(:disabled) {
+            border-color: #3b82f6;
+            color: #3b82f6;
+            background: #eff6ff;
+            transform: translateY(-1px);
+        }
+
+        .page-btn-lux:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: #f8fafc;
+        }
+
+        .page-info-lux {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #94a3b8;
+        }
     </style>
 </head>
 
@@ -235,8 +284,8 @@
             </div>
 
             <div class="col-xl-7 col-lg-7 col-md-12">
-                <div class="d-flex gx-3 justify-content-center justify-content-lg-end"
-                    style="gap: 12px; flex-wrap: wrap;">
+                <div class="d-flex gx-3 justify-content-center justify-content-lg-end stats-container-main"
+                    style="gap: 12px;">
 
                     <div class="stat-card-mini">
                         <div class="stat-icon pending"><i class="fas fa-user-clock"></i></div>
@@ -265,9 +314,12 @@
 
         <!-- ── Unified Tool Bar ── -->
         <div class="unified-tool-bar">
-            <i class="fas fa-search text-muted me-3" style="font-size: 0.9rem;"></i>
-            <input type="text" id="userSearchInput" class="search-input-clean"
-                placeholder="Filtrar por nombre, ID o correo..." oninput="handleUserFilter()">
+            <!-- Ícono + input en un grupo que NUNCA se rompe -->
+            <div style="display:flex; align-items:center; flex:1; min-width:0;">
+                <i class="fas fa-search text-muted" style="font-size:0.85rem; flex-shrink:0; margin-right:10px;"></i>
+                <input type="text" id="userSearchInput" class="search-input-clean"
+                    placeholder="Filtrar por nombre, ID o correo..." oninput="handleUserFilter()">
+            </div>
         </div>
 
         <!-- ── Módulo Principal ── -->
@@ -277,22 +329,9 @@
         </div>
 
         <div id="dataSection" style="display: none;">
-            <div class="table-responsive bg-white"
-                style="border-radius: 16px; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-                <table class="table table-hover table-borderless table-users align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th style="width: 15%;">Identificación</th>
-                            <th style="width: 35%;">Información de Usuario</th>
-                            <th style="width: 25%;">Estado / Rol</th>
-                            <th style="width: 25%; text-align: center;">Acción Administrativa</th>
-                        </tr>
-                    </thead>
-                    <tbody id="userTableBody">
-                        <!-- Rendered by JS -->
-                    </tbody>
-                </table>
-            </div>
+            <div id="userTableBody"></div>
+            <!-- Paginación Aesthetic -->
+            <div id="paginationUsers"></div>
         </div>
     </div>
 

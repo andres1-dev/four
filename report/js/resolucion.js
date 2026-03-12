@@ -10,8 +10,33 @@ const gsRecordsPerPage = 6;
 window.onload = async function () {
     if (typeof initParticles === 'function') initParticles();
     if (typeof loadUsers === 'function') loadUsers();
+    
+    // Aplicar modo compacto si estaba guardado
+    const isCompact = localStorage.getItem('viewModeResolucion') === 'compact';
+    if (isCompact) {
+        document.getElementById('novedadesFeed')?.classList.add('is-compact');
+        document.getElementById('toggleViewMode')?.classList.add('active');
+    }
+
     await cargarDatos();
 };
+
+/**
+ * Alterna entre vista de lista (detallada) y vista de grid (compacta)
+ */
+function toggleCompactView() {
+    const feed = document.getElementById('novedadesFeed');
+    const btn = document.getElementById('toggleViewMode');
+    if (!feed || !btn) return;
+
+    const isCompact = feed.classList.toggle('is-compact');
+    btn.classList.toggle('active');
+
+    localStorage.setItem('viewModeResolucion', isCompact ? 'compact' : 'expanded');
+    
+    // Si la paginación cambia de layout, forzamos reflow o scroll top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
 async function cargarDatos() {
     const loader = document.getElementById('loader');
@@ -74,9 +99,18 @@ function updateStats() {
         if (elQ) elQ.textContent = `${Math.round(data.qty)} UND`;
     };
 
+    // Desktop
     updateEl('stat-pending', 'stat-pending-qty', stats.PENDIENTE);
     updateEl('stat-process', 'stat-process-qty', stats.ELABORACION);
     updateEl('stat-done', 'stat-done-qty', stats.FINALIZADO);
+
+    // Mobile (Unificado)
+    const mP = document.getElementById('m-stat-pending');
+    const mR = document.getElementById('m-stat-process');
+    const mD = document.getElementById('m-stat-done');
+    if (mP) mP.textContent = stats.PENDIENTE.lots;
+    if (mR) mR.textContent = stats.ELABORACION.lots;
+    if (mD) mD.textContent = stats.FINALIZADO.lots;
 }
 
 function handleFilter() {
@@ -177,7 +211,7 @@ function renderTabla(data = gsNovedades) {
                         </div>
                     </div>
                     <div class="days-badge-lux">
-                        ${calcularDiasHabiles(dtSalida || dtIngreso, dtIngreso || new Date())} DÍAS HÁBILES
+                        ${calcularDiasHabiles(dtIngreso, dtSalida || new Date())} DÍAS HÁBILES
                     </div>
                 </div>
             </div>
@@ -330,9 +364,12 @@ function imprimirNovedad(id) {
     window.open('plantilla-impresion.html', '_blank');
 }
 
+
 /**
  * Muestra un modal estético con la información de contacto del taller
  */
+
+
 /**
  * Muestra una ficha de contacto amplia y estilizada
  */
