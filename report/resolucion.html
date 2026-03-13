@@ -786,6 +786,7 @@
             position: absolute;
             bottom: 12px;
             right: 12px;
+            z-index: 3;
             background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
             color: white;
             border: none;
@@ -799,6 +800,12 @@
             gap: 6px;
             transition: all 0.2s;
             box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+            outline: none !important;
+        }
+
+        .notify-ai-btn:focus,
+        .notify-ai-btn:active {
+            outline: none !important;
         }
 
         .notify-ai-btn:hover:not(:disabled) {
@@ -984,9 +991,6 @@
         }
 
         .novedad-card-ultra.is-finalized {
-            opacity: 0.7;
-            background: #fafafa;
-        }
             opacity: 0.7;
             background: #fafafa;
         }
@@ -1304,7 +1308,7 @@
                 <h2 class="notify-title">Notificar Solución</h2>
                 <p class="notify-subtitle">Describe la solución implementada para resolver esta novedad</p>
 
-                <div class="notify-textarea-wrapper">
+                <div class="notify-textarea-wrapper ai-textarea-wrapper">
                     <textarea 
                         id="notifySolucion" 
                         class="notify-textarea" 

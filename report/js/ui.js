@@ -621,22 +621,13 @@ async function mejorarRedaccion(fieldId) {
     // Buscar el botón de restaurar
     const restoreBtn = textarea.parentElement.parentElement.querySelector('.btn-restore-text');
     
-    // Mostrar loader
-    Swal.fire({
-        title: 'PROCESANDO TEXTO',
-        html: `
-            <div class="text-center py-2">
-                <i class="fas fa-circle-notch fa-spin fa-2x text-primary mb-3"></i>
-                <p class="mb-0" style="font-size: 0.9rem; color: #666;">Analizando gramática y estructura técnica...</p>
-            </div>
-        `,
-        showConfirmButton: false,
-        allowOutsideClick: false,
-        customClass: {
-            title: 'fw-bold text-dark fs-5',
-            popup: 'rounded-4'
-        }
-    });
+    // Aplicar efecto de IA en el textarea wrapper
+    const wrapper = textarea.closest('.ai-textarea-wrapper');
+    if (wrapper) {
+        wrapper.classList.add('ai-animating');
+    }
+    textarea.disabled = true;
+    textarea.style.cursor = 'wait';
 
     try {
         const apiKey = CONFIG.GEMINI_KEY;
@@ -646,7 +637,7 @@ async function mejorarRedaccion(fieldId) {
         }
 
         const model = 'gemma-3n-e4b-it';
-        const promptIA = `Actúa como corrector técnico industrial. Corrige ortografía, gramática y normaliza abreviaturas (ej: pta -> planta, cant -> cantidad) del siguiente texto para que sea profesional y ejecutivo. Si el texto está completamente en MAYÚSCULAS, conviértelo a formato normal con mayúsculas y minúsculas apropiadas según las reglas del español. Devuelve solo el resultado corregido sin agregar información que no esté implícita en el texto original.\n\nTexto a corregir: ${textoOriginal}`;
+        const promptIA = `Actúa como corrector técnico industrial. Corrige ortografía, gramática y normaliza abreviaturas (ej: pta -> planta, cant -> cantidad) del siguiente texto para que sea profesional y ejecutivo. Si el texto está completamente en MAYÚSCULAS, conviértelo a formato de oración (primera letra mayúscula, resto minúscula). Devuelve solo el resultado corregido sin agregar información que no esté implícita en el texto original.\n\nTexto a corregir: ${textoOriginal}`;
 
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -672,9 +663,6 @@ async function mejorarRedaccion(fieldId) {
         let textoPulido = data.candidates[0].content.parts[0].text.trim();
         textoPulido = textoPulido.replace(/^["']|["']$/g, '');
         
-        // Cerrar el loader
-        Swal.close();
-        
         // Guardar el texto original en un atributo data
         textarea.setAttribute('data-original-text', textoOriginal);
         
@@ -695,6 +683,16 @@ async function mejorarRedaccion(fieldId) {
             timer: 2000,
             showConfirmButton: false
         });
+    } finally {
+        // Remover efecto de IA después de 1.2 segundos
+        setTimeout(() => {
+            const wrapper = textarea.closest('.ai-textarea-wrapper');
+            if (wrapper) {
+                wrapper.classList.remove('ai-animating');
+            }
+            textarea.disabled = false;
+            textarea.style.cursor = '';
+        }, 1200);
     }
 }
 

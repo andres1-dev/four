@@ -522,6 +522,11 @@ async function corregirTextoIA() {
     aiBtn.disabled = true;
     aiStatus.classList.add('active');
 
+    const wrapper = textarea.closest('.ai-textarea-wrapper');
+    if (wrapper) {
+        wrapper.classList.add('ai-animating');
+    }
+
     try {
         // Usar la misma configuración que ui.js
         const apiKey = CONFIG.GEMINI_KEY;
@@ -596,6 +601,9 @@ async function corregirTextoIA() {
     } finally {
         aiBtn.innerHTML = originalHTML;
         aiBtn.disabled = false;
+        if (wrapper) {
+            wrapper.classList.remove('ai-animating');
+        }
     }
 }
 

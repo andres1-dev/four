@@ -15,6 +15,7 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    outline: none !important;
 }
 
 .btn-action-muted:hover {
@@ -22,11 +23,17 @@
     opacity: 0.8;
 }
 
+.btn-action-muted:focus,
+.btn-action-muted:active {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 /* ── Restore Button ── */
 .btn-restore-text {
     font-size: 0.75rem;
     font-weight: 600;
-    color: #f59e0b;
+    color: #64748b; /* Color restaurado más sutil (slate/gray) en lugar de naranja */
     background: none;
     border: none;
     padding: 0;
@@ -36,11 +43,69 @@
     align-items: center;
     gap: 4px;
     cursor: pointer;
+    outline: none !important;
 }
 
 .btn-restore-text:hover {
-    color: #d97706;
+    color: #334155;
     opacity: 0.8;
+}
+
+.btn-restore-text:focus,
+.btn-restore-text:active {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* ── Apple Intelligence / Magic Wand AI Processing Effect ── */
+.ai-textarea-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.ai-textarea-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: -1.5px;
+    border-radius: 13px;
+    background: linear-gradient(
+        90deg,
+        #ff2bd6,
+        #6c5cff,
+        #00e0ff,
+        #4cff7a,
+        #ffd84c,
+        #ff2bd6
+    );
+    background-size: 300% 300%;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.ai-textarea-wrapper.ai-animating::before {
+    animation: borderMoveMagic 1.2s linear;
+    opacity: 1;
+}
+
+.ai-textarea-wrapper textarea {
+    position: relative;
+    z-index: 2;
+    transition: border 0.2s ease;
+}
+
+@keyframes borderMoveMagic {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 200% 50%;
+    }
 }
 
 #editPlantaBtn {
@@ -164,6 +229,17 @@ textarea.form-control {
     color: #475569;
     font-weight: 500;
     cursor: not-allowed;
+}
+/* Quitar el borde nativo del textarea para que solo se vea el borde mágico, 
+   y mantener el fondo blanco opaco para que no se vea el gradiente por debajo */
+.ai-textarea-wrapper.ai-animating textarea.form-control,
+.ai-textarea-wrapper.ai-animating textarea.form-control[disabled],
+.ai-textarea-wrapper.ai-animating textarea:disabled {
+    background-color: #ffffff !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    border-radius: 12px !important;
+    opacity: 1 !important;
 }
 
 /* ── Labels (Simetría Perfecta) ── */

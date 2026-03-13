@@ -42,7 +42,7 @@
 
         <!-- Buscador de lote -->
         <div class="mb-3">
-          <label for="loteInput" class="form-label">Buscar Orden de Producción:</label>
+          <label for="loteInput" class="form-label">Orden de Producción:</label>
           <div class="input-with-icon">
             <i class="fas fa-search input-icon"></i>
             <input type="text" id="loteInput" class="form-control"
@@ -232,7 +232,7 @@
               <div style="display: flex; gap: 8px;">
                 <button type="button" class="btn-action-muted" onclick="mejorarRedaccion('observacionesNovedad')"
                   title="Mejorar redacción y ortografía">
-                  <i class="fas fa-wand-magic-sparkles"></i> Pulir texto
+                  <i class="fas fa-wand-magic-sparkles"></i> Mejorar
                 </button>
                 <button type="button" class="btn-restore-text" onclick="restaurarTextoOriginal('observacionesNovedad')"
                   title="Restaurar texto original" style="display: none;">
@@ -240,8 +240,10 @@
                 </button>
               </div>
             </div>
-            <textarea id="observacionesNovedad" class="form-control"
-              placeholder="Escribe aquí los detalles de la novedad..." rows="4" required></textarea>
+            <div class="ai-textarea-wrapper">
+              <textarea id="observacionesNovedad" class="form-control"
+                placeholder="Escribe aquí los detalles de la novedad..." rows="4" required></textarea>
+            </div>
           </div>
 
           <div class="mb-4">
@@ -274,22 +276,25 @@
             <!-- Cabecera con toggle de permiso -->
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
               <label class="form-label mb-0">
-                <i class="fas fa-map-marker-alt me-1"></i> Localización GPS:
+                <i class="fas fa-map-marker-alt me-1"></i> Localización:
               </label>
               <div style="display:flex; align-items:center; gap:10px; font-size:0.8rem; color:#64748b;">
                 <!-- Ícono de refrescar sin texto -->
-                <button type="button" id="gps-refresh-btn" onclick="activarGpsManual()" title="Actualizar ubicación" style="
+                <button type="button" id="gps-refresh-btn" onclick="activarGpsManual()" title="Actualizar ubicación"
+                  style="
                   display:none; background:none; border:none;
                   color:#94a3b8; cursor:pointer; padding:2px; line-height:1;
                   transition:color 0.15s;
                 " onmouseover="this.style.color='#475569'" onmouseout="this.style.color='#94a3b8'">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                    stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="23 4 23 10 17 10"></polyline>
                     <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                   </svg>
                 </button>
                 <span id="gps-status-label">Cargando...</span>
-                <div style="position:relative; display:inline-block; width:42px; height:22px; cursor:pointer;" onclick="toggleGpsPermission()">
+                <div style="position:relative; display:inline-block; width:42px; height:22px; cursor:pointer;"
+                  onclick="toggleGpsPermission()">
                   <input type="checkbox" id="gps-toggle-check" style="opacity:0; width:0; height:0; position:absolute;">
                   <span id="gps-toggle-slider" style="
                     position:absolute; inset:0;
@@ -331,7 +336,7 @@
           <!-- 2. CORREO y TIPO DE VISITA — fila de dos columnas -->
           <div class="row-pc-grid">
             <div class="mb-3">
-              <label for="email" class="form-label">Correo Electrónico:</label>
+              <label for="email" class="form-label">Correo:</label>
               <div class="input-with-icon">
                 <i class="fas fa-envelope input-icon"></i>
                 <input type="email" id="email" class="form-control" placeholder="usuario@ejemplo.com" required>
@@ -354,7 +359,7 @@
           </div>
 
           <div class="mb-3">
-            <label for="conclusion" class="form-label">Conclusión de Inspección:</label>
+            <label for="conclusion" class="form-label">Conclusión:</label>
             <div class="input-with-icon">
               <i class="fas fa-check-circle input-icon"></i>
               <select id="conclusion" class="form-control" required>
@@ -367,11 +372,11 @@
 
           <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center mb-1">
-              <label for="observacionesCalidad" class="form-label mb-0">Observaciones Técnicas:</label>
+              <label for="observacionesCalidad" class="form-label mb-0">Observaciones:</label>
               <div style="display: flex; gap: 8px;">
                 <button type="button" class="btn-action-muted" onclick="mejorarRedaccion('observacionesCalidad')"
                   title="Mejorar redacción y ortografía">
-                  <i class="fas fa-wand-magic-sparkles"></i> Pulir texto
+                  <i class="fas fa-wand-magic-sparkles"></i> Mejorar
                 </button>
                 <button type="button" class="btn-restore-text" onclick="restaurarTextoOriginal('observacionesCalidad')"
                   title="Restaurar texto original" style="display: none;">
@@ -379,12 +384,14 @@
                 </button>
               </div>
             </div>
-            <textarea id="observacionesCalidad" class="form-control" placeholder="Detalla los hallazgos encontrados..."
-              rows="4" required></textarea>
+            <div class="ai-textarea-wrapper">
+              <textarea id="observacionesCalidad" class="form-control"
+                placeholder="Detalla los hallazgos encontrados..." rows="4" required></textarea>
+            </div>
           </div>
 
           <div class="mb-4">
-            <label class="form-label">Añadir Soporte Técnico:</label>
+            <label class="form-label">Soporte:</label>
             <div class="file-dropzone" id="soporteDropzone" role="button" tabindex="0">
               <i class="fas fa-camera file-dropzone__icon"></i>
               <div class="file-dropzone__text">
@@ -393,7 +400,8 @@
               </div>
               <span class="file-dropzone__name" id="soporteName"></span>
             </div>
-            <input type="file" id="soporte" class="file-dropzone__input" accept="image/*,video/mp4,video/quicktime" required>
+            <input type="file" id="soporte" class="file-dropzone__input" accept="image/*,video/mp4,video/quicktime"
+              required>
           </div>
 
           <div class="mb-3 text-center">
@@ -409,9 +417,11 @@
         <div id="actualizarDatosSection" class="hidden">
 
           <!-- Alerta de seguridad (solo visible cuando hay datos previos) -->
-          <div id="alertaVerificacion" class="alert alert-info" style="border-left: 4px solid #3F51B5; background-color: #e8eaf6; border-radius: 8px; margin-bottom: 20px; display: none;">
+          <div id="alertaVerificacion" class="alert alert-info"
+            style="border-left: 4px solid #3F51B5; background-color: #e8eaf6; border-radius: 8px; margin-bottom: 20px; display: none;">
             <i class="fas fa-shield-alt" style="color: #3F51B5;"></i>
-            <strong>Verificación de Seguridad:</strong> Para proteger los datos de la planta, primero debe verificar su identidad ingresando la cédula o NIT registrado.
+            <strong>Verificación de Seguridad:</strong> Para proteger los datos de la planta, primero debe verificar su
+            identidad ingresando la cédula o NIT registrado.
           </div>
 
           <div class="mb-3">
@@ -438,7 +448,8 @@
             <label for="direccionPlanta" class="form-label">Dirección:</label>
             <div class="input-with-icon">
               <i class="fas fa-map-marker-alt input-icon"></i>
-              <input type="text" id="direccionPlanta" class="form-control" placeholder="Ej: CL 26 # 7-75" required readonly>
+              <input type="text" id="direccionPlanta" class="form-control" placeholder="Ej: CL 26 # 7-75" required
+                readonly>
             </div>
           </div>
 
