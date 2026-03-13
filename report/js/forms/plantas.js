@@ -108,8 +108,8 @@ function verificarCedulaPlanta() {
     );
 
     // Si la planta existe y tiene cédula registrada
-    if (plantaRegistrada && plantaRegistrada.CEDULA) {
-        const cedulaRegistrada = plantaRegistrada.CEDULA.toString().replace(/\D/g, '');
+    if (plantaRegistrada && plantaRegistrada.ID_PLANTA) {
+        const cedulaRegistrada = plantaRegistrada.ID_PLANTA.toString().replace(/\D/g, '');
         
         if (rawCedula === cedulaRegistrada) {
             // Cédula correcta: desbloquear campos
@@ -242,8 +242,8 @@ async function handleActualizarDatosSubmit(e) {
 
         // Actualizar estado local (usando las mismas claves que SHEET_PLANTAS.headers)
         const nuevaPlanta = {
+            ID_PLANTA: rawCedula,
             PLANTA: nombrePlanta,
-            CEDULA: rawCedula,
             DIRECCION: direccion,
             TELEFONO: rawTelefono,
             EMAIL: emailPlanta

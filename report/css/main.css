@@ -97,4 +97,63 @@ body {
 }
 
 
-
+
+
+
+/* ==========================================================================
+   SweetAlert2 Modal Position Fix
+   ========================================================================== */
+
+/* Asegurar que los modales aparezcan debajo del navbar */
+.swal2-container {
+  z-index: 9998 !important;
+}
+
+.swal2-popup {
+  margin-top: 80px !important;
+  min-width: 500px !important;
+  font-size: 1rem !important;
+}
+
+/* Animaciones extremadamente rápidas - 1/4 de velocidad original */
+.swal2-show {
+  animation: swal2-show 0.02s !important;
+}
+
+.swal2-hide {
+  animation: swal2-hide 0.0125s !important;
+}
+
+/* Toast notifications - rápidas y compactas */
+.swal2-toast {
+  min-width: 350px !important;
+  padding: 12px 20px !important;
+}
+
+.swal2-toast .swal2-title {
+  font-size: 0.95rem !important;
+  margin: 0 !important;
+}
+
+/* Ajuste para móvil */
+@media (max-width: 768px) {
+  .swal2-popup {
+    margin-top: 70px !important;
+    min-width: 90% !important;
+    max-width: 95% !important;
+  }
+  
+  .swal2-toast {
+    min-width: 90% !important;
+  }
+}
+
+/* Backdrop extremadamente rápido */
+.swal2-container.swal2-backdrop-show {
+  animation: swal2-backdrop-show 0.02s !important;
+}
+
+.swal2-container.swal2-backdrop-hide {
+  animation: swal2-backdrop-hide 0.0125s !important;
+}
+

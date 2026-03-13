@@ -264,10 +264,49 @@
             position: relative;
         }
 
+        /* Pseudo-elemento para efecto de relleno desde los botones de acción (derecha) */
+        .novedad-card-ultra::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 220px;
+            width: 0;
+            height: 100%;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        /* Colores del pseudo-elemento con gradiente que termina en blanco rápidamente */
+        .novedad-card-ultra.status-pendiente::before {
+            background: linear-gradient(to left, rgba(245, 158, 11, 0.05) 0%, rgba(245, 158, 11, 0.02) 30%, rgba(255, 255, 255, 1) 60%);
+        }
+
+        .novedad-card-ultra.status-elaboracion::before {
+            background: linear-gradient(to left, rgba(251, 191, 36, 0.1) 0%, rgba(251, 191, 36, 0.03) 30%, rgba(255, 255, 255, 1) 60%);
+        }
+
+        .novedad-card-ultra.status-finalizado::before {
+            background: linear-gradient(to left, rgba(34, 197, 94, 0.05) 0%, rgba(34, 197, 94, 0.02) 30%, rgba(255, 255, 255, 1) 60%);
+        }
+
+        /* Al hacer hover, el pseudo-elemento se expande con efecto de derrame */
+        .novedad-card-ultra:hover::before {
+            width: calc(100% - 220px);
+            opacity: 1;
+        }
+
         .novedad-card-ultra:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
             border-color: #cbd5e1;
+        }
+
+        /* Asegurar que el contenido esté por encima del pseudo-elemento */
+        .novedad-card-ultra > * {
+            position: relative;
+            z-index: 1;
         }
 
         /* Torre de Acciones con Color por Estado */
@@ -472,11 +511,36 @@
             background: #f8fafc;
             border: 1px solid #e2e8f0;
             color: #475569;
-            padding: 2px 8px;
+            padding: 4px 10px;
             border-radius: 6px;
             font-weight: 800;
-            font-size: 0.6rem;
+            font-size: 0.65rem;
             letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+
+        /* 0-2 días: A tiempo (verde) */
+        .days-badge-lux.is-ontime {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #16a34a;
+        }
+
+        /* 3-4 días: Advertencia (naranja) */
+        .days-badge-lux.is-warning {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #d97706;
+        }
+
+        /* 5+ días: Fuera de plazo (rojo) */
+        .days-badge-lux.is-overdue {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
         }
 
         .actions-tower-ultra {
@@ -552,6 +616,16 @@
             -webkit-appearance: none;
             -moz-appearance: none;
             appearance: none;
+            text-align: center;
+            text-align-last: center;
+        }
+
+        /* Mejorar apariencia del select en PC */
+        @media (min-width: 769px) {
+            .status-select-hidden {
+                font-size: 0.65rem;
+                font-weight: 800;
+            }
         }
 
         .status-btn-lux.is-loading {
@@ -564,22 +638,355 @@
             margin-right: 8px;
         }
 
-        .btn-print-ultra {
-            height: 32px;
-            border-radius: 8px;
-            background: var(--color-primary);
+        .btn-print-ultra,
+        .btn-notify-ultra {
+            height: auto;
+            border-radius: 10px;
             color: white;
             border: none;
-            font-size: 0.7rem;
-            font-weight: 700;
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             display: flex;
             align-items: center;
             justify-content: center;
+            gap: 8px;
+            padding: 8px 12px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .btn-print-ultra {
+            background: var(--color-primary);
+        }
+
+        .btn-print-ultra:disabled {
+            background: #cbd5e1;
+            color: #94a3b8;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .btn-print-ultra:not(:disabled):hover {
+            background: var(--color-primary-dark);
+            transform: translateY(-1px);
+            filter: brightness(1.1);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-notify-ultra {
+            background: #06b6d4;
+        }
+
+        .btn-notify-ultra:hover {
+            background: #0891b2;
+            transform: translateY(-1px);
+            filter: brightness(1.1);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-print-ultra i,
+        .btn-notify-ultra i {
+            font-size: 0.8rem;
+        }
+
+        /* ── Modal Premium Minimalista ── */
+        .modal-overlay-notify {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay-notify.active {
+            display: flex;
+        }
+
+        .modal-notify-container {
+            background: white;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 520px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .modal-notify-body {
+            padding: 40px 32px 32px;
+        }
+
+        .notify-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0 0 8px 0;
+            letter-spacing: -0.02em;
+        }
+
+        .notify-subtitle {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin: 0 0 32px 0;
+            line-height: 1.5;
+        }
+
+        .notify-textarea-wrapper {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .notify-textarea {
+            width: 100%;
+            min-height: 180px;
+            padding: 16px;
+            border: 2px solid #f1f5f9;
+            border-radius: 16px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9375rem;
+            color: #1e293b;
+            resize: vertical;
+            transition: all 0.2s;
+            background: #fafafa;
+        }
+
+        .notify-textarea:focus {
+            outline: none;
+            border-color: #06b6d4;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.08);
+        }
+
+        .notify-textarea::placeholder {
+            color: #94a3b8;
+        }
+
+        .notify-ai-btn {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 0.8125rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
             gap: 6px;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+        }
+
+        .notify-ai-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.35);
+        }
+
+        .notify-ai-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .notify-ai-btn i {
+            font-size: 0.875rem;
+        }
+
+        .notify-ai-status {
+            display: none;
+            margin-top: 12px;
+            padding: 12px 16px;
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 12px;
+            font-size: 0.8125rem;
+            color: #0369a1;
+            line-height: 1.5;
+        }
+
+        .notify-ai-status.active {
+            display: block;
+            animation: fadeIn 0.2s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Opciones de Cobro Horizontal con Iconos */
+        .notify-cobro-container {
+            margin-top: 20px;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .notify-cobro-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #64748b;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .notify-cobro-options {
+            display: flex;
+            gap: 6px;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .notify-cobro-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 4px;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 55px;
+            flex: 1;
+            min-width: 70px;
+        }
+
+        .notify-cobro-btn i {
+            font-size: 1rem;
+            color: #64748b;
+            margin-bottom: 4px;
+            transition: all 0.2s;
+        }
+
+        .notify-cobro-btn span {
+            font-size: 0.6rem;
+            font-weight: 600;
+            color: #94a3b8;
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.2s;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .notify-cobro-btn:hover {
+            border-color: #06b6d4;
+            background: #f0f9ff;
+        }
+
+        .notify-cobro-btn:hover i {
+            color: #06b6d4;
+            transform: scale(1.1);
+        }
+
+        .notify-cobro-btn:hover span {
+            opacity: 1;
+            max-height: 30px;
+        }
+
+        .notify-cobro-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Responsive para botones de cobro */
+        @media (max-width: 576px) {
+            .notify-cobro-options {
+                gap: 4px;
+            }
+            
+            .notify-cobro-btn {
+                padding: 6px 2px;
+                min-height: 50px;
+                min-width: 60px;
+            }
+            
+            .notify-cobro-btn i {
+                font-size: 0.9rem;
+            }
+            
+            .notify-cobro-btn span {
+                font-size: 0.55rem;
+            }
+        }
+
+        .modal-notify-footer {
+            padding: 0 32px 32px;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .notify-btn {
+            padding: 12px 24px;
+            border-radius: 14px;
+            font-size: 0.875rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .notify-btn-cancel {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .notify-btn-cancel:hover {
+            background: #e2e8f0;
+        }
+
+        .notify-btn-send {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
+        }
+
+        .notify-btn-send:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(6, 182, 212, 0.35);
+        }
+
+        .notify-btn-send:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         .novedad-card-ultra.is-finalized {
+            opacity: 0.7;
+            background: #fafafa;
+        }
             opacity: 0.7;
             background: #fafafa;
         }
@@ -641,6 +1048,15 @@
         .is-compact .novedad-card-ultra {
             flex-direction: column !important;
             height: 100%;
+        }
+
+        /* En vista compacta: desactivar el efecto de hover completamente */
+        .is-compact .novedad-card-ultra::before {
+            display: none;
+        }
+
+        .is-compact .novedad-card-ultra:hover::before {
+            width: 0;
         }
 
         .is-compact .card-visual-ultra {
@@ -878,6 +1294,71 @@
             </div>
             <!-- Paginación Aesthetic -->
             <div id="paginationFeed"></div>
+        </div>
+    </div>
+
+    <!-- Modal Premium Minimalista -->
+    <div id="modalNotifyOverlay" class="modal-overlay-notify">
+        <div class="modal-notify-container">
+            <div class="modal-notify-body">
+                <h2 class="notify-title">Notificar Solución</h2>
+                <p class="notify-subtitle">Describe la solución implementada para resolver esta novedad</p>
+
+                <div class="notify-textarea-wrapper">
+                    <textarea 
+                        id="notifySolucion" 
+                        class="notify-textarea" 
+                        placeholder="Escribe aquí la solución..."
+                    ></textarea>
+                    <button class="notify-ai-btn" onclick="corregirTextoIA()" title="Mejorar con IA">
+                        <i class="fas fa-wand-magic-sparkles"></i> Mejorar
+                    </button>
+                </div>
+
+                <div id="notifyAiStatus" class="notify-ai-status">
+                    <i class="fas fa-circle-notch fa-spin"></i> La IA está mejorando tu texto...
+                </div>
+
+                <!-- Opciones de Cobro Horizontal -->
+                <div class="notify-cobro-container">
+                    <label class="notify-cobro-label">Plantillas de Resolución</label>
+                    <div class="notify-cobro-options">
+                        <button type="button" class="notify-cobro-btn" onclick="insertarPlantilla('MANO_A_MANO')" title="Insertar plantilla Mano a Mano">
+                            <i class="fas fa-handshake"></i>
+                            <span>Mano a Mano</span>
+                        </button>
+                        <button type="button" class="notify-cobro-btn" onclick="insertarPlantilla('TALLER')" title="Insertar plantilla Taller">
+                            <i class="fas fa-industry"></i>
+                            <span>Taller</span>
+                        </button>
+                        <button type="button" class="notify-cobro-btn" onclick="insertarPlantilla('LINEA')" title="Insertar plantilla Línea">
+                            <i class="fas fa-route"></i>
+                            <span>Línea</span>
+                        </button>
+                        <button type="button" class="notify-cobro-btn" onclick="insertarPlantilla('REFERENCIA')" title="Insertar plantilla Referencia">
+                            <i class="fas fa-tag"></i>
+                            <span>Referencia</span>
+                        </button>
+                        <button type="button" class="notify-cobro-btn" onclick="insertarPlantilla('FICHA')" title="Insertar plantilla Ficha">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Ficha</span>
+                        </button>
+                        <button type="button" class="notify-cobro-btn" onclick="insertarPlantilla('ENTREGA')" title="Insertar plantilla Entrega">
+                            <i class="fas fa-truck"></i>
+                            <span>Entrega</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-notify-footer">
+                <button class="notify-btn notify-btn-cancel" onclick="cerrarModalNotify()">
+                    Cancelar
+                </button>
+                <button class="notify-btn notify-btn-send" onclick="enviarNotificacion()" id="btnEnviarNotify">
+                    <i class="fas fa-paper-plane"></i> Enviar
+                </button>
+            </div>
         </div>
     </div>
 

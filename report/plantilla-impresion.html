@@ -300,10 +300,10 @@
             const html = `
                 <div style="flex: 1;">
                     <div class="header" style="justify-content: flex-start; gap: 20px; align-items: flex-start;">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=95x95&data=${encodeURIComponent(nov.IMAGEN || nov.ID_RADICADO)}" alt="QR" style="mix-blend-mode: multiply; width: 95px; height: 95px;">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=95x95&data=${encodeURIComponent(nov.IMAGEN || nov.ID_NOVEDAD)}" alt="QR" style="mix-blend-mode: multiply; width: 95px; height: 95px;">
                         <div style="display: flex; flex-direction: column; justify-content: space-between; height: 95px; flex: 1;">
                             <h1 style="margin: 0; line-height: 1; font-size: 22px;">REPORTE DE NOVEDADES</h1>
-                            <p class="folio" style="margin: 0; line-height: 1; font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 800; color: #3F51B5;">${nov.ID_RADICADO || 'SIN REGISTRO'}</p>
+                            <p class="folio" style="margin: 0; line-height: 1; font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 800; color: #3F51B5;">${nov.ID_NOVEDAD || 'SIN REGISTRO'}</p>
                             <p style="font-size: 12px; font-weight: 700; color: #333; margin: 0; line-height: 1;">${formatearFecha(nov.FECHA || nov.TIMESTAMP)}</p>
                             <div style="margin: 0; line-height: 1;">
                                 <span class="status-badge" style="background: ${getColor(nov.ESTADO)}; font-size: 10px; padding: 3px 12px; border-radius: 2px; text-transform: uppercase;">

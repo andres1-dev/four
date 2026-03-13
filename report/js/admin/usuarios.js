@@ -109,7 +109,7 @@ function renderUserTable(usersToRender) {
         'PENDIENTE': { color: '#d97706', bg: '#fffbeb', border: '#fde68a', icon: 'fa-user-clock'      },
     };
 
-    const cUserID = (typeof currentUser !== 'undefined' && currentUser) ? String(currentUser.ID).trim() : null;
+    const cUserID = (typeof currentUser !== 'undefined' && currentUser) ? String(currentUser.ID_USUARIO || currentUser.ID || '').trim() : null;
 
     tbody.innerHTML = `
         <div style="
@@ -120,7 +120,7 @@ function renderUserTable(usersToRender) {
         ">
         ${paginatedData.map(user => {
             const isAdmin  = user.ROL === 'ADMIN';
-            const isSelf   = cUserID === String(user.ID).trim();
+            const isSelf   = cUserID === String(user.ID_USUARIO || user.ID || '').trim();
             const canEdit  = !isAdmin || isSelf;
             const meta     = ROL_META[user.ROL] || ROL_META['GUEST'];
             const initial  = (user.USUARIO || '?').charAt(0).toUpperCase();
@@ -172,7 +172,7 @@ function renderUserTable(usersToRender) {
                             font-family: 'JetBrains Mono', monospace;
                             font-size: 0.65rem; color: #94a3b8;
                             font-weight: 600; margin-top: 2px;
-                        "># ${user.ID}</div>
+                        "># ${user.ID_USUARIO || user.ID}</div>
                     </div>
 
                     <!-- Role badge -->
@@ -238,7 +238,7 @@ function renderUserTable(usersToRender) {
                     background: #fafbfc;
                 ">
                     ${canEdit ? `
-                    <button onclick="openEditUserModal('${user.ID}')" style="
+                    <button onclick="openEditUserModal('${user.ID_USUARIO || user.ID}')" style="
                         width: 100%; padding: 8px 0;
                         background: linear-gradient(135deg, #3b82f6, #6366f1);
                         color: #fff; border: none;
@@ -308,9 +308,10 @@ function handleUserFilter() {
     
     const divisa = gsUserList.filter(u => {
         if (!term) return true;
+        const userId = String(u.ID_USUARIO || u.ID || '').toLowerCase();
         return (u.USUARIO || '').toLowerCase().includes(term) ||
                (u.CORREO || '').toLowerCase().includes(term) ||
-               (u.ID || '').toLowerCase().includes(term);
+               userId.includes(term);
     });
 
     renderUserTable(divisa);
@@ -322,7 +323,10 @@ function handleUserFilter() {
  * Abre la ventana modal para editar todos los datos del usuario de forma estética.
  */
 async function openEditUserModal(userId) {
-    const user = gsUserList.find(u => String(u.ID).trim() === String(userId).trim());
+    const user = gsUserList.find(u => {
+        const dbId = String(u.ID_USUARIO || u.ID || '').trim();
+        return dbId === String(userId).trim();
+    });
     if (!user) return;
 
     const html = `
@@ -491,7 +495,10 @@ async function openEditUserModal(userId) {
                 });
                 
                 // Actualizar la memoria local para inmediatez reactiva
-                const userIndex = gsUserList.findIndex(u => String(u.ID).trim() === String(userId).trim());
+                const userIndex = gsUserList.findIndex(u => {
+                    const dbId = String(u.ID_USUARIO || u.ID || '').trim();
+                    return dbId === String(userId).trim();
+                });
                 if (userIndex !== -1) {
                     gsUserList[userIndex].USUARIO = formValues.usuario;
                     gsUserList[userIndex].CORREO = formValues.correo;

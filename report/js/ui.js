@@ -140,6 +140,28 @@ function fillLotDetails(lotData) {
     document.getElementById('salida').value = formatDate(lotData.SALIDA) || '';
     DOM.lineaInput().value = lotData.LINEA || '';
     document.getElementById('proceso').value = lotData.PROCESO || '';
+    document.getElementById('prenda').value = lotData.PRENDA || '';
+    document.getElementById('genero').value = lotData.GENERO || '';
+    document.getElementById('tejido').value = lotData.TEJIDO || '';
+
+    // Calcular y mostrar duración estimada
+    const duracion = calcularDuracionProduccion(lotData.PRENDA, lotData.CANTIDAD);
+    const duracionField = document.getElementById('duracionEstimada');
+    if (duracionField) {
+        if (duracion.totalMinutos > 0) {
+            // Formato: X días, Y horas, Z minutos
+            let partes = [];
+            if (duracion.dias > 0) partes.push(`${duracion.dias} día${duracion.dias !== 1 ? 's' : ''}`);
+            if (duracion.horas > 0) partes.push(`${duracion.horas} hora${duracion.horas !== 1 ? 's' : ''}`);
+            if (duracion.minutos > 0) partes.push(`${duracion.minutos} min`);
+            if (duracion.segundos > 0 && duracion.dias === 0) partes.push(`${duracion.segundos} seg`);
+            
+            const textoFormateado = partes.length > 0 ? partes.join(', ') : '< 1 segundo';
+            duracionField.value = `${textoFormateado} (${duracion.totalMinutos} min totales)`;
+        } else {
+            duracionField.value = 'No disponible';
+        }
+    }
 
     toggleReadonly(DOM.plantaSelect());
     toggleReadonly(DOM.lineaInput());
@@ -587,16 +609,19 @@ async function mejorarRedaccion(fieldId) {
     let textoOriginal = textarea.value.trim();
     if (!textoOriginal) {
         Swal.fire({
-            icon: 'info',
-            title: 'Campo vacío',
-            text: 'Escribe algo primero para poder pulirlo.',
-            timer: 2000,
+            icon: 'warning',
+            title: 'Campo Vacío',
+            text: 'Escribe primero el texto para que la IA pueda mejorarlo',
+            timer: 1500,
             showConfirmButton: false
         });
         return;
     }
 
-    // ── Loader de IA Profesional ──
+    // Buscar el botón de restaurar
+    const restoreBtn = textarea.parentElement.parentElement.querySelector('.btn-restore-text');
+    
+    // Mostrar loader
     Swal.fire({
         title: 'PROCESANDO TEXTO',
         html: `
@@ -614,17 +639,15 @@ async function mejorarRedaccion(fieldId) {
     });
 
     try {
-        // --- SEGURIDAD: Verificar llave antes de proceder ---
-        const apiKey = CONFIG.GEMINI_KEY; 
+        const apiKey = CONFIG.GEMINI_KEY;
         
         if (!apiKey) {
             throw new Error("La llave de IA no se ha cargado correctamente desde el servidor.");
         }
 
-        const model = 'gemma-3n-e4b-it'; // Modelo específico solicitado
-        const promptIA = `Actúa como corrector técnico industrial. Corrige ortografía, gramática y normaliza abreviaturas (ej: pta -> planta, cant -> cantidad) del siguiente texto para que sea profesional y ejecutivo. Devuelve solo el resultado corregido.\n\nTexto a corregir: ${textoOriginal}`;
+        const model = 'gemma-3n-e4b-it';
+        const promptIA = `Actúa como corrector técnico industrial. Corrige ortografía, gramática y normaliza abreviaturas (ej: pta -> planta, cant -> cantidad) del siguiente texto para que sea profesional y ejecutivo. Si el texto está completamente en MAYÚSCULAS, conviértelo a formato normal con mayúsculas y minúsculas apropiadas según las reglas del español. Devuelve solo el resultado corregido sin agregar información que no esté implícita en el texto original.\n\nTexto a corregir: ${textoOriginal}`;
 
-        // Regresamos al endpoint v1beta solicitado originalmente
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
         const response = await fetch(url, {
@@ -648,63 +671,49 @@ async function mejorarRedaccion(fieldId) {
 
         let textoPulido = data.candidates[0].content.parts[0].text.trim();
         textoPulido = textoPulido.replace(/^["']|["']$/g, '');
-
-        // ── Panel de Revisión Técnica ──
-        Swal.fire({
-            title: '<i class="fas fa-wand-sparkles me-2"></i>REVISIÓN DE REDACCIÓN',
-            html: `
-                <div style="text-align: left; font-family: 'Inter', sans-serif;">
-                    <div class="mb-3">
-                        <small class="text-muted fw-bold" style="letter-spacing: 0.5px; font-size: 10px; text-transform: uppercase;">
-                            <i class="fas fa-terminal me-1"></i> Entrada Original
-                        </small>
-                        <div style="background: #f1f5f9; padding: 12px; border-radius: 6px; border-left: 3px solid #cbd5e1; margin-top: 5px; color: #64748b; font-size: 0.9rem;">
-                            ${textoOriginal}
-                        </div>
-                    </div>
-                    
-                    <div class="mb-2">
-                        <small class="text-primary fw-bold" style="letter-spacing: 0.5px; font-size: 10px; text-transform: uppercase;">
-                            <i class="fas fa-check-double me-1"></i> Propuesta Sugerida
-                        </small>
-                        <div style="background: #eff6ff; padding: 15px; border-radius: 8px; border: 1.5px solid #3b82f6; margin-top: 5px; color: #1e40af; font-size: 1.05rem; line-height: 1.5; font-weight: 500;">
-                            ${textoPulido}
-                        </div>
-                    </div>
-                </div>
-            `,
-            showCancelButton: true,
-            confirmButtonColor: '#3F51B5',
-            cancelButtonColor: '#64748b',
-            confirmButtonText: 'APLICAR CAMBIOS',
-            cancelButtonText: 'IGNORAR',
-            customClass: {
-                title: 'text-start fs-5 fw-bold border-bottom pb-3 mb-3',
-                popup: 'rounded-4'
-            },
-            footer: '<div class="text-center w-100" style="font-size: 10px; color: #94a3b8;"><i class="fas fa-shield-halved me-1"></i>Optimización gramatical bajo estándares de calidad</div>'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                textarea.value = textoPulido;
-                Swal.fire({
-                    icon: 'success',
-                    title: 'CAMBIOS APLICADOS',
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 2000,
-                    iconColor: '#3F51B5'
-                });
-            }
-        });
+        
+        // Cerrar el loader
+        Swal.close();
+        
+        // Guardar el texto original en un atributo data
+        textarea.setAttribute('data-original-text', textoOriginal);
+        
+        // Aplicar el texto mejorado inmediatamente
+        textarea.value = textoPulido;
+        
+        // Mostrar el botón de restaurar
+        if (restoreBtn) {
+            restoreBtn.style.display = 'inline-flex';
+        }
 
     } catch (error) {
-        console.error("IA Error:", error);
+        console.error('Error al corregir con IA:', error);
         Swal.fire({
             icon: 'error',
-            title: 'FALLO TÉCNICO',
-            text: 'No se pudo establecer conexión con el motor de IA.',
-            confirmButtonColor: '#3F51B5'
+            title: 'Error',
+            text: error.message || 'No se pudo procesar el texto',
+            timer: 2000,
+            showConfirmButton: false
         });
+    }
+}
+
+/**
+ * Restaura el texto original antes de la corrección de IA
+ */
+function restaurarTextoOriginal(fieldId) {
+    const textarea = document.getElementById(fieldId);
+    if (!textarea) return;
+    
+    const textoOriginal = textarea.getAttribute('data-original-text');
+    if (textoOriginal) {
+        textarea.value = textoOriginal;
+        textarea.removeAttribute('data-original-text');
+        
+        // Ocultar el botón de restaurar
+        const restoreBtn = textarea.parentElement.parentElement.querySelector('.btn-restore-text');
+        if (restoreBtn) {
+            restoreBtn.style.display = 'none';
+        }
     }
 }

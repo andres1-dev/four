@@ -151,19 +151,18 @@ async function recargarDatosCalidad() {
         
         Swal.fire({
             icon: 'success',
-            title: 'Datos actualizados',
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 2000
+            title: 'Datos Actualizados',
+            text: 'Los reportes se han recargado correctamente',
+            timer: 1500,
+            showConfirmButton: false
         });
         
     } catch (error) {
         console.error('Error al recargar:', error);
         Swal.fire({
             icon: 'error',
-            title: 'Error al recargar',
-            text: error.message,
+            title: 'Error al Recargar',
+            text: error.message || 'No se pudieron cargar los datos',
             confirmButtonColor: '#3F51B5'
         });
         if (loader) loader.style.display = 'none';
@@ -221,10 +220,10 @@ function parsearFechaLatina(d) {
  * Actualiza los indicadores KPIs del dashboard basándose en los datos reales de REPORTES
  */
 function actualizarKPIs() {
-    // Usar los datos filtrados para los KPIs
-    const data = gsFilteredReportes.length > 0 ? gsFilteredReportes : gsReportes;
+    // Usar siempre los datos filtrados para los KPIs
+    const data = gsFilteredReportes;
     
-    if (!data.length) {
+    if (!data || data.length === 0) {
         document.getElementById('kpi-total').textContent = '0';
         document.getElementById('kpi-ok').textContent = '0';
         document.getElementById('kpi-rejected').textContent = '0';
@@ -567,82 +566,315 @@ function expandReport(timestamp) {
     Swal.fire({
         title: null,
         html: `
-            <div class="text-start" style="font-family: 'Inter', sans-serif; padding: 5px;">
-                <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
-                    <div style="background: linear-gradient(135deg, #3f51b5, #6366f1); color: white; width: 50px; height: 50px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+            <style>
+                .modal-detail-container {
+                    font-family: 'Inter', sans-serif;
+                    padding: 0;
+                    text-align: left;
+                }
+                
+                .modal-header-lux {
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                    margin-bottom: 24px;
+                    padding-bottom: 20px;
+                    border-bottom: 2px solid #f1f5f9;
+                }
+                
+                .modal-icon-box {
+                    background: linear-gradient(135deg, #3f51b5, #6366f1);
+                    color: white;
+                    width: 56px;
+                    height: 56px;
+                    border-radius: 16px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.5rem;
+                    flex-shrink: 0;
+                    box-shadow: 0 8px 16px rgba(63, 81, 181, 0.25);
+                }
+                
+                .modal-title-group {
+                    flex: 1;
+                    min-width: 0;
+                }
+                
+                .modal-title-lux {
+                    margin: 0 0 4px 0;
+                    font-size: 1.3rem;
+                    font-weight: 800;
+                    color: #0f172a;
+                    line-height: 1.2;
+                }
+                
+                .modal-subtitle-lux {
+                    color: #64748b;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    margin: 0;
+                }
+                
+                .modal-grid-lux {
+                    display: grid;
+                    grid-template-columns: 1fr;
+                    gap: 16px;
+                }
+                
+                .field-group-lux {
+                    background: #f8fafc;
+                    padding: 14px 16px;
+                    border-radius: 12px;
+                    border: 1px solid #f1f5f9;
+                    transition: all 0.2s ease;
+                }
+                
+                .field-group-lux:hover {
+                    background: #f1f5f9;
+                    border-color: #e2e8f0;
+                }
+                
+                .field-label-lux {
+                    display: block;
+                    font-size: 0.65rem;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    color: #94a3b8;
+                    margin-bottom: 6px;
+                    letter-spacing: 0.5px;
+                }
+                
+                .field-value-lux {
+                    font-size: 0.95rem;
+                    font-weight: 700;
+                    color: #1e293b;
+                    word-break: break-word;
+                }
+                
+                .field-highlight {
+                    background: ${tipoColor}10;
+                    border: 1.5px solid ${tipoColor}30;
+                    padding: 16px;
+                }
+                
+                .field-highlight .field-value-lux {
+                    color: ${tipoColor};
+                    font-size: 1.05rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                
+                .conclusion-box {
+                    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+                    border: 1.5px solid #93c5fd;
+                    padding: 16px;
+                }
+                
+                .conclusion-box .field-value-lux {
+                    color: #1e40af;
+                    font-size: 1.05rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                
+                .observations-box {
+                    background: white;
+                    border: 1.5px solid #e2e8f0;
+                    padding: 16px;
+                    border-radius: 12px;
+                    margin-top: 8px;
+                }
+                
+                .observations-box .field-value-lux {
+                    font-weight: 500;
+                    line-height: 1.6;
+                    color: #475569;
+                    white-space: pre-wrap;
+                }
+                
+                .media-container-lux {
+                    margin-top: 20px;
+                    border-radius: 16px;
+                    overflow: hidden;
+                    border: 1px solid #e2e8f0;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+                }
+                
+                .media-container-lux img,
+                .media-container-lux video {
+                    width: 100%;
+                    display: block;
+                }
+                
+                /* Desktop: 2 columnas */
+                @media (min-width: 768px) {
+                    .modal-grid-lux {
+                        grid-template-columns: repeat(2, 1fr);
+                    }
+                    
+                    .field-group-full {
+                        grid-column: 1 / -1;
+                    }
+                    
+                    .modal-title-lux {
+                        font-size: 1.5rem;
+                    }
+                }
+                
+                /* Mobile: optimización */
+                @media (max-width: 767px) {
+                    .modal-header-lux {
+                        gap: 12px;
+                        margin-bottom: 20px;
+                        padding-bottom: 16px;
+                    }
+                    
+                    .modal-icon-box {
+                        width: 48px;
+                        height: 48px;
+                        font-size: 1.3rem;
+                    }
+                    
+                    .modal-title-lux {
+                        font-size: 1.1rem;
+                    }
+                    
+                    .modal-subtitle-lux {
+                        font-size: 0.75rem;
+                    }
+                    
+                    .field-group-lux {
+                        padding: 12px 14px;
+                    }
+                    
+                    .field-value-lux {
+                        font-size: 0.9rem;
+                    }
+                }
+            </style>
+            
+            <div class="modal-detail-container">
+                <div class="modal-header-lux">
+                    <div class="modal-icon-box">
                         <i class="fas fa-microscope"></i>
                     </div>
-                    <div>
-                        <h4 class="mb-0 fw-800" style="color: #0f172a;">Reporte de Calidad</h4>
-                        <span class="text-muted small">ID: ${rep.TIMESTAMP}</span>
+                    <div class="modal-title-group">
+                        <h4 class="modal-title-lux">Reporte de Calidad</h4>
+                        <p class="modal-subtitle-lux">ID: ${rep.ID_REPORTE || rep.TIMESTAMP || 'N/A'}</p>
                     </div>
                 </div>
 
-                <div class="row g-3">
-                    <div class="col-6">
-                        <label class="text-muted small fw-bold text-uppercase d-block mb-1">Lote</label>
-                        <div class="fw-800" style="color: #3f51b5;">${rep.LOTE || 'N/A'}</div>
+                <div class="modal-grid-lux">
+                    <div class="field-group-lux">
+                        <span class="field-label-lux">Lote</span>
+                        <div class="field-value-lux" style="color: #3f51b5;">${rep.LOTE || 'N/A'}</div>
                     </div>
-                    <div class="col-6">
-                        <label class="text-muted small fw-bold text-uppercase d-block mb-1">Fecha</label>
-                        <div class="fw-bold">${rep.FECHA || 'N/A'}</div>
+                    
+                    <div class="field-group-lux">
+                        <span class="field-label-lux">Fecha</span>
+                        <div class="field-value-lux">${rep.FECHA || 'N/A'}</div>
                     </div>
-                    <div class="col-6">
-                        <label class="text-muted small fw-bold text-uppercase d-block mb-1">Referencia</label>
-                        <div class="fw-bold">${rep.REFERENCIA || 'N/A'}</div>
+                    
+                    <div class="field-group-lux">
+                        <span class="field-label-lux">Referencia</span>
+                        <div class="field-value-lux">${rep.REFERENCIA || 'N/A'}</div>
                     </div>
-                    <div class="col-6">
-                        <label class="text-muted small fw-bold text-uppercase d-block mb-1">Cantidad</label>
-                        <div class="fw-bold">${rep.CANTIDAD || 'N/A'}</div>
+                    
+                    <div class="field-group-lux">
+                        <span class="field-label-lux">Cantidad</span>
+                        <div class="field-value-lux">${rep.CANTIDAD || 'N/A'}</div>
                     </div>
-                    <div class="col-6">
-                        <label class="text-muted small fw-bold text-uppercase d-block mb-1">Planta</label>
-                        <div class="fw-bold">${rep.PLANTA || 'N/A'}</div>
+                    
+                    <div class="field-group-lux">
+                        <span class="field-label-lux">Planta</span>
+                        <div class="field-value-lux">${rep.PLANTA || 'N/A'}</div>
                     </div>
-                    <div class="col-6">
-                        <label class="text-muted small fw-bold text-uppercase d-block mb-1">Línea</label>
-                        <div class="fw-bold">${rep.LINEA || 'N/A'}</div>
+                    
+                    <div class="field-group-lux">
+                        <span class="field-label-lux">Línea</span>
+                        <div class="field-value-lux">${rep.LINEA || 'N/A'}</div>
                     </div>
-                    <div class="col-12">
-                        <label class="text-muted small fw-bold text-uppercase d-block mb-1">Proceso</label>
-                        <div class="fw-bold">${rep.PROCESO || 'N/A'}</div>
+                    
+                    <div class="field-group-lux field-group-full">
+                        <span class="field-label-lux">Proceso</span>
+                        <div class="field-value-lux">${rep.PROCESO || 'N/A'}</div>
                     </div>
-                    <div class="col-12">
-                        <div class="p-3 rounded-4 border" style="background: ${tipoColor}15; border-color: ${tipoColor}40 !important;">
-                            <label class="text-muted small fw-bold text-uppercase d-block mb-1">
-                                <i class="fas ${tipoIcon} me-1"></i> Tipo de Visita
-                            </label>
-                            <div class="fw-800" style="color: ${tipoColor};">${tipoVisita}</div>
+                    
+                    <div class="field-group-lux">
+                        <span class="field-label-lux">Prenda</span>
+                        <div class="field-value-lux">${rep.PRENDA || 'N/A'}</div>
+                    </div>
+                    
+                    <div class="field-group-lux">
+                        <span class="field-label-lux">Género</span>
+                        <div class="field-value-lux">${rep.GENERO || 'N/A'}</div>
+                    </div>
+                    
+                    <div class="field-group-lux field-group-full">
+                        <span class="field-label-lux">Tejido</span>
+                        <div class="field-value-lux">${rep.TEJIDO || 'N/A'}</div>
+                    </div>
+                    
+                    <div class="field-group-lux field-group-full field-highlight">
+                        <span class="field-label-lux">
+                            <i class="fas ${tipoIcon}"></i> Tipo de Visita
+                        </span>
+                        <div class="field-value-lux">
+                            <i class="fas ${tipoIcon}"></i>
+                            ${tipoVisita}
                         </div>
                     </div>
-                    <div class="col-12">
-                        <div class="p-3 bg-light rounded-4 border">
-                            <label class="text-muted small fw-bold text-uppercase d-block mb-1">Conclusión Final</label>
-                            <div class="fw-800 text-primary uppercase"><i class="fas fa-award me-2"></i>${rep.CONCLUSION || 'N/A'}</div>
+                    
+                    <div class="field-group-lux field-group-full conclusion-box">
+                        <span class="field-label-lux">Conclusión Final</span>
+                        <div class="field-value-lux">
+                            <i class="fas fa-award"></i>
+                            ${rep.CONCLUSION || 'N/A'}
                         </div>
                     </div>
-                    <div class="col-12">
-                        <label class="text-muted small fw-bold text-uppercase d-block mb-1">Observaciones</label>
-                        <p class="text-secondary small" style="white-space: pre-wrap;">${rep.OBSERVACIONES || 'Sin observaciones'}</p>
+                    
+                    <div class="field-group-lux field-group-full observations-box">
+                        <span class="field-label-lux">Observaciones</span>
+                        <div class="field-value-lux">${rep.OBSERVACIONES || 'Sin observaciones registradas'}</div>
                     </div>
-                    <div class="col-12">
-                        <label class="text-muted small fw-bold text-uppercase d-block mb-1">Inspector</label>
-                        <div class="fw-bold"><i class="fas fa-user-check me-2"></i>${rep.EMAIL || 'N/A'}</div>
+                    
+                    <div class="field-group-lux">
+                        <span class="field-label-lux">Inspector</span>
+                        <div class="field-value-lux">
+                            <i class="fas fa-user-check" style="color: #3f51b5; margin-right: 6px;"></i>
+                            ${rep.EMAIL || 'N/A'}
+                        </div>
                     </div>
+                    
                     ${rep.LOCALIZACION ? `
-                    <div class="col-12">
-                        <label class="text-muted small fw-bold text-uppercase d-block mb-1">Ubicación GPS</label>
-                        <div class="fw-bold"><i class="fas fa-map-marker-alt me-2"></i>${rep.LOCALIZACION}</div>
+                    <div class="field-group-lux">
+                        <span class="field-label-lux">Ubicación GPS</span>
+                        <div class="field-value-lux">
+                            <i class="fas fa-map-marker-alt" style="color: #ef4444; margin-right: 6px;"></i>
+                            ${rep.LOCALIZACION}
+                        </div>
                     </div>
                     ` : ''}
                 </div>
 
-                ${mediaHTML}
+                ${mediaHTML ? `<div class="media-container-lux">${mediaHTML}</div>` : ''}
             </div>
         `,
         confirmButtonText: 'CERRAR',
         confirmButtonColor: '#3f51b5',
-        width: '600px',
-        customClass: { popup: 'rounded-5', confirmButton: 'rounded-pill px-5 fw-800' }
+        width: '800px',
+        customClass: { 
+            popup: 'rounded-5',
+            confirmButton: 'rounded-pill px-5 fw-800'
+        },
+        didOpen: () => {
+            // Ajustar ancho en móvil
+            if (window.innerWidth < 768) {
+                document.querySelector('.swal2-popup').style.width = '95%';
+            }
+        }
     });
 }

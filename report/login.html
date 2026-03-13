@@ -205,20 +205,34 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> VALIDANDO...';
 
-            if (allUsers.length === 0) {
-                await loadUsers(); // Asegurar datos cargados si el usuario teclea rápido
-            }
+            try {
+                // Asegurar que los usuarios estén cargados
+                if (allUsers.length === 0) {
+                    console.log('[LOGIN] Cargando usuarios...');
+                    await loadUsers();
+                }
 
-            // Llamar a la lógica central en auth.js
-            handleLogin(userId, pass, true);
+                console.log('[LOGIN] Total usuarios cargados:', allUsers.length);
+                console.log('[LOGIN] Intentando login con ID:', userId);
 
-            // Si falla, el botón se restaura después (podríamos mejorar esto con un callback)
-            setTimeout(() => {
-                if (btn.disabled) {
+                // Llamar a la lógica central en auth.js
+                handleLogin(userId, pass, true);
+
+            } catch (error) {
+                console.error('[LOGIN] Error:', error);
+                Swal.fire({
+                    title: 'Error',
+                    text: 'No se pudo conectar con el servidor. Intente nuevamente.',
+                    icon: 'error',
+                    confirmButtonColor: '#3F51B5'
+                });
+            } finally {
+                // Restaurar botón después de 2 segundos
+                setTimeout(() => {
                     btn.disabled = false;
                     btn.innerHTML = '<span class="btn-text">INGRESAR AL SISTEMA</span><i class="fas fa-chevron-right"></i>';
-                }
-            }, 3000);
+                }, 2000);
+            }
         }
 
         async function requestRegister() {
@@ -299,7 +313,10 @@
                 await loadUsers(); // Asegurar datos cargados
             }
 
-            const existingUser = allUsers.find(u => String(u.ID).trim() === String(id));
+            const existingUser = allUsers.find(u => {
+                const dbId = String(u.ID_USUARIO || u.ID || '').trim();
+                return dbId === String(id);
+            });
 
             if (existingUser) {
                 detailsDiv.classList.add('hidden');
@@ -326,7 +343,7 @@
                 
                 // Animación css-native enfocando el siguiente input
                 setTimeout(() => {
-                    const nameInput = document.getElementById('reg-nombre');
+                    const nameInput = document.getElementById('reg-name');
                     if (nameInput) nameInput.focus();
                 }, 50);
             }

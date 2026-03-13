@@ -678,6 +678,21 @@
         .flatpickr-months .flatpickr-next-month:hover svg {
             fill: white !important;
         }
+
+        /* ── SweetAlert2 Modal Position Fix ── */
+        .swal2-container {
+            z-index: 9998 !important;
+        }
+
+        .swal2-popup {
+            margin-top: 80px !important;
+        }
+
+        @media (max-width: 768px) {
+            .swal2-popup {
+                margin-top: 70px !important;
+            }
+        }
     </style>
 </head>
 

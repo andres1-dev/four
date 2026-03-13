@@ -26,7 +26,7 @@ function fileToBase64(file) {
 
 /**
  * Recoge los datos comunes del lote actualmente seleccionado en el formulario.
- * @returns {Object} Campos del lote: fecha, lote, referencia, cantidad, planta, salida, linea, proceso.
+ * @returns {Object} Campos del lote: fecha, lote, referencia, cantidad, planta, salida, linea, proceso, prenda, genero, tejido.
  */
 function collectLotData() {
     return {
@@ -38,6 +38,9 @@ function collectLotData() {
         salida: document.getElementById('salida').value,
         linea: DOM.lineaInput().value,
         proceso: document.getElementById('proceso').value,
+        prenda: document.getElementById('prenda').value,
+        genero: document.getElementById('genero').value,
+        tejido: document.getElementById('tejido').value,
     };
 }
 

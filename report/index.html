@@ -42,8 +42,12 @@
 
         <!-- Buscador de lote -->
         <div class="mb-3">
-          <input type="text" id="loteInput" class="form-control"
-            placeholder="Seleccione el número de la Orden de Producción...">
+          <label for="loteInput" class="form-label">Buscar Orden de Producción:</label>
+          <div class="input-with-icon">
+            <i class="fas fa-search input-icon"></i>
+            <input type="text" id="loteInput" class="form-control"
+              placeholder="Seleccione el número de la Orden de Producción...">
+          </div>
           <ul id="loteSuggestions" class="list-group mt-2 hidden"></ul>
         </div>
 
@@ -60,9 +64,12 @@
                   <i class="fas fa-user-edit"></i> Actualizar
                 </button>
               </div>
-              <select id="planta" class="form-control" required>
-                <option value="">Seleccione una planta...</option>
-              </select>
+              <div class="input-with-icon">
+                <i class="fas fa-industry input-icon"></i>
+                <select id="planta" class="form-control" required>
+                  <option value="">Seleccione una planta...</option>
+                </select>
+              </div>
             </div>
 
             <div class="mb-3">
@@ -71,12 +78,15 @@
                 <!-- Placeholder para simetría vertical -->
                 <div class="sync-placeholder"></div>
               </div>
-              <select id="acciones" class="form-control" required>
-                <option value="">Seleccione una acción...</option>
-                <option value="NOVEDADES">NOVEDADES</option>
-                <option value="CALIDAD">CALIDAD</option>
-                <option value="ACTUALIZAR_DATOS" hidden>ACTUALIZAR DATOS</option>
-              </select>
+              <div class="input-with-icon">
+                <i class="fas fa-tasks input-icon"></i>
+                <select id="acciones" class="form-control" required>
+                  <option value="">Seleccione una acción...</option>
+                  <option value="NOVEDADES">NOVEDADES</option>
+                  <option value="CALIDAD">CALIDAD</option>
+                  <option value="ACTUALIZAR_DATOS" hidden>ACTUALIZAR DATOS</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -91,39 +101,91 @@
           <div id="lotCollapseBody" class="lot-collapse-body">
             <div class="mb-3">
               <label for="linea" class="form-label">Línea:</label>
-              <input type="text" id="linea" class="form-control" readonly>
+              <div class="input-with-icon">
+                <i class="fas fa-industry input-icon"></i>
+                <input type="text" id="linea" class="form-control" readonly>
+              </div>
             </div>
 
             <div class="mb-3">
               <label for="fecha" class="form-label">Fecha y Hora:</label>
-              <input type="text" id="fecha" class="form-control" readonly required>
+              <div class="input-with-icon">
+                <i class="fas fa-calendar-alt input-icon"></i>
+                <input type="text" id="fecha" class="form-control" readonly required>
+              </div>
             </div>
-
-
 
             <div class="mb-3">
               <label for="lote" class="form-label">Lote:</label>
-              <input type="text" id="lote" class="form-control" readonly>
+              <div class="input-with-icon">
+                <i class="fas fa-box input-icon"></i>
+                <input type="text" id="lote" class="form-control" readonly>
+              </div>
             </div>
 
             <div class="mb-3">
               <label for="referencia" class="form-label">Referencia:</label>
-              <input type="text" id="referencia" class="form-control" readonly>
+              <div class="input-with-icon">
+                <i class="fas fa-barcode input-icon"></i>
+                <input type="text" id="referencia" class="form-control" readonly>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="prenda" class="form-label">Prenda:</label>
+              <div class="input-with-icon">
+                <i class="fas fa-tshirt input-icon"></i>
+                <input type="text" id="prenda" class="form-control" readonly>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="genero" class="form-label">Género:</label>
+              <div class="input-with-icon">
+                <i class="fas fa-venus-mars input-icon"></i>
+                <input type="text" id="genero" class="form-control" readonly>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="tejido" class="form-label">Tejido:</label>
+              <div class="input-with-icon">
+                <i class="fas fa-scroll input-icon"></i>
+                <input type="text" id="tejido" class="form-control" readonly>
+              </div>
             </div>
 
             <div class="mb-3">
               <label for="cantidad" class="form-label">Cantidad:</label>
-              <input type="text" id="cantidad" class="form-control" readonly>
+              <div class="input-with-icon">
+                <i class="fas fa-hashtag input-icon"></i>
+                <input type="text" id="cantidad" class="form-control" readonly>
+              </div>
             </div>
 
             <div class="mb-3">
               <label for="salida" class="form-label">Salida:</label>
-              <input type="text" id="salida" class="form-control" readonly>
+              <div class="input-with-icon">
+                <i class="fas fa-calendar-check input-icon"></i>
+                <input type="text" id="salida" class="form-control" readonly>
+              </div>
             </div>
 
             <div class="mb-3">
               <label for="proceso" class="form-label">Proceso:</label>
-              <input type="text" id="proceso" class="form-control" readonly>
+              <div class="input-with-icon">
+                <i class="fas fa-cogs input-icon"></i>
+                <input type="text" id="proceso" class="form-control" readonly>
+              </div>
+            </div>
+
+            <!-- Duración Estimada: Ocupa todo el ancho al final -->
+            <div class="mb-3" style="grid-column: 1 / -1;">
+              <label for="duracionEstimada" class="form-label">Duración Estimada:</label>
+              <div class="input-with-icon">
+                <i class="fas fa-clock input-icon"></i>
+                <input type="text" id="duracionEstimada" class="form-control" readonly>
+              </div>
             </div>
           </div>
 
@@ -140,31 +202,43 @@
           <div class="row-pc-grid mt-2">
             <div class="mb-3">
               <label for="area" class="form-label">Área de Servicios:</label>
-              <select id="area" class="form-control" required>
-                <option value="">Seleccione un área...</option>
-                <option value="DISEÑO">DISEÑO</option>
-                <option value="TELAS">TELAS</option>
-                <option value="INSUMOS">INSUMOS</option>
-                <option value="CORTE">CORTE</option>
-                <option value="SESGO">SESGO</option>
-                <option value="CODIGOS">CÓDIGOS</option>
-                <option value="OTROS">OTROS</option>
-              </select>
+              <div class="input-with-icon">
+                <i class="fas fa-building input-icon"></i>
+                <select id="area" class="form-control" required>
+                  <option value="">Seleccione un área...</option>
+                  <option value="DISEÑO">DISEÑO</option>
+                  <option value="TELAS">TELAS</option>
+                  <option value="INSUMOS">INSUMOS</option>
+                  <option value="CORTE">CORTE</option>
+                  <option value="SESGO">SESGO</option>
+                  <option value="CODIGOS">CÓDIGOS</option>
+                  <option value="OTROS">OTROS</option>
+                </select>
+              </div>
             </div>
 
             <div class="mb-3">
               <label for="cantidadSolicitada" class="form-label">Cantidad Solicitada:</label>
-              <input type="number" class="form-control" id="cantidadSolicitada" required>
+              <div class="input-with-icon">
+                <i class="fas fa-hashtag input-icon"></i>
+                <input type="number" class="form-control" id="cantidadSolicitada" required>
+              </div>
             </div>
           </div>
 
           <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center mb-1">
               <label for="observacionesNovedad" class="form-label mb-0">Descripción detallada:</label>
-              <button type="button" class="btn-action-muted" onclick="mejorarRedaccion('observacionesNovedad')"
-                title="Mejorar redacción y ortografía">
-                <i class="fas fa-wand-magic-sparkles"></i> Pulir texto
-              </button>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn-action-muted" onclick="mejorarRedaccion('observacionesNovedad')"
+                  title="Mejorar redacción y ortografía">
+                  <i class="fas fa-wand-magic-sparkles"></i> Pulir texto
+                </button>
+                <button type="button" class="btn-restore-text" onclick="restaurarTextoOriginal('observacionesNovedad')"
+                  title="Restaurar texto original" style="display: none;">
+                  <i class="fas fa-undo"></i> Restaurar
+                </button>
+              </div>
             </div>
             <textarea id="observacionesNovedad" class="form-control"
               placeholder="Escribe aquí los detalles de la novedad..." rows="4" required></textarea>
@@ -258,37 +332,52 @@
           <div class="row-pc-grid">
             <div class="mb-3">
               <label for="email" class="form-label">Correo Electrónico:</label>
-              <input type="email" id="email" class="form-control" placeholder="usuario@ejemplo.com" required>
+              <div class="input-with-icon">
+                <i class="fas fa-envelope input-icon"></i>
+                <input type="email" id="email" class="form-control" placeholder="usuario@ejemplo.com" required>
+              </div>
             </div>
 
             <div class="mb-3">
               <label for="tipoVisita" class="form-label">Tipo de Visita:</label>
-              <select id="tipoVisita" class="form-control" required>
-                <option value="">Seleccione tipo...</option>
-                <option value="AUDITORIA">AUDITORIA</option>
-                <option value="RONDA">RONDA</option>
-                <option value="CONTRAMUESTRA">CONTRAMUESTRA</option>
-                <option value="SEGUIMIENTO">SEGUIMIENTO</option>
-              </select>
+              <div class="input-with-icon">
+                <i class="fas fa-clipboard-check input-icon"></i>
+                <select id="tipoVisita" class="form-control" required>
+                  <option value="">Seleccione tipo...</option>
+                  <option value="AUDITORIA">AUDITORIA</option>
+                  <option value="RONDA">RONDA</option>
+                  <option value="CONTRAMUESTRA">CONTRAMUESTRA</option>
+                  <option value="SEGUIMIENTO">SEGUIMIENTO</option>
+                </select>
+              </div>
             </div>
           </div>
 
           <div class="mb-3">
             <label for="conclusion" class="form-label">Conclusión de Inspección:</label>
-            <select id="conclusion" class="form-control" required>
-              <option value="">Seleccione una conclusión...</option>
-              <option value="APROBADO">APROBADO</option>
-              <option value="RECHAZADO">RECHAZADO</option>
-            </select>
+            <div class="input-with-icon">
+              <i class="fas fa-check-circle input-icon"></i>
+              <select id="conclusion" class="form-control" required>
+                <option value="">Seleccione una conclusión...</option>
+                <option value="APROBADO">APROBADO</option>
+                <option value="RECHAZADO">RECHAZADO</option>
+              </select>
+            </div>
           </div>
 
           <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center mb-1">
               <label for="observacionesCalidad" class="form-label mb-0">Observaciones Técnicas:</label>
-              <button type="button" class="btn-action-muted" onclick="mejorarRedaccion('observacionesCalidad')"
-                title="Mejorar redacción y ortografía">
-                <i class="fas fa-wand-magic-sparkles"></i> Pulir texto
-              </button>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn-action-muted" onclick="mejorarRedaccion('observacionesCalidad')"
+                  title="Mejorar redacción y ortografía">
+                  <i class="fas fa-wand-magic-sparkles"></i> Pulir texto
+                </button>
+                <button type="button" class="btn-restore-text" onclick="restaurarTextoOriginal('observacionesCalidad')"
+                  title="Restaurar texto original" style="display: none;">
+                  <i class="fas fa-undo"></i> Restaurar
+                </button>
+              </div>
             </div>
             <textarea id="observacionesCalidad" class="form-control" placeholder="Detalla los hallazgos encontrados..."
               rows="4" required></textarea>
@@ -326,11 +415,12 @@
           </div>
 
           <div class="mb-3">
-            <label for="cedulaPlanta" class="form-label">
-              <i class="fas fa-id-card"></i> NIT o Cédula de Ciudadanía:
-            </label>
-            <input type="text" id="cedulaPlanta" class="form-control"
-              placeholder="Ingrese el número de identificación o NIT" required>
+            <label for="cedulaPlanta" class="form-label">NIT o Cédula de Ciudadanía:</label>
+            <div class="input-with-icon">
+              <i class="fas fa-id-card input-icon"></i>
+              <input type="text" id="cedulaPlanta" class="form-control"
+                placeholder="Ingrese el número de identificación o NIT" required>
+            </div>
             <div class="form-text small" id="cedulaHint" style="display: none;">
               <i class="fas fa-info-circle"></i> Ingrese la cédula para verificar su identidad y desbloquear los campos.
             </div>
@@ -338,12 +428,18 @@
 
           <div class="mb-3">
             <label for="nombrePlanta" class="form-label">Nombre de la Planta:</label>
-            <input type="text" id="nombrePlanta" class="form-control" readonly>
+            <div class="input-with-icon">
+              <i class="fas fa-industry input-icon"></i>
+              <input type="text" id="nombrePlanta" class="form-control" readonly>
+            </div>
           </div>
 
           <div class="mb-3">
             <label for="direccionPlanta" class="form-label">Dirección:</label>
-            <input type="text" id="direccionPlanta" class="form-control" placeholder="Ej: CL 26 # 7-75" required readonly style="background-color: #f8f9fa;">
+            <div class="input-with-icon">
+              <i class="fas fa-map-marker-alt input-icon"></i>
+              <input type="text" id="direccionPlanta" class="form-control" placeholder="Ej: CL 26 # 7-75" required readonly>
+            </div>
           </div>
 
           <div class="mb-3">
@@ -355,15 +451,18 @@
                 <span class="phone-prefix-text">+57</span>
               </div>
               <input type="tel" id="telefonoPlanta" class="form-control" placeholder="(316) 800-7979" required
-                maxlength="15" readonly style="background-color: #f8f9fa;">
+                maxlength="15" readonly>
             </div>
             <div class="form-text small">Ingrese un número celular valido.</div>
           </div>
 
           <div class="mb-3">
             <label for="emailPlanta" class="form-label">Correo Electrónico:</label>
-            <input type="email" id="emailPlanta" class="form-control" list="emailOptions"
-              placeholder="Ej: planta@empresa.com" required readonly style="background-color: #f8f9fa;">
+            <div class="input-with-icon">
+              <i class="fas fa-envelope input-icon"></i>
+              <input type="email" id="emailPlanta" class="form-control" list="emailOptions"
+                placeholder="Ej: planta@empresa.com" required readonly>
+            </div>
             <datalist id="emailOptions">
               <option value="@gmail.com">
               <option value="@outlook.com">
@@ -396,23 +495,23 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
 
   <!-- ── App JS (orden importa: dependencias primero) ── -->
-  <script src="js/config.js?v=16"></script>
-  <script src="js/api.js?v=16"></script>
-  <script src="js/ui.js?v=16"></script>
-  <script src="js/auth.js?v=16"></script>
-  <script src="js/admin/usuarios.js?v=16"></script>
+  <script src="js/config.js?v=18"></script>
+  <script src="js/api.js?v=18"></script>
+  <script src="js/ui.js?v=18"></script>
+  <script src="js/auth.js?v=18"></script>
+  <script src="js/admin/usuarios.js?v=18"></script>
 
   <!-- ── Módulo de formularios (js/forms/) ── -->
-  <script src="js/forms/index.js"></script> <!-- estado compartido + dispatcher -->
-  <script src="js/forms/gas.js"></script> <!-- sendToGAS, fileToBase64, collectLotData -->
-  <script src="js/forms/lotes.js"></script> <!-- búsqueda y selección de lotes -->
-  <script src="js/forms/novedades.js"></script> <!-- formulario novedades -->
-  <script src="js/forms/calidad.js"></script> <!-- formulario calidad -->
-  <script src="js/forms/plantas.js"></script> <!-- formulario plantas + Google Maps -->
-  <script src="js/forms/dropzone.js"></script> <!-- dropzone personalizado de archivos -->
+  <script src="js/forms/index.js?v=18"></script> <!-- estado compartido + dispatcher -->
+  <script src="js/forms/gas.js?v=18"></script> <!-- sendToGAS, fileToBase64, collectLotData -->
+  <script src="js/forms/lotes.js?v=18"></script> <!-- búsqueda y selección de lotes -->
+  <script src="js/forms/novedades.js?v=18"></script> <!-- formulario novedades -->
+  <script src="js/forms/calidad.js?v=18"></script> <!-- formulario calidad -->
+  <script src="js/forms/plantas.js?v=18"></script> <!-- formulario plantas + Google Maps -->
+  <script src="js/forms/dropzone.js?v=18"></script> <!-- dropzone personalizado de archivos -->
 
-  <script src="js/particles-config.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/particles-config.js?v=18"></script>
+  <script src="js/app.js?v=18"></script>
 
 </body>
 

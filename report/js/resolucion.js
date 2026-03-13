@@ -143,7 +143,7 @@ function handleFilter() {
         if (!term) return true;
         return (n.LOTE || '').toLowerCase().includes(term) ||
             (n.PLANTA || '').toLowerCase().includes(term) ||
-            (n.ID_RADICADO || '').toLowerCase().includes(term) ||
+            (n.ID_NOVEDAD || '').toLowerCase().includes(term) ||
             (n.DESCRIPCION || '').toLowerCase().includes(term);
     }));
 }
@@ -193,8 +193,9 @@ function renderTabla(data = gsNovedades) {
         const estadoActual = nov.ESTADO || 'PENDIENTE';
         const infoPlanta = obtenerPlantaReciente(nov.PLANTA);
 
-        // Calcular días hábiles
-        const totalDias = calcularDiasHabiles(dtIngreso, dtSalida || new Date());
+        // Calcular días hábiles: desde la SALIDA hasta la FECHA DE REPORTE
+        // Esto mide si la planta reportó a tiempo (debe ser máximo 2 días hábiles)
+        const totalDias = (dtSalida && dtIngreso) ? calcularDiasHabiles(dtSalida, dtIngreso) : 0;
 
         const card = document.createElement('div');
         const statusClass = `status-${estadoActual.toLowerCase()}`;
@@ -202,7 +203,30 @@ function renderTabla(data = gsNovedades) {
 
         let sIcon = 'clock', sClass = 'p', sLab = 'PENDIENTE';
         if (estadoActual === 'ELABORACION') { sIcon = 'sync-alt'; sClass = 'w'; sLab = 'ELABORACIÓN'; }
-        else if (estadoActual === 'FINALIZADO') { sIcon = 'check-circle'; sClass = 'd'; sLab = 'CERRADA'; }
+        else if (estadoActual === 'FINALIZADO') { sIcon = 'check-circle'; sClass = 'd'; sLab = 'FINALIZADO'; }
+
+        // Opciones del select según el estado actual
+        let opcionesEstado = '';
+        if (estadoActual === 'PENDIENTE') {
+            // Desde PENDIENTE solo puede pasar a ELABORACION
+            opcionesEstado = `
+                <option value="PENDIENTE" selected>PENDIENTE</option>
+                <option value="ELABORACION">ELABORACIÓN</option>
+            `;
+        } else if (estadoActual === 'ELABORACION') {
+            // Desde ELABORACION solo se puede finalizar
+            opcionesEstado = `
+                <option value="ELABORACION" selected>ELABORACIÓN</option>
+                <option value="FINALIZADO">FINALIZAR</option>
+            `;
+        } else {
+            // FINALIZADO no se puede cambiar
+            opcionesEstado = `<option value="FINALIZADO" selected>FINALIZADO</option>`;
+        }
+
+        // Deshabilitar botón de imprimir si está en PENDIENTE
+        const btnPrintDisabled = estadoActual === 'PENDIENTE' ? 'disabled' : '';
+        const btnPrintTitle = estadoActual === 'PENDIENTE' ? 'Debe cambiar a ELABORACIÓN para imprimir' : 'Imprimir documento';
 
         card.innerHTML = `
             <div class="card-visual-ultra" onclick="${nov.IMAGEN ? `window.open('${nov.IMAGEN}', '_blank')` : ''}">
@@ -213,6 +237,9 @@ function renderTabla(data = gsNovedades) {
                     <div class="tech-pills-container">
                         <div class="tech-pill-lux" title="Lote"><i class="fas fa-barcode"></i> ${nov.LOTE || 'S/L'}</div>
                         <div class="tech-pill-lux" title="Referencia"><i class="fas fa-tag"></i> ${nov.REFERENCIA || 'REF S/N'}</div>
+                        <div class="tech-pill-lux" title="Prenda"><i class="fas fa-tshirt"></i> ${nov.PRENDA || '--'}</div>
+                        <div class="tech-pill-lux" title="Género"><i class="fas fa-venus-mars"></i> ${nov.GENERO || '--'}</div>
+                        <div class="tech-pill-lux" title="Tejido"><i class="fas fa-scroll"></i> ${nov.TEJIDO || '--'}</div>
                         <div class="tech-pill-lux" title="Línea"><i class="fas fa-route"></i> ${nov.LINEA || '--'}</div>
                         <div class="tech-pill-lux" title="Cantidad Original"><i class="fas fa-cubes"></i> ${nov.CANTIDAD || '0'}</div>
                     </div>
@@ -236,11 +263,11 @@ function renderTabla(data = gsNovedades) {
                         </div>
                         <div class="date-row-lux">
                             <span><b>Reportado:</b> ${dtIngreso ? (dtIngreso.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).charAt(0).toUpperCase() + dtIngreso.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).slice(1)) : '--'}</span>
-                            <span><b>Despachado:</b> ${dtSalida ? (dtSalida.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).charAt(0).toUpperCase() + dtSalida.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).slice(1)) : (estadoActual === 'FINALIZADO' ? '--' : 'PENDIENTE DE DESPACHO')}</span>
+                            <span><b>Salida Producción:</b> ${dtSalida ? (dtSalida.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).charAt(0).toUpperCase() + dtSalida.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).slice(1)) : 'PENDIENTE'}</span>
                         </div>
                     </div>
-                    <div class="days-badge-lux">
-                        ${calcularDiasHabiles(dtIngreso, dtSalida || new Date())} DÍAS HÁBILES
+                    <div class="days-badge-lux ${totalDias <= 2 ? 'is-ontime' : (totalDias <= 4 ? 'is-warning' : 'is-overdue')}">
+                        ${totalDias <= 2 ? '<i class="fas fa-check-circle"></i> ' : (totalDias <= 4 ? '<i class="fas fa-exclamation-circle"></i> ' : '<i class="fas fa-exclamation-triangle"></i> ')}${totalDias} DÍA${totalDias !== 1 ? 'S' : ''} HÁBIL${totalDias !== 1 ? 'ES' : ''}
                     </div>
                 </div>
             </div>
@@ -248,15 +275,18 @@ function renderTabla(data = gsNovedades) {
                 <div class="status-btn-lux ${sClass}">
                     <i class="fas fa-${sIcon}"></i>
                     <span>${sLab}</span>
-                    <select class="status-select-hidden" onchange="actualizarEstado('${nov.ID_RADICADO}', this.value, this)">
-                        <option value="PENDIENTE" ${estadoActual === 'PENDIENTE' ? 'selected' : ''}>PENDIENTE</option>
-                        <option value="ELABORACION" ${estadoActual === 'ELABORACION' ? 'selected' : ''}>ELABORACIÓN</option>
-                        <option value="FINALIZADO" ${estadoActual === 'FINALIZADO' ? 'selected' : ''}>CERRADA</option>
+                    <select class="status-select-hidden" onchange="actualizarEstado('${nov.ID_NOVEDAD}', this.value, this)">
+                        ${opcionesEstado}
                     </select>
                 </div>
-                <button class="btn-print-ultra w-100" onclick="imprimirNovedad('${nov.ID_RADICADO}')">
+                <button class="btn-print-ultra w-100" onclick="imprimirNovedad('${nov.ID_NOVEDAD}')" ${btnPrintDisabled} title="${btnPrintTitle}">
                     <i class="fas fa-print"></i> IMPRIMIR
                 </button>
+                ${estadoActual === 'FINALIZADO' ? `
+                <button class="btn-notify-ultra w-100" onclick="notificarSolucion('${nov.ID_NOVEDAD}')" title="Enviar notificación de solución por correo">
+                    <i class="fas fa-envelope"></i> NOTIFICAR
+                </button>
+                ` : ''}
             </div>
         `;
         feed.appendChild(card);
@@ -299,8 +329,8 @@ function renderPaginacion(totalRecords, dataRef) {
 }
 
 /**
- * Calcula días hábiles entre dos fechas (Lunes a Viernes)
- * Ignora la hora, solo toma en cuenta el cambio de fecha.
+ * Calcula días hábiles transcurridos entre dos fechas (Lunes a Viernes)
+ * Excluye el día de inicio, incluye el día de fin.
  */
 function calcularDiasHabiles(fechaInicio, fechaFin) {
     if (!fechaInicio || !fechaFin) return 0;
@@ -312,11 +342,18 @@ function calcularDiasHabiles(fechaInicio, fechaFin) {
     let end = new Date(fechaFin);
     end.setHours(0, 0, 0, 0);
 
+    // Si las fechas son iguales, no hay días transcurridos
+    if (start.getTime() === end.getTime()) return 0;
+    
     if (start > end) return 0;
 
     let count = 0;
     let curr = new Date(start);
+    
+    // Avanzar al día siguiente del inicio (excluir día de inicio)
+    curr.setDate(curr.getDate() + 1);
 
+    // Contar días hábiles hasta el día de fin (inclusive)
     while (curr <= end) {
         let day = curr.getDay();
         if (day !== 0 && day !== 6) { // 0=Dom, 6=Sab
@@ -325,9 +362,6 @@ function calcularDiasHabiles(fechaInicio, fechaFin) {
         curr.setDate(curr.getDate() + 1);
     }
 
-    // Si queremos contar los días transcurridos (excluyendo el día de inicio si es el mismo)
-    // Pero usualmente se cuenta el rango completo. El usuario pide "diferencia".
-    // Si es el mismo día, count será 1 si es hábil.
     return count;
 }
 
@@ -338,23 +372,12 @@ function obtenerPlantaReciente(nombrePlanta) {
 }
 
 async function actualizarEstado(timestampId, nuevoEstado, selectEl) {
-    const row = gsNovedades.find(n => n.ID_RADICADO === timestampId);
+    const row = gsNovedades.find(n => n.ID_NOVEDAD === timestampId);
     const btnContainer = selectEl.closest('.status-btn-lux');
     const originalHTML = btnContainer.innerHTML;
     let respuestaCorreo = "";
 
-    if (nuevoEstado === 'FINALIZADO') {
-        const { value: texto, isConfirmed } = await Swal.fire({
-            title: 'RESOLUCIÓN',
-            input: 'textarea',
-            inputPlaceholder: 'Escriba la solución...',
-            showCancelButton: true,
-            confirmButtonText: 'CONFIRMAR',
-            confirmButtonColor: '#3f51b5'
-        });
-        if (!isConfirmed) { renderTabla(); return; }
-        respuestaCorreo = texto;
-    }
+    // Ya no pedimos confirmación al finalizar, solo actualizamos directamente
 
     // Estado de carga en el botón
     selectEl.disabled = true;
@@ -371,9 +394,19 @@ async function actualizarEstado(timestampId, nuevoEstado, selectEl) {
         if (row) row.ESTADO = nuevoEstado;
         renderTabla(); // Esto reconstruirá la UI con el nuevo estado y el botón correcto
 
-        Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 }).fire({ icon: 'success', title: 'Actualizado' });
+        Swal.fire({ 
+            icon: 'success', 
+            title: 'Estado Actualizado', 
+            text: 'El cambio se ha guardado correctamente',
+            timer: 1500,
+            showConfirmButton: false
+        });
     } catch (e) {
-        Swal.fire({ icon: 'error', title: 'Error' });
+        Swal.fire({ 
+            icon: 'error', 
+            title: 'Error al Actualizar',
+            text: 'No se pudo guardar el cambio. Intente nuevamente.'
+        });
         btnContainer.classList.remove('is-loading');
         btnContainer.innerHTML = originalHTML;
         renderTabla();
@@ -381,8 +414,282 @@ async function actualizarEstado(timestampId, nuevoEstado, selectEl) {
         // No es necesario selectEl.disabled = false porque renderTabla() recrea el elemento
     }
 }
+
+let currentNovedadNotify = null;
+
+/**
+ * Inserta una plantilla pre-establecida en el textarea según el tipo de resolución
+ */
+function insertarPlantilla(tipo) {
+    const textarea = document.getElementById('notifySolucion');
+    let plantilla = '';
+    
+    switch(tipo) {
+        case 'MANO_A_MANO':
+            plantilla = 'Esta resolución es mano a mano sin cobro. Puede recoger el material en nuestras instalaciones en el horario de atención: 7:10 a.m. - 4:43 p.m.';
+            break;
+        case 'TALLER':
+            plantilla = 'Agradecemos su colaboración y le recordamos que el reporte oportuno de novedades (dentro de las 24 horas o 2 días hábiles) nos permite gestionar de manera más eficiente las soluciones y mantener la calidad de nuestros procesos conjuntos.';
+            break;
+        case 'LINEA':
+            plantilla = 'Hemos identificado que la situación se originó en nuestra línea de producción, por lo que los ajustes necesarios han sido gestionados internamente para garantizar la continuidad del proceso.';
+            break;
+        case 'REFERENCIA':
+            plantilla = 'Hemos identificado que la situación está relacionada con especificaciones de la referencia, por lo que los ajustes necesarios han sido gestionados internamente para garantizar la continuidad del proceso.';
+            break;
+        case 'FICHA':
+            plantilla = 'Hemos identificado que la situación está relacionada con la ficha técnica, por lo que los ajustes necesarios han sido gestionados internamente para garantizar la continuidad del proceso.';
+            break;
+        case 'ENTREGA':
+            plantilla = 'Hemos identificado que la situación se originó en el proceso de entrega, por lo que los ajustes necesarios han sido gestionados internamente para garantizar la continuidad del proceso.';
+            break;
+    }
+    
+    // Insertar la plantilla en el textarea
+    textarea.value = plantilla;
+    textarea.focus();
+    
+    // Pequeña animación visual
+    textarea.style.background = '#f0f9ff';
+    setTimeout(() => {
+        textarea.style.background = '#fafafa';
+    }, 300);
+}
+
+async function notificarSolucion(timestampId) {
+    const nov = gsNovedades.find(n => n.ID_NOVEDAD === timestampId);
+    if (!nov) {
+        Swal.fire({ 
+            icon: 'error', 
+            title: 'Error',
+            text: 'No se encontró la novedad',
+            timer: 1500,
+            showConfirmButton: false
+        });
+        return;
+    }
+
+    const infoPlanta = obtenerPlantaReciente(nov.PLANTA);
+    if (!infoPlanta || !infoPlanta.EMAIL) {
+        Swal.fire({ 
+            icon: 'warning', 
+            title: 'Sin Correo',
+            text: 'Esta planta no tiene un correo electrónico registrado',
+            timer: 1500,
+            showConfirmButton: false
+        });
+        return;
+    }
+
+    // Guardar datos actuales
+    currentNovedadNotify = {
+        nov: nov,
+        infoPlanta: infoPlanta
+    };
+
+    // Limpiar textarea
+    document.getElementById('notifySolucion').value = '';
+
+    // Mostrar modal
+    document.getElementById('modalNotifyOverlay').classList.add('active');
+}
+
+function cerrarModalNotify() {
+    document.getElementById('modalNotifyOverlay').classList.remove('active');
+    currentNovedadNotify = null;
+}
+
+async function corregirTextoIA() {
+    const textarea = document.getElementById('notifySolucion');
+    const texto = textarea.value.trim();
+
+    if (!texto) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Campo Vacío',
+            text: 'Escribe primero la solución para que la IA pueda mejorarla',
+            timer: 1500,
+            showConfirmButton: false
+        });
+        return;
+    }
+
+    const aiBtn = document.querySelector('.notify-ai-btn');
+    const aiStatus = document.getElementById('notifyAiStatus');
+    const originalHTML = aiBtn.innerHTML;
+    
+    aiBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Procesando...';
+    aiBtn.disabled = true;
+    aiStatus.classList.add('active');
+
+    try {
+        // Usar la misma configuración que ui.js
+        const apiKey = CONFIG.GEMINI_KEY;
+        
+        if (!apiKey) {
+            throw new Error("La llave de IA no se ha cargado correctamente desde el servidor.");
+        }
+
+        const model = 'gemma-3n-e4b-it';
+        
+        // Solo corregir ortografía y gramática, sin considerar el tipo de cobro
+        const promptIA = `Actúa como corrector técnico industrial. Corrige ortografía, gramática y normaliza abreviaturas (ej: pta -> planta, cant -> cantidad) del siguiente texto para que sea profesional y ejecutivo. Si el texto está completamente en MAYÚSCULAS, conviértelo a formato normal con mayúsculas y minúsculas apropiadas según las reglas del español. Devuelve solo el resultado corregido sin agregar información que no esté implícita en el texto original.\n\nTexto a corregir: ${texto}`;
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: promptIA }] }],
+                generationConfig: { temperature: 0.1, topP: 0.95, maxOutputTokens: 1024 }
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error?.message || "Error en la respuesta de la IA");
+        }
+
+        if (!data.candidates || data.candidates.length === 0) {
+            throw new Error("La IA no pudo generar una respuesta (Filtro de seguridad o bloqueo).");
+        }
+
+        let textoPulido = data.candidates[0].content.parts[0].text.trim();
+        textoPulido = textoPulido.replace(/^["']|["']$/g, '');
+        
+        // Mostrar el resultado
+        aiStatus.innerHTML = '<i class="fas fa-check-circle"></i> ¡Texto mejorado exitosamente!';
+        aiStatus.style.background = '#f0fdf4';
+        aiStatus.style.borderColor = '#bbf7d0';
+        aiStatus.style.color = '#15803d';
+        
+        textarea.value = textoPulido;
+
+        setTimeout(() => {
+            aiStatus.classList.remove('active');
+            setTimeout(() => {
+                aiStatus.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> La IA está mejorando tu texto...';
+                aiStatus.style.background = '#f0f9ff';
+                aiStatus.style.borderColor = '#bae6fd';
+                aiStatus.style.color = '#0369a1';
+            }, 300);
+        }, 2000);
+
+    } catch (error) {
+        console.error('Error al corregir con IA:', error);
+        aiStatus.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + (error.message || 'Error al procesar el texto');
+        aiStatus.style.background = '#fef2f2';
+        aiStatus.style.borderColor = '#fecaca';
+        aiStatus.style.color = '#dc2626';
+        
+        setTimeout(() => {
+            aiStatus.classList.remove('active');
+            setTimeout(() => {
+                aiStatus.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> La IA está mejorando tu texto...';
+                aiStatus.style.background = '#f0f9ff';
+                aiStatus.style.borderColor = '#bae6fd';
+                aiStatus.style.color = '#0369a1';
+            }, 300);
+        }, 3000);
+    } finally {
+        aiBtn.innerHTML = originalHTML;
+        aiBtn.disabled = false;
+    }
+}
+
+async function enviarNotificacion() {
+    // Validar que exista currentNovedadNotify PRIMERO
+    if (!currentNovedadNotify) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se encontró la información de la novedad',
+            timer: 1500,
+            showConfirmButton: false
+        });
+        return;
+    }
+
+    const solucion = document.getElementById('notifySolucion').value.trim();
+
+    if (!solucion) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Campo Requerido',
+            text: 'Debe escribir la solución antes de enviar',
+            timer: 1500,
+            showConfirmButton: false
+        });
+        return;
+    }
+
+    const btnEnviar = document.getElementById('btnEnviarNotify');
+    const originalHTML = btnEnviar.innerHTML;
+    btnEnviar.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Enviando...';
+    btnEnviar.disabled = true;
+
+    try {
+        const res = await fetch(GAS_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ 
+                accion: "NOTIFICAR_SOLUCION", 
+                timestampId: currentNovedadNotify.nov.ID_NOVEDAD,
+                correo: currentNovedadNotify.infoPlanta.EMAIL,
+                planta: currentNovedadNotify.nov.PLANTA,
+                lote: currentNovedadNotify.nov.LOTE,
+                referencia: currentNovedadNotify.nov.REFERENCIA,
+                descripcion: currentNovedadNotify.nov.DESCRIPCION,
+                fecha: currentNovedadNotify.nov.FECHA,
+                solucion: solucion
+            })
+        });
+
+        if (!res.ok) {
+            throw new Error(`Error HTTP: ${res.status}`);
+        }
+
+        const data = await res.json();
+        console.log('Respuesta del servidor:', data);
+
+        if (data.success === true) {
+            // Guardar el email antes de cerrar el modal (que limpia currentNovedadNotify)
+            const emailDestino = currentNovedadNotify.infoPlanta.EMAIL;
+            cerrarModalNotify();
+            Swal.fire({ 
+                icon: 'success', 
+                title: 'Notificación Enviada', 
+                text: `Se ha enviado el correo a ${emailDestino}`,
+                timer: 1500,
+                showConfirmButton: false
+            });
+        } else {
+            throw new Error(data.message || 'Error al enviar notificación');
+        }
+    } catch (e) {
+        console.error('Error al enviar notificación:', e);
+        Swal.fire({ 
+            icon: 'error', 
+            title: 'Error al Enviar',
+            text: e.message || 'No se pudo enviar la notificación. Intente nuevamente.'
+        });
+    } finally {
+        btnEnviar.innerHTML = originalHTML;
+        btnEnviar.disabled = false;
+    }
+}
+
+// Cerrar modal al hacer clic fuera
+document.addEventListener('click', function(e) {
+    const overlay = document.getElementById('modalNotifyOverlay');
+    if (e.target === overlay) {
+        cerrarModalNotify();
+    }
+});
 function imprimirNovedad(id) {
-    const nov = gsNovedades.find(n => n.ID_RADICADO === id);
+    const nov = gsNovedades.find(n => n.ID_NOVEDAD === id);
     if (!nov) return;
     
     const infoPlanta = obtenerPlantaReciente(nov.PLANTA);
@@ -554,40 +861,56 @@ function parsearFechaLatina(d) {
 
         if (dateParts.length === 3) {
             let dia, mes, anio;
-            // Caso DD/MM/YYYY o DD-MM-YYYY
-            if (dateParts[2].length === 4 || dateParts[2].length === 2) {
-                dia = parseInt(dateParts[0]);
-                // Si el segundo parte es texto (ene, feb...)
-                if (isNaN(dateParts[1])) {
-                    const meses = { 'ene': 0, 'feb': 1, 'mar': 2, 'abr': 3, 'may': 4, 'jun': 5, 'jul': 6, 'ago': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dic': 11 };
-                    mes = meses[dateParts[1].toLowerCase().substring(0, 3)] || 0;
-                } else {
-                    mes = parseInt(dateParts[1]) - 1;
-                }
-                anio = parseInt(dateParts[2].length === 2 ? '20' + dateParts[2] : dateParts[2]);
-            }
+            
             // Caso YYYY-MM-DD (Formato ISO de Sheets)
-            else if (dateParts[0].length === 4) {
+            if (dateParts[0].length === 4) {
                 anio = parseInt(dateParts[0]);
                 mes = parseInt(dateParts[1]) - 1;
                 dia = parseInt(dateParts[2]);
             }
+            // Caso DD/MM/YYYY o DD-MM-YYYY (Formato Latino)
+            else if (dateParts[2].length === 4) {
+                dia = parseInt(dateParts[0]);
+                mes = parseInt(dateParts[1]) - 1;
+                anio = parseInt(dateParts[2]);
+            }
+            // Caso DD/MM/YY o DD-MM-YY (Año corto)
+            else if (dateParts[2].length === 2) {
+                dia = parseInt(dateParts[0]);
+                mes = parseInt(dateParts[1]) - 1;
+                anio = parseInt('20' + dateParts[2]);
+            }
+            // Caso con mes en texto (ene, feb, mar...)
+            else if (isNaN(dateParts[1])) {
+                dia = parseInt(dateParts[0]);
+                const meses = { 'ene': 0, 'feb': 1, 'mar': 2, 'abr': 3, 'may': 4, 'jun': 5, 'jul': 6, 'ago': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dic': 11 };
+                mes = meses[dateParts[1].toLowerCase().substring(0, 3)] || 0;
+                anio = parseInt(dateParts[2].length === 2 ? '20' + dateParts[2] : dateParts[2]);
+            }
 
             if (!isNaN(dia) && !isNaN(mes) && !isNaN(anio)) {
                 let fecha = new Date(anio, mes, dia);
-                // Si hay hora (HH:mm)
+                // Si hay hora (HH:mm:ss)
                 if (parts[1] && parts[1].includes(':')) {
                     const timeParts = parts[1].split(':');
-                    fecha.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]));
+                    fecha.setHours(parseInt(timeParts[0]) || 0, parseInt(timeParts[1]) || 0, parseInt(timeParts[2]) || 0);
                 }
-                if (!isNaN(fecha.getTime())) return fecha;
+                
+                // Validar que la fecha sea válida
+                if (!isNaN(fecha.getTime())) {
+                    return fecha;
+                }
             }
         }
     }
 
     // Fallback al parse nativo solo si lo de arriba falla
     const dtFallback = new Date(d);
-    return isNaN(dtFallback.getTime()) ? null : dtFallback;
+    if (!isNaN(dtFallback.getTime())) {
+        return dtFallback;
+    }
+    
+    return null;
 }
 
 function formatearHora(d) {

@@ -17,30 +17,42 @@ function showLoginPrompt() {
  */
 async function loadUsers() {
     try {
+        console.log('[AUTH] Iniciando carga de usuarios...');
+        
         if (!CONFIG.API_KEY) {
+            console.log('[AUTH] Obteniendo configuración segura...');
             await fetchSecureConfig();
         }
 
+        console.log('[AUTH] Fetching usuarios data...');
         allUsers = await fetchUsuariosData();
+        console.log('[AUTH] Usuarios cargados:', allUsers.length);
 
         const savedUser = localStorage.getItem('sispro_user');
         if (savedUser) {
             let parsedUser = JSON.parse(savedUser);
             // Sincronizar en caliente los datos cacheados con el último listado descargado de DB
-            const realUser = allUsers.find(u => String(u.ID).trim() === String(parsedUser.ID).trim());
+            const realUser = allUsers.find(u => {
+                const dbId = String(u.ID_USUARIO || u.ID || '').trim();
+                const savedId = String(parsedUser.ID_USUARIO || parsedUser.ID || '').trim();
+                return dbId === savedId;
+            });
             
             if (realUser) {
                 currentUser = realUser;
                 localStorage.setItem('sispro_user', JSON.stringify(currentUser)); // Forzar refresco
+                console.log('[AUTH] Sesión restaurada para:', currentUser.USUARIO);
             } else {
                 // Usuario fue eliminado de la DB, destruir sesión zombi
                 currentUser = null;
                 localStorage.removeItem('sispro_user');
+                console.log('[AUTH] Sesión eliminada (usuario no encontrado en DB)');
             }
         }
         applyAccessControl();
     } catch (error) {
-        console.error("Error al cargar sesión:", error);
+        console.error("[AUTH] Error al cargar sesión:", error);
+        throw error; // Propagar el error para que se maneje en el caller
     }
 }
 
@@ -48,10 +60,21 @@ async function loadUsers() {
  * Valida las credenciales.
  */
 function handleLogin(userId, password, isLoginPage = false) {
-    const userFound = allUsers.find(u =>
-        String(u.ID).trim() === String(userId).trim() &&
-        String(u.PASSWORD).trim() === String(password).trim()
-    );
+    console.log('[AUTH] handleLogin - Buscando usuario:', userId);
+    console.log('[AUTH] Total usuarios disponibles:', allUsers.length);
+    
+    const userFound = allUsers.find(u => {
+        const dbId = String(u.ID_USUARIO || u.ID || '').trim();
+        const dbPass = String(u.PASSWORD || '').trim();
+        const inputId = String(userId).trim();
+        const inputPass = String(password).trim();
+        
+        console.log('[AUTH] Comparando:', dbId, '===', inputId, '&&', dbPass.length, '===', inputPass.length);
+        
+        return dbId === inputId && dbPass === inputPass;
+    });
+
+    console.log('[AUTH] Usuario encontrado:', userFound ? userFound.USUARIO : 'NO');
 
     if (userFound) {
         // Bloquear acceso a cuentas no aprobadas
