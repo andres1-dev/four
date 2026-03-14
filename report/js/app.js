@@ -67,26 +67,19 @@ function bindEvents() {
 
 /* ── Inicialización de la aplicación ── */
 
-window.onload = function () {
-    // Fecha y hora
+window.onload = async function() {
+    // 1. Prioridad Absoluta: Validar usuario (El escudo está activo en CSS)
+    await loadUsers(); 
+
+    // Si loadUsers() pasó (no hubo redirect), inicializar el resto
     updateDateTime();
-
-    // Registrar eventos
     bindEvents();
-
-    // Cargar datos (Lotes + Plantas + Usuarios)
+    
+    // Cargar datos operativos
     loadData();
-    loadUsers(); 
-
-    // Dropzones de archivo personalizados
+    
     initDropzones();
 
-    // Fondo de partículas
-    initParticles();
-
-    // Mostrar login inicial si no hay sesión
-    updateAuthUI();
-
-    // Actualizar reloj cada minuto
+    // El escudo se quita dentro de loadUsers() cuando todo es válido
     setInterval(updateDateTime, 60_000);
 };

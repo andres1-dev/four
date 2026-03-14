@@ -57,6 +57,7 @@ async function handleCalidadSubmit(e) {
         });
 
         e.target.reset();
+        if (typeof clearVersionHistory === 'function') clearVersionHistory();
         hideSections();
 
     } catch (error) {

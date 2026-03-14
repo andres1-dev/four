@@ -14,6 +14,13 @@
             padding: 15px;
             background: #fff;
             line-height: 1.3;
+            /* Escudo de Seguridad */
+            opacity: 0 !important;
+            visibility: hidden !important;
+        }
+        body.auth-shield-pass {
+            opacity: 1 !important;
+            visibility: visible !important;
         }
 
         .container {
@@ -79,7 +86,11 @@
 
         /* SECCIONES Y TABLAS */
         .section {
+            padding: 15px;
             margin-bottom: 12px;
+            background: #fff;
+            border-radius: 8px;
+            border: 1px solid #eee;
             page-break-inside: avoid;
         }
 
@@ -261,6 +272,27 @@
             transform: scale(1.1) rotate(5deg);
         }
     </style>
+
+    <!-- ── Escudo de Seguridad (Bloqueo Agresivo) ── -->
+    <script>
+        (function(){
+            const s = localStorage.getItem('sispro_user');
+            if(!s || s==='undefined' || s==='null') {
+                window.location.replace('login.html');
+                return;
+            }
+            
+            try {
+                const user = JSON.parse(s);
+                const role = user.ROL;
+                if (role !== 'ADMIN' && role !== 'USER-P') {
+                    window.location.replace('index.html');
+                }
+            } catch (e) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
 </head>
 
 <body>
@@ -275,6 +307,9 @@
     </div>
 
     <script>
+        // Aplicar escudo visual ya validado en el head
+        document.body.classList.add('auth-shield-pass');
+
         // Cargar datos del LocalStorage enviados desde resolucion.js
         const novData = localStorage.getItem('printNovedad');
         const plantaData = localStorage.getItem('printPlanta');

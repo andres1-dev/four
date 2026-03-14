@@ -2,6 +2,10 @@
    login.css — Estilos específicos para el Portal de Acceso
    ========================================================================== */
 
+.login-body {
+    background: #ffffff !important;
+}
+
 .login-page-wrapper {
     min-height: 100vh;
     display: flex;
@@ -11,8 +15,26 @@
     position: relative;
     z-index: 10;
     padding: 20px;
-    background: linear-gradient(135deg, #f8fafc 0%, #cbd5e1 100%);
+    background: transparent !important;
     overflow: hidden;
+}
+
+
+
+#particles-js {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: auto !important;
+}
+
+@media (max-width: 768px) {
+    #particles-js {
+        display: none !important;
+    }
 }
 
 /* ── Login Card (Glassmorphism Effect) ── */
@@ -43,7 +65,6 @@
     height: 72px;
     width: 72px;
     margin-bottom: 20px;
-    filter: drop-shadow(0 6px 8px rgba(38, 82, 219, 0.15));
     animation: floatWhale 4s ease-in-out infinite;
 }
 
@@ -54,21 +75,28 @@
 }
 
 .brand-divider {
-    height: 2px;
-    width: 40px;
-    background: var(--color-primary);
-    margin: 0 auto 15px;
-    border-radius: 2px;
-    opacity: 0.6;
+    display: none;
 }
 
 .login-subtitle {
-    font-size: 0.75rem;
+    font-size: 1.25rem;
     font-weight: 800;
-    color: var(--color-primary);
-    letter-spacing: 2px;
+    background: linear-gradient(135deg, #3f51b5 0%, #3b82f6 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 1px;
     text-transform: uppercase;
-    margin: 0;
+    margin: 0 auto;
+    display: table;
+    line-height: 1.2;
+}
+
+@media (max-width: 480px) {
+    .login-subtitle {
+        font-size: 1.1rem;
+        letter-spacing: 0.5px;
+    }
 }
 
 /* ── Auth Sections ── */
@@ -149,28 +177,28 @@
 /* ── Primary Action Button ── */
 .btn-auth-primary {
     width: 100%;
-    height: 56px;
-    background: var(--color-primary);
+    height: 54px;
+    background: #3f51b5;
     color: white;
     border: none;
-    border-radius: 14px;
-    font-weight: 700;
+    border-radius: 12px;
+    font-weight: 600;
     font-size: 0.9rem;
-    letter-spacing: 1.2px;
+    letter-spacing: 0.5px;
     cursor: pointer;
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 12px;
     transition: all 0.3s ease;
-    box-shadow: 0 10px 15px -3px var(--color-primary-shadow);
-    margin: 30px 0 20px;
+    box-shadow: 0 4px 12px rgba(63, 81, 181, 0.2);
+    margin: 25px 0 15px;
 }
 
 .btn-auth-primary:hover {
-    background: var(--color-primary-dark);
-    transform: translateY(-2px);
-    box-shadow: 0 20px 25px -5px var(--color-primary-shadow);
+    background: #3949ab;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 15px rgba(63, 81, 181, 0.3);
 }
 
 .btn-auth-primary:active {
@@ -178,9 +206,10 @@
 }
 
 .btn-auth-primary:disabled {
-    background: #94a3b8;
+    background: #e2e8f0;
+    color: #94a3b8;
     cursor: not-allowed;
-    transform: none;
+    box-shadow: none;
 }
 
 /* ── Footer Links ── */

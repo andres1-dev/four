@@ -85,16 +85,36 @@ async function fetchSheetData(sheetName, indices, headers) {
     }
 
     const { values = [] } = await response.json();
-
     if (values.length <= 1) return [];
 
-    return values.slice(1).map((row) => {
+    let records = values.slice(1).map((row) => {
         const record = {};
         indices.forEach((colIndex, i) => {
             record[headers[i]] = colIndex < row.length ? row[colIndex] : '';
         });
         return record;
     });
+
+    /**
+     * FILTRO DE SEGURIDAD CRÍTICO:
+     * Si el usuario es tipo "GUEST" (Planta/Taller), solo puede ver datos de su propia planta.
+     */
+    const sessionUser = (typeof currentUser !== 'undefined') ? currentUser : null;
+    if (sessionUser && sessionUser.ROL === 'GUEST' && sessionUser.PLANTA) {
+        const userPlanta = String(sessionUser.PLANTA).trim().toUpperCase();
+        
+        // Solo filtrar si la hoja contiene una columna llamada "PLANTA"
+        // Esto aplica a SISPRO, NOVEDADES y REPORTES
+        if (headers.includes('PLANTA')) {
+            const originalCount = records.length;
+            records = records.filter(r => 
+                String(r.PLANTA || '').trim().toUpperCase() === userPlanta
+            );
+            console.log(`[SECURITY] Filtrados ${originalCount - records.length} registros de otra planta para el usuario: ${userPlanta}`);
+        }
+    }
+
+    return records;
 }
 
 /**

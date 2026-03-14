@@ -69,7 +69,7 @@ function hideSections() {
     DOM.calidadSection().classList.add('hidden');
     DOM.actualizarDatosSection().classList.add('hidden');
     DOM.errorMessage().classList.add('hidden');
-    
+
     // Asegurar que los datos del lote se contraigan
     const collapseHeader = document.getElementById('lotCollapseToggle');
     const collapseBody = document.getElementById('lotCollapseBody');
@@ -78,7 +78,7 @@ function hideSections() {
         collapseBody.classList.remove('open');
         collapseHeader.setAttribute('aria-expanded', 'false');
     }
-    
+
     clearSuggestions();
 }
 
@@ -155,7 +155,7 @@ function fillLotDetails(lotData) {
             if (duracion.horas > 0) partes.push(`${duracion.horas} hora${duracion.horas !== 1 ? 's' : ''}`);
             if (duracion.minutos > 0) partes.push(`${duracion.minutos} min`);
             if (duracion.segundos > 0 && duracion.dias === 0) partes.push(`${duracion.segundos} seg`);
-            
+
             const textoFormateado = partes.length > 0 ? partes.join(', ') : '< 1 segundo';
             duracionField.value = `${textoFormateado} (${duracion.totalMinutos} min totales)`;
         } else {
@@ -207,7 +207,7 @@ function toggleActionSections(action) {
     if (action === 'ACTUALIZAR_DATOS') {
         fillPlantaName();
     }
-    
+
     // Auto-llenar el correo y la localización GPS en el formulario de Calidad
     if (action === 'CALIDAD') {
         const emailInput = document.getElementById('email');
@@ -219,6 +219,9 @@ function toggleActionSections(action) {
         // Capturar coordenadas GPS en el momento de abrir el formulario
         requestCalidadLocation();
     }
+
+    // Limpiar historial de IA al cambiar de sección o cerrar
+    if (typeof clearVersionHistory === 'function') clearVersionHistory();
 }
 
 /* ── GPS Permission Manager ── */
@@ -243,10 +246,10 @@ function setCalidadFieldsDisabled(disabled) {
         el.disabled = disabled;
         if (disabled) {
             el.style.opacity = '0.45';
-            el.style.cursor  = 'not-allowed';
+            el.style.cursor = 'not-allowed';
         } else {
             el.style.opacity = '';
-            el.style.cursor  = '';
+            el.style.cursor = '';
         }
     });
     const submitBtn = document.querySelector('#calidadForm button[type="submit"]');
@@ -258,16 +261,16 @@ function setCalidadFieldsDisabled(disabled) {
  * @param {boolean} enabled
  */
 function applyGpsToggleUI(enabled) {
-    const label  = document.getElementById('gps-status-label');
+    const label = document.getElementById('gps-status-label');
     const slider = document.getElementById('gps-toggle-slider');
-    const knob   = document.getElementById('gps-toggle-knob');
+    const knob = document.getElementById('gps-toggle-knob');
     if (!label || !slider || !knob) return;
 
     if (enabled) {
         // Dot verde sin texto
         label.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:#16a34a;display:inline-block;box-shadow:0 0 0 2px #bbf7d0;"></span>`;
         slider.style.background = '#16a34a';
-        knob.style.transform    = 'translateX(20px)';
+        knob.style.transform = 'translateX(20px)';
         setCalidadFieldsDisabled(false);
         const rb = document.getElementById('gps-refresh-btn');
         if (rb) rb.style.display = 'inline-block';
@@ -275,7 +278,7 @@ function applyGpsToggleUI(enabled) {
         // Dot rojo sin texto
         label.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:#dc2626;display:inline-block;box-shadow:0 0 0 2px #fecaca;"></span>`;
         slider.style.background = '#dc2626';
-        knob.style.transform    = 'translateX(0)';
+        knob.style.transform = 'translateX(0)';
         setCalidadFieldsDisabled(true);
         const rb = document.getElementById('gps-refresh-btn');
         if (rb) rb.style.display = 'none';
@@ -316,7 +319,7 @@ function showGpsBlockedOverlay() {
  * Toggle manual: activa o desactiva el GPS para este usuario y actualiza la UI.
  */
 function toggleGpsPermission() {
-    const key     = getGpsKey();
+    const key = getGpsKey();
     const current = localStorage.getItem(key);
     const newState = (current === 'enabled') ? 'disabled' : 'enabled';
     localStorage.setItem(key, newState);
@@ -371,12 +374,12 @@ function _renderMapCard(lat, lng, locInput, mapaCard) {
  * Solo se llama al abrir CALIDAD por primera vez (sin cache) o al hacer clic en "Actualizar".
  */
 function requestCalidadLocation() {
-    const locInput  = document.getElementById('localizacion');
-    const mapaCard  = document.getElementById('mapa-calidad-card');
+    const locInput = document.getElementById('localizacion');
+    const mapaCard = document.getElementById('mapa-calidad-card');
     const submitBtn = document.querySelector('#calidadForm button[type="submit"]');
     if (!locInput || !mapaCard) return;
 
-    const key  = getGpsKey();
+    const key = getGpsKey();
     const pref = localStorage.getItem(key);
 
     // Si el usuario desactivó manualmente → bloquear módulo
@@ -435,8 +438,8 @@ function requestCalidadLocation() {
  * El usuario hace clic conscientemente → navegador solo pregunta si es la primera vez.
  */
 function activarGpsManual() {
-    const locInput  = document.getElementById('localizacion');
-    const mapaCard  = document.getElementById('mapa-calidad-card');
+    const locInput = document.getElementById('localizacion');
+    const mapaCard = document.getElementById('mapa-calidad-card');
     const submitBtn = document.querySelector('#calidadForm button[type="submit"]');
     const key = getGpsKey();
 
@@ -500,7 +503,7 @@ function fillPlantaName() {
     // Verificar si la planta ya tiene datos registrados
     let plantaRegistrada = null;
     if (typeof currentPlantas !== 'undefined' && plantaValue) {
-        plantaRegistrada = currentPlantas.find(p => 
+        plantaRegistrada = currentPlantas.find(p =>
             (p.PLANTA || '').toString().trim().toLowerCase() === plantaValue.trim().toLowerCase()
         );
     }
@@ -597,6 +600,103 @@ function cycleLogo() {
     logo.src = LOGOS[nextIndex];
 }
 
+/** 
+ * HISTORIAL DE VERSIONES (Volátil)
+ * Estructura: { fieldId: [str1, str2, ...] }
+ */
+let versionHistory = {};
+
+/**
+ * Limpia el historial de versiones de todos los campos.
+ * Se llama al enviar formularios o cambiar de sección.
+ */
+function clearVersionHistory() {
+    console.log('[AI] Limpiando historial de versiones volátil...');
+    versionHistory = {};
+    
+    // Ocultar todos los botones de restaurar y menús
+    document.querySelectorAll('.btn-restore-text').forEach(btn => btn.style.display = 'none');
+    document.querySelectorAll('.ai-history-menu').forEach(menu => menu.remove());
+}
+
+/**
+ * Agrega una versión al historial de un campo.
+ * @param {string} fieldId 
+ * @param {string} text 
+ */
+function addToHistory(fieldId, text) {
+    if (!text) return;
+    if (!versionHistory[fieldId]) versionHistory[fieldId] = [];
+    
+    // Mantenemos solo las últimas 5 versiones
+    if (versionHistory[fieldId].includes(text)) return;
+    versionHistory[fieldId].unshift(text);
+    if (versionHistory[fieldId].length > 5) versionHistory[fieldId].pop();
+}
+
+/**
+ * Muestra el menú de historial de versiones.
+ */
+function showHistoryMenu(fieldId, buttonEl) {
+    // Remover menús previos existentes
+    document.querySelectorAll('.ai-history-menu').forEach(menu => menu.remove());
+
+    const history = versionHistory[fieldId] || [];
+    if (history.length === 0) return;
+
+    const menu = document.createElement('div');
+    menu.className = 'ai-history-menu';
+    
+    // Posicionamiento dinámico cerca del botón
+    const rect = buttonEl.getBoundingClientRect();
+    menu.style.top = `${rect.bottom + window.scrollY + 5}px`;
+    menu.style.left = `${rect.left + window.scrollX - 100}px`;
+
+    let html = '<div class="ai-history-header"><i class="fas fa-clock-rotate-left"></i> Versiones anteriores</div>';
+    history.forEach((text, index) => {
+        const preview = text.length > 35 ? text.substring(0, 35) + '...' : text;
+        html += `<div class="ai-history-item" onclick="restaurarVersion('${fieldId}', ${index})">
+                    <span class="ai-history-num">${index + 1}</span>
+                    <span class="ai-history-text">${preview}</span>
+                 </div>`;
+    });
+
+    menu.innerHTML = html;
+    document.body.appendChild(menu);
+
+    // Cerrar al hacer click fuera
+    setTimeout(() => {
+        const closeMenu = (e) => {
+            if (!menu.contains(e.target) && e.target !== buttonEl) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        };
+        document.addEventListener('click', closeMenu);
+    }, 10);
+}
+
+/**
+ * Restaura una versión específica del historial.
+ */
+function restaurarVersion(fieldId, index) {
+    const textarea = document.getElementById(fieldId);
+    if (!textarea || !versionHistory[fieldId]) return;
+
+    const selectedText = versionHistory[fieldId][index];
+    
+    // Antes de pisar, guardamos la actual en el historial si no es igual
+    const current = textarea.value.trim();
+    if (current && current !== selectedText) {
+        addToHistory(fieldId, current);
+    }
+
+    textarea.value = selectedText;
+    
+    // Limpiar menú
+    document.querySelectorAll('.ai-history-menu').forEach(menu => menu.remove());
+}
+
 /**
  * Asistente de Redacción con IA (Integración Interna)
  * Conecta con el motor de procesamiento AI para una corrección profesional.
@@ -618,9 +718,12 @@ async function mejorarRedaccion(fieldId) {
         return;
     }
 
+    // Guardar en historial antes de cambiar
+    addToHistory(fieldId, textoOriginal);
+
     // Buscar el botón de restaurar
     const restoreBtn = textarea.parentElement.parentElement.querySelector('.btn-restore-text');
-    
+
     // Aplicar efecto de IA en el textarea wrapper
     const wrapper = textarea.closest('.ai-textarea-wrapper');
     if (wrapper) {
@@ -631,13 +734,13 @@ async function mejorarRedaccion(fieldId) {
 
     try {
         const apiKey = CONFIG.GEMINI_KEY;
-        
+
         if (!apiKey) {
             throw new Error("La llave de IA no se ha cargado correctamente desde el servidor.");
         }
 
         const model = 'gemma-3n-e4b-it';
-        const promptIA = `Actúa como corrector técnico industrial. Corrige ortografía, gramática y normaliza abreviaturas (ej: pta -> planta, cant -> cantidad) del siguiente texto para que sea profesional y ejecutivo. Si el texto está completamente en MAYÚSCULAS, conviértelo a formato de oración (primera letra mayúscula, resto minúscula). Devuelve solo el resultado corregido sin agregar información que no esté implícita en el texto original.\n\nTexto a corregir: ${textoOriginal}`;
+        const promptIA = `Actúa como corrector técnico industrial especializado en redacción profesional. Corrige la ortografía, gramática, puntuación y estilo del siguiente texto, mejorando su claridad y coherencia sin alterar el significado original. Normaliza abreviaturas técnicas comunes cuando corresponda. Si el texto está completamente en mayúsculas, conviértelo a formato de escritura estándar utilizando mayúscula inicial al inicio de las oraciones y en nombres propios, y minúsculas en el resto del texto. Sustituye términos vulgares, ofensivos o inapropiados por equivalentes profesionales o neutrales cuando sea necesario. Mantén el contenido técnico implícito en el original y no agregues información nueva. Devuelve únicamente el texto corregido.\n\nTexto a corregir: ${textoOriginal}`;
 
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -662,13 +765,13 @@ async function mejorarRedaccion(fieldId) {
 
         let textoPulido = data.candidates[0].content.parts[0].text.trim();
         textoPulido = textoPulido.replace(/^["']|["']$/g, '');
-        
+
         // Guardar el texto original en un atributo data
         textarea.setAttribute('data-original-text', textoOriginal);
-        
+
         // Aplicar el texto mejorado inmediatamente
         textarea.value = textoPulido;
-        
+
         // Mostrar el botón de restaurar
         if (restoreBtn) {
             restoreBtn.style.display = 'inline-flex';
@@ -699,19 +802,10 @@ async function mejorarRedaccion(fieldId) {
 /**
  * Restaura el texto original antes de la corrección de IA
  */
+/**
+ * Abre el menú de historial para el campo especificado.
+ */
 function restaurarTextoOriginal(fieldId) {
-    const textarea = document.getElementById(fieldId);
-    if (!textarea) return;
-    
-    const textoOriginal = textarea.getAttribute('data-original-text');
-    if (textoOriginal) {
-        textarea.value = textoOriginal;
-        textarea.removeAttribute('data-original-text');
-        
-        // Ocultar el botón de restaurar
-        const restoreBtn = textarea.parentElement.parentElement.querySelector('.btn-restore-text');
-        if (restoreBtn) {
-            restoreBtn.style.display = 'none';
-        }
-    }
+    const btn = event.currentTarget;
+    showHistoryMenu(fieldId, btn);
 }

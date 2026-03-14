@@ -1,9 +1,36 @@
-/* ==========================================================================
-   auth.js — Sistema de Autenticación y Control de Roles
-   ========================================================================== */
+// Detección robusta de página de Login
+const IS_LOGIN_PAGE = window.location.pathname.toLowerCase().includes('login.html');
 
-let currentUser = null;
+// Función auxiliar para validar si existe una sesión real y válida
+function hasValidSession() {
+    const session = localStorage.getItem('sispro_user');
+    if (!session || session === 'undefined' || session === 'null') return false;
+    try {
+        const parsed = JSON.parse(session);
+        return !!parsed;
+    } catch (e) {
+        return false;
+    }
+}
+
+// CHEQUEO SINCRÓNICO INMEDIATO (Escudo de Seguridad v3)
+(function() {
+    if (!hasValidSession() && !IS_LOGIN_PAGE) {
+        window.location.replace('login.html');
+    }
+})();
+
+let currentUser = (() => {
+    try {
+        const session = localStorage.getItem('sispro_user');
+        if (session === 'undefined' || session === 'null') return null;
+        return JSON.parse(session) || null;
+    } catch (e) {
+        return null;
+    }
+})();
 let allUsers = [];
+let allPlantas = [];
 
 /**
  * Redirige al portal de acceso profesional.
@@ -16,60 +43,85 @@ function showLoginPrompt() {
  * Carga los usuarios y verifica sesión activa.
  */
 async function loadUsers() {
+    // 1. Escudo de seguridad inmediato: Redirigir si no hay sesión y NO estamos en login
+    if (!hasValidSession() && !IS_LOGIN_PAGE) {
+        window.location.replace('login.html');
+        return;
+    }
+
     try {
-        console.log('[AUTH] Iniciando carga de usuarios...');
+        console.log('[AUTH] Cargando configuración y base de datos...');
         
         if (!CONFIG.API_KEY) {
-            console.log('[AUTH] Obteniendo configuración segura...');
             await fetchSecureConfig();
         }
 
-        console.log('[AUTH] Fetching usuarios data...');
-        allUsers = await fetchUsuariosData();
-        console.log('[AUTH] Usuarios cargados:', allUsers.length);
+        // Carga paralela de datos para ganar velocidad
+        const [usersData, plantasData] = await Promise.all([
+            fetchUsuariosData(),
+            fetchPlantasData()
+        ]);
+        
+        allUsers = usersData;
+        allPlantas = plantasData;
 
         const savedUser = localStorage.getItem('sispro_user');
         if (savedUser) {
             let parsedUser = JSON.parse(savedUser);
             // Sincronizar en caliente los datos cacheados con el último listado descargado de DB
-            const realUser = allUsers.find(u => {
-                const dbId = String(u.ID_USUARIO || u.ID || '').trim();
-                const savedId = String(parsedUser.ID_USUARIO || parsedUser.ID || '').trim();
+            let realUser = allUsers.find(u => {
+                const dbId = String(u.ID_USUARIO || u.ID || u.cedula || '').trim();
+                const savedId = String(parsedUser.ID_USUARIO || parsedUser.ID_PLANTA || parsedUser.ID || parsedUser.cedula || '').trim();
                 return dbId === savedId;
             });
             
+            if (!realUser && allPlantas.length > 0) {
+                realUser = allPlantas.find(u => {
+                    const dbId = String(u.ID_PLANTA || u.ID || u.cedula || '').trim();
+                    const savedId = String(parsedUser.ID_USUARIO || parsedUser.ID_PLANTA || parsedUser.ID || parsedUser.cedula || '').trim();
+                    return dbId === savedId;
+                });
+            }
+            
             if (realUser) {
                 currentUser = realUser;
-                localStorage.setItem('sispro_user', JSON.stringify(currentUser)); // Forzar refresco
-                console.log('[AUTH] Sesión restaurada para:', currentUser.USUARIO);
+                localStorage.setItem('sispro_user', JSON.stringify(realUser));
+                
+                // SI TODO BIEN, QUITAR EL ESCUDO Y APLICAR PERMISOS
+                document.body.classList.add('auth-shield-pass');
+                applyAccessControl(); 
             } else {
-                // Usuario fue eliminado de la DB, destruir sesión zombi
-                currentUser = null;
+                // Si el usuario ya no existe en la DB, cerrar sesión (solo si no estamos en login)
+                console.warn('[AUTH] Usuario no encontrado en DB, invalidando sesión.');
                 localStorage.removeItem('sispro_user');
-                console.log('[AUTH] Sesión eliminada (usuario no encontrado en DB)');
+                if (!IS_LOGIN_PAGE) window.location.replace('login.html');
             }
         }
-        applyAccessControl();
     } catch (error) {
-        console.error("[AUTH] Error al cargar sesión:", error);
-        throw error; // Propagar el error para que se maneje en el caller
+        console.error('[AUTH] Error crítico de autenticación:', error);
+        if (currentUser) {
+            document.body.classList.add('auth-shield-pass');
+            applyAccessControl();
+        } else if (!IS_LOGIN_PAGE) {
+            window.location.replace('login.html');
+        }
     }
 }
+
 
 /**
  * Valida las credenciales.
  */
-function handleLogin(userId, password, isLoginPage = false) {
-    console.log('[AUTH] handleLogin - Buscando usuario:', userId);
-    console.log('[AUTH] Total usuarios disponibles:', allUsers.length);
+function handleLogin(userId, password, isLoginPage = false, tipoAcceso = 'interno') {
+    console.log('[AUTH] handleLogin - Buscando usuario:', userId, 'Tipo:', tipoAcceso);
     
-    const userFound = allUsers.find(u => {
-        const dbId = String(u.ID_USUARIO || u.ID || '').trim();
-        const dbPass = String(u.PASSWORD || '').trim();
+    let targetArray = tipoAcceso === 'interno' ? allUsers : allPlantas;
+    
+    const userFound = targetArray.find(u => {
+        const dbId = String(u.ID_USUARIO || u.ID_PLANTA || u.ID || '').trim();
+        const dbPass = String(u.PASSWORD || u.CONTRASEÑA || '').trim();
         const inputId = String(userId).trim();
         const inputPass = String(password).trim();
-        
-        console.log('[AUTH] Comparando:', dbId, '===', inputId, '&&', dbPass.length, '===', inputPass.length);
         
         return dbId === inputId && dbPass === inputPass;
     });
@@ -182,46 +234,28 @@ function applyAccessControl() {
 function checkRouteAccess(role) {
     const path = window.location.pathname;
 
-    // Proteger resolucion.html
-    if (path.includes('resolucion.html')) {
-        if (role !== 'ADMIN' && role !== 'USER-P') {
-            Swal.fire({
-                icon: 'warning',
-                title: 'ACCESO RESTRINGIDO',
-                text: 'No tienes permisos para acceder a este módulo.',
-                confirmButtonColor: '#3F51B5'
-            }).then(() => {
-                window.location.href = 'index.html';
-            });
-        }
+    // 1. Bloqueo total si no hay sesión
+    if (!currentUser && !path.includes('login.html')) {
+        window.location.replace('login.html');
+        return;
     }
 
-    // Proteger calidad.html
-    if (path.includes('calidad.html')) {
-        if (role !== 'ADMIN' && role !== 'MODERATOR') {
-            Swal.fire({
-                icon: 'warning',
-                title: 'ACCESO RESTRINGIDO',
-                text: 'Solo el personal de Moderación o Administración puede ver este módulo.',
-                confirmButtonColor: '#3F51B5'
-            }).then(() => {
-                window.location.href = 'index.html';
-            });
-        }
+    // 2. Bloqueo por Rol Arreglado (Agresivo)
+    let isAuthorized = true;
+
+    if (path.includes('resolucion.html')) {
+        if (role !== 'ADMIN' && role !== 'USER-P') isAuthorized = false;
+    } else if (path.includes('calidad.html')) {
+        if (role !== 'ADMIN' && role !== 'MODERATOR') isAuthorized = false;
+    } else if (path.includes('usuarios.html')) {
+        if (role !== 'ADMIN') isAuthorized = false;
     }
-    
-    // Proteger usuarios.html
-    if (path.includes('usuarios.html')) {
-        if (role !== 'ADMIN') {
-            Swal.fire({
-                icon: 'error',
-                title: 'ACCESO DENEGADO',
-                text: 'Este módulo es de uso exclusivo para Administradores.',
-                confirmButtonColor: '#3F51B5'
-            }).then(() => {
-                window.location.href = 'index.html';
-            });
-        }
+
+    if (!isAuthorized) {
+        // Si no está autorizado, FORZAR ocultamiento y redirigir YA (sin esperar a SweetAlert)
+        document.body.classList.remove('auth-shield-pass'); 
+        window.location.replace('index.html');
+        return;
     }
 }
 
@@ -260,13 +294,14 @@ function updateAuthUI() {
         else if (currentUser.ROL === 'MODERATOR') iconClass = 'fas fa-user-tie';
         else if (currentUser.ROL === 'USER-C') iconClass = 'fas fa-user-check';
         else if (currentUser.ROL === 'USER-P') iconClass = 'fas fa-user';
+        else if (currentUser.ROL === 'GUEST') iconClass = 'fas fa-user-secret';
     }
 
     // Renderizar Header HTML
     navContainer.innerHTML = `
         <div class="nav-brand-area">
             <img src="icons/icon-any.svg" alt="Logo TMD" class="nav-logo">
-            <span class="brand-tag">NOVEDADES</span>
+            <span class="brand-tag">PORTAL EMPLEADOS</span>
         </div>
         <div class="nav-user-area">
             <button onclick="toggleSidebar()" class="btn-profile-toggle ${profileType}" id="profileToggle">
@@ -309,13 +344,14 @@ function createSidebar() {
         else if (currentUser.ROL === 'MODERATOR') roleIcon = 'fas fa-user-tie';
         else if (currentUser.ROL === 'USER-C') roleIcon = 'fas fa-user-check';
         else if (currentUser.ROL === 'USER-P') roleIcon = 'fas fa-user';
+        else if (currentUser.ROL === 'GUEST') roleIcon = 'fas fa-user-secret';
 
         sidebar.innerHTML = `
             <div class="sidebar-header">
                 <div class="sidebar-user-card">
                     <div class="user-avatar-large ${roleClass}"><i class="${roleIcon}"></i></div>
                     <div class="user-meta">
-                        <span class="u-name">${currentUser.USUARIO}</span>
+                        <span class="u-name">${currentUser.USUARIO || currentUser.PLANTA || 'Usuario'}</span>
                         <span class="u-role">${currentUser.ROL}</span>
                     </div>
                 </div>

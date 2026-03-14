@@ -14,7 +14,7 @@ let selectedDateRange = null;
  * Se inicializa cuando carga la página calidad.html
  */
 window.onload = async function() {
-    if (typeof initParticles === 'function') initParticles();
+
     
     // loadUsers() en auth.js ejecuta fetchSecureConfig() y extrae la data de todos los usuarios
     await loadUsers(); 

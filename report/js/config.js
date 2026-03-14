@@ -25,8 +25,8 @@ const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwHyBLQxirRHSXBpTE
  */
 const SHEET_SISPRO = Object.freeze({
     name: 'SISPRO',
-    indices: [0, 1, 4, 9, 10, 16, 12, 15, 17, 18],
-    headers: ['LOTE', 'REFERENCIA', 'CANTIDAD', 'PLANTA', 'SALIDA', 'LINEA', 'PROCESO', 'PRENDA', 'GENERO', 'TEJIDO'],
+    indices: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+    headers: ['LOTE', 'REFERENCIA', 'C1', 'C2', 'CANTIDAD', 'C3', 'C4', 'C5', 'C6', 'PLANTA', 'SALIDA', 'C7', 'PROCESO', 'C8', 'C9', 'PRENDA', 'LINEA', 'GENERO', 'TEJIDO'],
 });
 
 /**
@@ -55,8 +55,8 @@ const SHEET_NOVEDADES = Object.freeze({
  */
 const SHEET_PLANTAS = Object.freeze({
     name: 'PLANTAS',
-    indices: [0, 1, 2, 3, 4],
-    headers: ['ID_PLANTA', 'PLANTA', 'DIRECCION', 'TELEFONO', 'EMAIL'],
+    indices: [0, 1, 2, 3, 4, 5, 6],
+    headers: ['ID_PLANTA', 'PLANTA', 'DIRECCION', 'TELEFONO', 'EMAIL', 'ROL', 'PASSWORD'],
 });
 
 /**

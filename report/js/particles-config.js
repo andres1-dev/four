@@ -13,33 +13,38 @@ const PARTICLES_CONFIG = Object.freeze({
             value: 80,
             density: { enable: true, value_area: 800 },
         },
-        color: { value: '#ad86f2' },
+        color: { value: '#94a3b8' }, // Color sutil (Slate 400)
         shape: { type: 'circle' },
-        opacity: { value: 0.5, random: false },
-        size: { value: 5, random: true },
+        opacity: { value: 0.4, random: false },
+        size: { value: 3, random: true },
         line_linked: {
             enable: true,
             distance: 150,
-            color: '#ad86f2',
-            opacity: 0.4,
+            color: '#94a3b8',
+            opacity: 0.3,
             width: 1,
         },
         move: {
             enable: true,
-            speed: 6,
+            speed: 1.2, // Movimiento lento y elegante
             direction: 'none',
-            random: false,
+            random: true,
+            straight: false,
+            out_mode: 'out',
+            bounce: false,
         },
     },
     interactivity: {
         detect_on: 'canvas',
         events: {
             onhover: { enable: true, mode: 'repulse' },
-            onclick: { enable: true, mode: 'push' },
+            onclick: { enable: false },
         },
         modes: {
-            repulse: { distance: 100 },
-            push: { particles_nb: 4 },
+            repulse: { 
+                distance: 140, 
+                duration: 0.2 // Repulsión casi instantánea y veloz
+            }
         },
     },
     retina_detect: true,

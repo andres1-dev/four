@@ -53,6 +53,7 @@ async function handleNovedadesSubmit(e) {
         });
 
         e.target.reset();
+        if (typeof clearVersionHistory === 'function') clearVersionHistory();
         hideSections();
 
     } catch (error) {

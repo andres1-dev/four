@@ -42,7 +42,22 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
+  /* Escudo de Seguridad: El contenido está oculto por defecto hasta que JS valide la sesión */
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  user-select: none !important;
 }
+
+body.auth-shield-pass {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  user-select: auto !important;
+  transition: opacity 0.4s ease-in-out;
+}
+
+
 
 /* ── Layout ── */
 .container-fluid {
@@ -52,35 +67,15 @@ body {
   padding: 0;
 }
 
-/* ── Particles (Eliminado por preferencia de usuario) ── */
-#particles-js {
-  display: none;
-}
-
-/* ── Logo ── */
-#logo {
-  height: auto;
-  max-width: 220px;
-  margin: 3rem 0;
-  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.05));
-}
-
-/* ── Wrappers para Diferenciación PC/Móvil ── */
-.content-wrapper {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-/* Estilos específicos Móvil (Vista Compacta y Directa) */
-@media (max-width: 767px) {
-  body {
-    background-color: #ffffff;
+@media (max-width: 768px) {
+  .swal2-popup {
+    margin-top: 70px !important;
+    min-width: 90% !important;
+    max-width: 95% !important;
   }
   
-  .content-wrapper {
-    margin-top: 80px; /* Espacio para el header fijo en móvil */
-    padding: 1rem;
+  .swal2-toast {
+    min-width: 90% !important;
   }
 }
 

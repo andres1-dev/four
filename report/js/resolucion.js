@@ -8,8 +8,10 @@ let gsCurrentPage = 1;
 const gsRecordsPerPage = 6;
 
 window.onload = async function () {
-    if (typeof initParticles === 'function') initParticles();
-    if (typeof loadUsers === 'function') loadUsers();
+    // 1. Validar usuario antes de mostrar nada
+    await loadUsers();
+
+
     
     // Aplicar modo compacto si estaba guardado
     const isCompact = localStorage.getItem('viewModeResolucion') === 'compact';
@@ -522,11 +524,6 @@ async function corregirTextoIA() {
     aiBtn.disabled = true;
     aiStatus.classList.add('active');
 
-    const wrapper = textarea.closest('.ai-textarea-wrapper');
-    if (wrapper) {
-        wrapper.classList.add('ai-animating');
-    }
-
     try {
         // Usar la misma configuración que ui.js
         const apiKey = CONFIG.GEMINI_KEY;
@@ -601,9 +598,6 @@ async function corregirTextoIA() {
     } finally {
         aiBtn.innerHTML = originalHTML;
         aiBtn.disabled = false;
-        if (wrapper) {
-            wrapper.classList.remove('ai-animating');
-        }
     }
 }
 

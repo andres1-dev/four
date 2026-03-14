@@ -14,6 +14,14 @@
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/mobile.css">
+    
+    <!-- ── Escudo de Seguridad (Bloqueo Agresivo) ── -->
+    <script>
+      (function(){
+        const s = localStorage.getItem('sispro_user');
+        if(!s || s==='undefined' || s==='null') window.location.replace('login.html');
+      })();
+    </script>
     <style>
         :root {
             --glass-bg: rgba(255, 255, 255, 0.9);
@@ -698,7 +706,7 @@
 
 <body>
     <!-- ── Particles Background ── -->
-    <div id="particles-js"></div>
+
 
     <div class="wrapper-dashboard">
 

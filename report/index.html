@@ -15,12 +15,19 @@
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/footer.css">
+  
+  <!-- ── Escudo de Seguridad (Bloqueo Agresivo) ── -->
+  <script>
+    (function(){
+      const s = localStorage.getItem('sispro_user');
+      if(!s || s==='undefined' || s==='null') window.location.replace('login.html');
+    })();
+  </script>
 </head>
 
 <body>
 
-  <!-- ── Fondo de partículas ── -->
-  <div id="particles-js"></div>
+
 
   <!-- ══════════════════════════════════════════════════════════════════════
        CONTENIDO PRINCIPAL
@@ -181,7 +188,7 @@
 
             <!-- Duración Estimada: Ocupa todo el ancho al final -->
             <div class="mb-3" style="grid-column: 1 / -1;">
-              <label for="duracionEstimada" class="form-label">Duración Estimada:</label>
+              <label for="duracionEstimada" class="form-label">Duración:</label>
               <div class="input-with-icon">
                 <i class="fas fa-clock input-icon"></i>
                 <input type="text" id="duracionEstimada" class="form-control" readonly>
