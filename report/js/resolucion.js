@@ -87,6 +87,9 @@ async function cargarDatos() {
         if (loader) loader.style.display = 'none';
         if (section) section.style.display = 'block';
 
+        // Iniciar badges de chat no leídos para USER-P/ADMIN
+        if (typeof initChatBadges === 'function') initChatBadges();
+
     } catch (error) {
         console.error('Error:', error);
         if (loader) {
@@ -202,6 +205,9 @@ function renderTabla(data = gsNovedades) {
         const card = document.createElement('div');
         const statusClass = `status-${estadoActual.toLowerCase()}`;
         card.className = `novedad-card-ultra ${statusClass} ${estadoActual === 'FINALIZADO' ? 'is-finalized' : ''}`;
+        card.dataset.novedadId = nov.ID_NOVEDAD;
+        card.dataset.lote      = nov.LOTE   || '';
+        card.dataset.planta    = nov.PLANTA  || '';
 
         let sIcon = 'clock', sClass = 'p', sLab = 'PENDIENTE';
         if (estadoActual === 'ELABORACION') { sIcon = 'sync-alt'; sClass = 'w'; sLab = 'ELABORACIÓN'; }
@@ -289,6 +295,9 @@ function renderTabla(data = gsNovedades) {
                     <i class="fas fa-envelope"></i> NOTIFICAR
                 </button>
                 ` : ''}
+                <button class="btn-chat-ultra w-100" data-chat-btn="${nov.ID_NOVEDAD}" onclick="openChat('${nov.ID_NOVEDAD}','${(nov.PLANTA||'').replace(/'/g,"\\'")}','${(nov.LOTE||'').replace(/'/g,"\\'")}',${String(nov.CHAT||'').startsWith('https://') ? 'true' : 'false'})">
+                    <i class="fas fa-comments"></i> CHAT
+                </button>
             </div>
         `;
         feed.appendChild(card);
@@ -395,6 +404,11 @@ async function actualizarEstado(timestampId, nuevoEstado, selectEl) {
 
         if (row) row.ESTADO = nuevoEstado;
         renderTabla(); // Esto reconstruirá la UI con el nuevo estado y el botón correcto
+
+        // Si se finaliza, cerrar el chat si está abierto y archivar en Drive
+        if (nuevoEstado === 'FINALIZADO' && typeof _finalizarChat === 'function') {
+            _finalizarChat(timestampId);
+        }
 
         Swal.fire({ 
             icon: 'success', 

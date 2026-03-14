@@ -249,6 +249,8 @@ function checkRouteAccess(role) {
         if (role !== 'ADMIN' && role !== 'MODERATOR') isAuthorized = false;
     } else if (path.includes('usuarios.html')) {
         if (role !== 'ADMIN') isAuthorized = false;
+    } else if (path.includes('seguimiento.html')) {
+        if (role !== 'GUEST') isAuthorized = false;
     }
 
     if (!isAuthorized) {
@@ -298,18 +300,47 @@ function updateAuthUI() {
     }
 
     // Renderizar Header HTML
+    const isGuest = currentUser && currentUser.ROL === 'GUEST';
+    const isResolutionPage = window.location.pathname.includes('resolucion.html');
+    const showBell = isGuest || (currentUser && (currentUser.ROL === 'ADMIN' || currentUser.ROL === 'USER-P') && isResolutionPage);
     navContainer.innerHTML = `
         <div class="nav-brand-area">
             <img src="icons/icon-any.svg" alt="Logo TMD" class="nav-logo">
-            <span class="brand-tag">PORTAL EMPLEADOS</span>
+            <span class="brand-tag">TDM</span>
         </div>
-        <div class="nav-user-area">
+        <div class="nav-user-area" style="display:flex;align-items:center;gap:6px;">
+            ${showBell ? `
+            <div style="position:relative;display:inline-flex;align-items:center;">
+                <button id="notif-bell-btn" onclick="toggleNotifPanel()" title="Notificaciones" style="
+                    background:none; border:none; cursor:pointer;
+                    padding:6px 10px; border-radius:50%;
+                    color:#64748b; font-size:1.1rem;
+                    transition:all 0.2s ease; position:relative;
+                " onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'">
+                    <i class="fas fa-bell"></i>
+                    <span id="notif-badge" style="
+                        display:none; position:absolute;
+                        top:2px; right:2px;
+                        background:#ef4444; color:white;
+                        font-size:0.6rem; font-weight:800;
+                        min-width:16px; height:16px;
+                        border-radius:8px; padding:0 4px;
+                        line-height:16px; text-align:center;
+                    ">0</span>
+                </button>
+            </div>
+            ` : ''}
             <button onclick="toggleSidebar()" class="btn-profile-toggle ${profileType}" id="profileToggle">
                 <span class="avatar-mini"><i class="${iconClass}"></i></span>
                 <i class="fas fa-bars"></i>
             </button>
         </div>
     `;
+
+    // Re-inicializar el panel de notificaciones si corresponde
+    if (showBell && typeof _ensureNotifPanel === 'function') {
+        _ensureNotifPanel();
+    }
 
     // Crear o actualizar el Sidebar (Drawer)
     createSidebar();
@@ -364,6 +395,11 @@ function createSidebar() {
                 ${(currentUser.ROL === 'ADMIN' || currentUser.ROL === 'USER-P') ? `
                     <a href="resolucion.html" class="sidebar-link ${isResolutionPage ? 'active' : ''}">
                         <i class="fas fa-desktop"></i> Novedades
+                    </a>
+                ` : ''}
+                ${currentUser.ROL === 'GUEST' ? `
+                    <a href="seguimiento.html" class="sidebar-link ${path.includes('seguimiento.html') ? 'active' : ''}">
+                        <i class="fas fa-shipping-fast"></i> Seguimiento
                     </a>
                 ` : ''}
                 ${(currentUser.ROL === 'ADMIN' || currentUser.ROL === 'MODERATOR') ? `

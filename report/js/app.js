@@ -82,4 +82,7 @@ window.onload = async function() {
 
     // El escudo se quita dentro de loadUsers() cuando todo es válido
     setInterval(updateDateTime, 60_000);
+
+    // Sistema de notificaciones internas (solo para GUEST)
+    initNotifications();
 };

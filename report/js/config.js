@@ -45,8 +45,8 @@ const SHEETS_DESTINO = Object.freeze({
  */
 const SHEET_NOVEDADES = Object.freeze({
     name: 'NOVEDADES',
-    indices: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    headers: ['ID_NOVEDAD', 'FECHA', 'LOTE', 'REFERENCIA', 'CANTIDAD', 'PLANTA', 'SALIDA', 'LINEA', 'PROCESO', 'PRENDA', 'GENERO', 'TEJIDO', 'AREA', 'DESCRIPCION', 'CANTIDAD_SOLICITADA', 'IMAGEN', 'ESTADO'],
+    indices: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+    headers: ['ID_NOVEDAD', 'FECHA', 'LOTE', 'REFERENCIA', 'CANTIDAD', 'PLANTA', 'SALIDA', 'LINEA', 'PROCESO', 'PRENDA', 'GENERO', 'TEJIDO', 'AREA', 'DESCRIPCION', 'CANTIDAD_SOLICITADA', 'IMAGEN', 'ESTADO', 'CHAT', 'CHAT_READ', 'HISTORIAL_ESTADOS'],
 });
 
 /**
