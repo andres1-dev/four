@@ -223,7 +223,20 @@ function applyAccessControl() {
     // Actualizar indicador de login/logout en el nav
     updateAuthUI();
 
-    // 3. Protección de acceso directo (URL)
+    // 3. Opción RUTERO: solo ADMIN, MODERATOR, USER-C
+    if (accionesSelect) {
+        let ruteroOption = accionesSelect.querySelector('option[value="RUTERO"]');
+        const hasRuteroPermission = (role === 'ADMIN' || role === 'MODERATOR' || role === 'USER-C');
+        if (!hasRuteroPermission && ruteroOption) {
+            ruteroOption.remove();
+            if (accionesSelect.value === 'RUTERO') {
+                accionesSelect.value = '';
+                if (typeof hideSections === 'function') hideSections();
+            }
+        }
+    }
+
+    // 4. Protección de acceso directo (URL)
     checkRouteAccess(role);
 }
 
@@ -405,6 +418,11 @@ function createSidebar() {
                 ${(currentUser.ROL === 'ADMIN' || currentUser.ROL === 'MODERATOR') ? `
                     <a href="calidad.html" class="sidebar-link ${path.includes('calidad.html') ? 'active' : ''}">
                         <i class="fas fa-microscope"></i> Calidad
+                    </a>
+                ` : ''}
+                ${(currentUser.ROL === 'ADMIN' || currentUser.ROL === 'USER-C' || currentUser.ROL === 'MODERATOR') ? `
+                    <a href="rutero.html" class="sidebar-link ${path.includes('rutero.html') ? 'active' : ''}">
+                        <i class="fas fa-route"></i> Rutero
                     </a>
                 ` : ''}
                 ${currentUser.ROL === 'ADMIN' ? `

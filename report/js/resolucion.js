@@ -290,6 +290,9 @@ function renderTabla(data = gsNovedades) {
                 <button class="btn-print-ultra w-100" onclick="imprimirNovedad('${nov.ID_NOVEDAD}')" ${btnPrintDisabled} title="${btnPrintTitle}">
                     <i class="fas fa-print"></i> IMPRIMIR
                 </button>
+                <button class="btn-chat-print-ultra w-100" onclick="imprimirChat('${nov.ID_NOVEDAD}')" ${btnPrintDisabled} title="Imprimir transcripción del chat">
+                    <i class="fas fa-comments"></i> CHAT
+                </button>
                 ${estadoActual === 'FINALIZADO' ? `
                 <button class="btn-notify-ultra w-100" onclick="notificarSolucion('${nov.ID_NOVEDAD}')" title="Enviar notificación de solución por correo">
                     <i class="fas fa-envelope"></i> NOTIFICAR
@@ -716,6 +719,23 @@ function imprimirNovedad(id) {
     window.open('plantilla-impresion.html', '_blank');
 }
 
+async function imprimirChat(id) {
+    const nov = gsNovedades.find(n => n.ID_NOVEDAD === id);
+    if (!nov) return;
+
+    try {
+        Swal.fire({ title: 'Cargando chat...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        const data = await _chatFetch({ accion: 'GET_CHAT_MSGS', idNovedad: id });
+        const msgs = data.msgs || [];
+        localStorage.setItem('printNovedad', JSON.stringify(nov));
+        localStorage.setItem('printChatMsgs', JSON.stringify(msgs));
+        Swal.close();
+        window.open('plantilla-chat.html', '_blank');
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cargar el chat. Intente nuevamente.', timer: 2000, showConfirmButton: false });
+    }
+}
+
 
 /**
  * Muestra un modal estético con la información de contacto del taller
@@ -817,11 +837,11 @@ function verFichaTaller(nombre) {
                         <span class="val-lux" style="font-weight: 400; text-transform: uppercase;">${p.PLANTA}</span>
                     </div>
 
-                    ${p.CEDULA ? `
+                    ${p.ID_PLANTA ? `
                     <div class="row-lux">
                         <span class="hint-lux">NIT o Cédula</span>
                         <div class="icon-box-lux"><i class="fas fa-id-card"></i></div>
-                        <span class="val-lux" style="font-weight: 600;">${p.CEDULA}</span>
+                        <span class="val-lux" style="font-weight: 600;">${p.ID_PLANTA}</span>
                     </div>` : ''}
 
                     ${p.TELEFONO ? `

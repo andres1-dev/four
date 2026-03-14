@@ -16,6 +16,7 @@ const DOM = {
     novedadesSection: () => document.getElementById('novedadesSection'),
     calidadSection: () => document.getElementById('calidadSection'),
     actualizarDatosSection: () => document.getElementById('actualizarDatosSection'),
+    ruteroSection: () => document.getElementById('ruteroSection'),
     fecha: () => document.getElementById('fecha'),
     logo: () => document.getElementById('logo'),
     localizacion: () => document.getElementById('localizacion'),
@@ -68,6 +69,7 @@ function hideSections() {
     DOM.novedadesSection().classList.add('hidden');
     DOM.calidadSection().classList.add('hidden');
     DOM.actualizarDatosSection().classList.add('hidden');
+    DOM.ruteroSection()?.classList.add('hidden');
     DOM.errorMessage().classList.add('hidden');
 
     // Asegurar que los datos del lote se contraigan
@@ -166,6 +168,10 @@ function fillLotDetails(lotData) {
     toggleReadonly(DOM.plantaSelect());
     toggleReadonly(DOM.lineaInput());
 
+    // Auto-fill ruteroCantidad if the rutero form is visible
+    const ruteroCantidad = document.getElementById('ruteroCantidad');
+    if (ruteroCantidad) ruteroCantidad.value = lotData.CANTIDAD || '';
+
     DOM.detailsSection().classList.remove('hidden');
 }
 
@@ -198,10 +204,16 @@ function toggleActionSections(action) {
     const novedades = DOM.novedadesSection();
     const calidad = DOM.calidadSection();
     const actualizarDatos = DOM.actualizarDatosSection();
+    const rutero = DOM.ruteroSection();
 
     novedades.classList.toggle('hidden', action !== 'NOVEDADES');
     calidad.classList.toggle('hidden', action !== 'CALIDAD');
     actualizarDatos.classList.toggle('hidden', action !== 'ACTUALIZAR_DATOS');
+    if (rutero) rutero.classList.toggle('hidden', action !== 'RUTERO');
+
+    if (action === 'RUTERO') {
+        initRuteroForm();
+    }
 
     // Auto-llenar nombre de planta al abrir formulario de actualización
     if (action === 'ACTUALIZAR_DATOS') {
@@ -509,7 +521,7 @@ function fillPlantaName() {
     }
 
     // Si la planta YA tiene datos registrados → BLOQUEAR y pedir verificación
-    if (plantaRegistrada && plantaRegistrada.CEDULA) {
+    if (plantaRegistrada && plantaRegistrada.ID_PLANTA) {
         // Mostrar alerta de verificación
         if (alertaVerificacion) alertaVerificacion.style.display = 'block';
         if (cedulaHint) cedulaHint.style.display = 'block';

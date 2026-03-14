@@ -37,6 +37,7 @@ const SHEETS_DESTINO = Object.freeze({
     NOVEDADES: 'NOVEDADES',
     CALIDAD: 'REPORTES',
     PLANTAS: 'PLANTAS',
+    RUTERO: 'RUTERO',
 });
 
 /**
@@ -67,6 +68,16 @@ const SHEET_USUARIOS = Object.freeze({
     name: 'USUARIOS',
     indices: [0, 1, 2, 3, 4, 5],
     headers: ['ID_USUARIO', 'USUARIO', 'CORREO', 'TELEFONO', 'ROL', 'PASSWORD'],
+});
+
+/**
+ * Definición de lectura de datos del Rutero (agenda de visitas).
+ * @readonly
+ */
+const SHEET_RUTERO = Object.freeze({
+    name: 'RUTERO',
+    indices: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    headers: ['ID_VISITA', 'FECHA_VISITA', 'AUDITOR', 'PLANTA', 'LOTE', 'REFERENCIA', 'PROCESO', 'TIPO_VISITA', 'DESTINO', 'CANTIDAD', 'PRIORIDAD', 'ESTADO'],
 });
 
 /**

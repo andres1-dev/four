@@ -48,6 +48,26 @@ function verificarRegistroPlanta(plantaNombre) {
         return;
     }
 
+    // Solo aplica la restricción a usuarios GUEST
+    const role = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.ROL : 'GUEST';
+    if (role !== 'GUEST') {
+        // Para ADMIN, USER-P, USER-C, MODERATOR: flujo libre sin restricción
+        const accionesContainer = DOM.accionesSelect().closest('.mb-3');
+        const editBtn = DOM.editPlantaBtn();
+        if (accionesContainer) accionesContainer.style.display = 'block';
+        DOM.accionesSelect().removeAttribute('disabled');
+        DOM.accionesSelect().value = '';
+        toggleActionSections('');
+        if (editBtn) {
+            editBtn.style.display = 'block';
+            editBtn.onclick = () => {
+                DOM.accionesSelect().value = 'ACTUALIZAR_DATOS';
+                toggleActionSections('ACTUALIZAR_DATOS');
+            };
+        }
+        return;
+    }
+
     // Buscamos en la lista de plantas registradas (leídas desde Sheets o guardadas localmente)
     // Usamos comparación insensible a mayúsculas para evitar problemas de escritura
     const infoPlanta = currentPlantas.find(p =>

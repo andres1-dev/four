@@ -32,6 +32,48 @@ async function loadData() {
     }
 }
 
+/* ── Prefill desde Rutero ── */
+
+/**
+ * Si venimos desde rutero.html con datos en sessionStorage,
+ * selecciona el lote, cambia la acción a CALIDAD y pre-llena tipoVisita.
+ */
+function aplicarPrefillRutero() {
+    const raw = sessionStorage.getItem('rutero_prefill');
+    if (!raw) return;
+    sessionStorage.removeItem('rutero_prefill');
+
+    let prefill;
+    try { prefill = JSON.parse(raw); } catch(_) { return; }
+
+    // Buscar el lote en currentLots
+    const lot = currentLots.find(l =>
+        (l.LOTE || '').trim().toLowerCase() === (prefill.lote || '').trim().toLowerCase()
+    );
+    if (!lot) return;
+
+    // Seleccionar el lote y llenar detalles
+    DOM.loteInput().value = lot.LOTE;
+    fillLotDetails(lot);
+    verificarRegistroPlanta(lot.PLANTA);
+
+    // Cambiar acción a CALIDAD
+    DOM.accionesSelect().value = 'CALIDAD';
+    toggleActionSections('CALIDAD');
+
+    // Pre-llenar tipo de visita
+    if (prefill.tipoVisita) {
+        const tvSelect = document.getElementById('tipoVisita');
+        if (tvSelect) tvSelect.value = prefill.tipoVisita;
+    }
+
+    // Scroll suave al formulario
+    setTimeout(() => {
+        const calidadSection = document.getElementById('calidadSection');
+        if (calidadSection) calidadSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
+}
+
 /* ── Registro de Event Listeners ── */
 
 function bindEvents() {
@@ -76,7 +118,7 @@ window.onload = async function() {
     bindEvents();
     
     // Cargar datos operativos
-    loadData();
+    loadData().then(() => aplicarPrefillRutero());
     
     initDropzones();
 

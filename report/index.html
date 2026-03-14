@@ -91,6 +91,7 @@
                   <option value="">Seleccione una acción...</option>
                   <option value="NOVEDADES">NOVEDADES</option>
                   <option value="CALIDAD">CALIDAD</option>
+                  <option value="RUTERO">RUTERO</option>
                   <option value="ACTUALIZAR_DATOS" hidden>ACTUALIZAR DATOS</option>
                 </select>
               </div>
@@ -418,6 +419,64 @@
       </form>
 
       <!-- ══════════════════════════════════════════════════════════════════
+           FORMULARIO RUTERO
+           ══════════════════════════════════════════════════════════════════ -->
+      <form id="ruteroForm">
+        <div id="ruteroSection" class="hidden">
+
+          <div class="row-pc-grid mt-2">
+            <div class="mb-3">
+              <label for="ruteroFechaVisita" class="form-label">Fecha de Visita:</label>
+              <div class="input-with-icon">
+                <i class="fas fa-calendar-alt input-icon"></i>
+                <input type="date" id="ruteroFechaVisita" class="form-control" required>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="ruteroTipoVisita" class="form-label">Tipo de Visita:</label>
+              <div class="input-with-icon">
+                <i class="fas fa-clipboard-check input-icon"></i>
+                <select id="ruteroTipoVisita" class="form-control" required>
+                  <option value="">Seleccione tipo...</option>
+                  <option value="AUDITORIA">AUDITORIA</option>
+                  <option value="RONDA">RONDA</option>
+                  <option value="CONTRAMUESTRA">CONTRAMUESTRA</option>
+                  <option value="SEGUIMIENTO">SEGUIMIENTO</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="row-pc-grid">
+            <div class="mb-3">
+              <label for="ruteroDestino" class="form-label">Destino post-visita:</label>
+              <div class="input-with-icon">
+                <i class="fas fa-map-signs input-icon"></i>
+                <select id="ruteroDestino" class="form-control" required>
+                  <option value="">Seleccione destino...</option>
+                  <option value="CDI">CDI</option>
+                  <option value="PROCESO">PROCESO</option>
+                </select>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="ruteroCantidad" class="form-label">Cantidad del lote:</label>
+              <div class="input-with-icon">
+                <i class="fas fa-hashtag input-icon"></i>
+                <input type="text" id="ruteroCantidad" class="form-control" readonly placeholder="Se llena automáticamente">
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3 text-center">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-route"></i> Agregar al Rutero
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <!-- ══════════════════════════════════════════════════════════════════
            FORMULARIO DE ACTUALIZAR DATOS DE PLANTA
            ══════════════════════════════════════════════════════════════════ -->
       <form id="actualizarDatosForm">
@@ -527,6 +586,7 @@
   <script src="js/forms/calidad.js?v=18"></script> <!-- formulario calidad -->
   <script src="js/forms/plantas.js?v=18"></script> <!-- formulario plantas + Google Maps -->
   <script src="js/forms/dropzone.js?v=18"></script> <!-- dropzone personalizado de archivos -->
+  <script src="js/forms/rutero.js?v=18"></script> <!-- formulario rutero -->
 
   <script src="js/particles-config.js?v=18"></script>
   <script src="js/notifications.js?v=18"></script>

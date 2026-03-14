@@ -30,6 +30,10 @@ let _guestChatSeen    = {};
 let _guestPollTimer   = null;
 let _guestNovedades   = [];
 
+/* ── Imagen pendiente en chat ── */
+let _chatPendingImageData = null; // { base64, mimeType, fileName } para enviar a GAS
+let _chatPendingImageB64  = null; // base64 local para preview inmediato
+
 /* ══════════════════════════════════════════════════════════════════════════
    API HELPERS
    ══════════════════════════════════════════════════════════════════════════ */
@@ -91,11 +95,11 @@ async function _readNovedadChatMeta(idNovedad) {
     return { chatUrl: '', chatRead: {} };
 }
 
-async function _sendMsg(mensaje) {
-    if (!mensaje.trim() || !_chatNovedadId) return;
+async function _sendMsg(mensaje, imagenData = null) {
+    if (!mensaje.trim() && !imagenData || !_chatNovedadId) return;
     const autor = currentUser.USUARIO || currentUser.PLANTA || 'Usuario';
     const rol   = currentUser.ROL || 'GUEST';
-    return _chatFetch({ accion: 'SEND_CHAT_MSG', idNovedad: _chatNovedadId, planta: _chatPlanta, autor, rol, mensaje: mensaje.trim() });
+    return _chatFetch({ accion: 'SEND_CHAT_MSG', idNovedad: _chatNovedadId, planta: _chatPlanta, autor, rol, mensaje: mensaje.trim(), imagen: imagenData || null });
 }
 
 async function _archiveChat(idNovedad) {
@@ -230,21 +234,54 @@ function _buildChatModal(lote, planta) {
                 </div>
             </div>
             <!-- Input -->
-            <div id="chat-input-area" style="padding:12px 16px;border-top:1px solid #f1f5f9;background:white;display:flex;gap:10px;align-items:flex-end;">
-                <textarea id="chat-input" placeholder="Escribe un mensaje..." rows="1"
-                    style="flex:1;border:1.5px solid #e2e8f0;border-radius:12px;padding:10px 14px;font-size:0.875rem;resize:none;font-family:inherit;color:#1e293b;outline:none;transition:border 0.2s;max-height:100px;overflow-y:auto;line-height:1.4;"
-                    onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'"
-                    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();_submitChatMsg();}"
-                    oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px';"
-                ></textarea>
-                <button onclick="_submitChatMsg()" id="chat-send-btn"
-                    style="width:40px;height:40px;border-radius:50%;border:none;
-                           background:linear-gradient(135deg,#3b82f6,#6366f1);color:white;cursor:pointer;
-                           flex-shrink:0;display:flex;align-items:center;justify-content:center;
-                           font-size:0.9rem;transition:all 0.2s;box-shadow:0 4px 12px rgba(59,130,246,0.3);"
-                    onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
+            <div id="chat-input-area" style="padding:12px 16px;border-top:1px solid #f1f5f9;background:white;display:flex;flex-direction:column;gap:8px;">
+                <!-- Preview de imagen pendiente -->
+                <div id="chat-img-preview" style="display:none;position:relative;width:fit-content;">
+                    <img id="chat-img-preview-img" src="" alt="preview" style="max-height:80px;max-width:180px;border-radius:8px;border:1.5px solid #e2e8f0;object-fit:cover;">
+                    <button onclick="_chatClearImage()" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#ef4444;border:none;color:white;cursor:pointer;font-size:0.6rem;display:flex;align-items:center;justify-content:center;padding:0;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <!-- Fila de input -->
+                <div style="display:flex;gap:8px;align-items:flex-end;">
+                    <!-- Adjuntar imagen -->
+                    <button type="button" onclick="document.getElementById('chat-img-input').click()" title="Adjuntar imagen"
+                        style="width:38px;height:38px;border-radius:50%;border:1.5px solid #e2e8f0;
+                               background:white;color:#94a3b8;cursor:pointer;flex-shrink:0;
+                               display:flex;align-items:center;justify-content:center;
+                               font-size:0.85rem;transition:all 0.2s;"
+                        onmouseover="this.style.borderColor='#3b82f6';this.style.color='#3b82f6'"
+                        onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#94a3b8'">
+                        <i class="fas fa-image"></i>
+                    </button>
+                    <input type="file" id="chat-img-input" accept="image/*" style="display:none;" onchange="_chatImageSelected(this)">
+                    <!-- Corregir con IA -->
+                    <button id="chat-ai-btn" onclick="_chatCorregirIA()" title="Corregir con IA"
+                        style="width:38px;height:38px;border-radius:50%;border:1.5px solid #e2e8f0;
+                               background:white;color:#94a3b8;cursor:pointer;flex-shrink:0;
+                               display:flex;align-items:center;justify-content:center;
+                               font-size:0.85rem;transition:all 0.2s;"
+                        onmouseover="this.style.borderColor='#8b5cf6';this.style.color='#8b5cf6'"
+                        onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#94a3b8'">
+                        <i class="fas fa-wand-magic-sparkles"></i>
+                    </button>
+                    <!-- Textarea -->
+                    <textarea id="chat-input" placeholder="Escribe un mensaje..." rows="1"
+                        style="flex:1;border:1.5px solid #e2e8f0;border-radius:12px;padding:9px 13px;font-size:0.875rem;resize:none;font-family:inherit;color:#1e293b;outline:none;transition:border 0.2s;max-height:100px;overflow-y:auto;line-height:1.4;"
+                        onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'"
+                        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();_submitChatMsg();}"
+                        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px';"
+                    ></textarea>
+                    <!-- Enviar -->
+                    <button onclick="_submitChatMsg()" id="chat-send-btn"
+                        style="width:38px;height:38px;border-radius:50%;border:none;
+                               background:linear-gradient(135deg,#3b82f6,#6366f1);color:white;cursor:pointer;
+                               flex-shrink:0;display:flex;align-items:center;justify-content:center;
+                               font-size:0.85rem;transition:all 0.2s;box-shadow:0 4px 12px rgba(59,130,246,0.3);"
+                        onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
             </div>
         </div>
     `;
@@ -364,17 +401,32 @@ async function _submitChatMsg() {
     const input = document.getElementById('chat-input');
     if (!input) return;
     const texto = input.value.trim();
-    if (!texto) return;
+
+    if (!texto && !_chatPendingImageB64) return;
 
     const btn = document.getElementById('chat-send-btn');
     if (btn) btn.disabled = true;
+
+    const imagenData   = _chatPendingImageData; // { base64, mimeType, fileName }
+    const imageB64     = _chatPendingImageB64;  // solo para preview local
+
     input.value = '';
     input.style.height = 'auto';
+    _chatClearImage();
 
-    _appendBubble({ id: 'temp_' + Date.now(), autor: currentUser.USUARIO || currentUser.PLANTA || 'Tú', rol: currentUser.ROL, mensaje: texto, ts: new Date().toISOString() }, true);
+    // Preview optimista
+    _appendBubble({
+        id: 'temp_' + Date.now(),
+        autor: currentUser.USUARIO || currentUser.PLANTA || 'Tú',
+        rol: currentUser.ROL,
+        mensaje: texto,
+        ts: new Date().toISOString(),
+        _localImg: imageB64
+    }, true);
 
     try {
-        await _sendMsg(texto);
+        const res = await _sendMsg(texto, imagenData);
+        // Si GAS devuelve la URL de Drive, ya quedó guardada en el mensaje
         await _loadAndRender();
     } catch (e) {
         console.error('[CHAT] Error al enviar:', e);
@@ -485,7 +537,7 @@ function _appendBubble(msg, scrollDown = true, container = null, isLastMine = fa
     const align       = isGuestMsg ? 'flex-end' : 'flex-start';
     const borderRadius = isGuestMsg ? '18px 18px 4px 18px' : '18px 18px 18px 4px';
 
-    // Read receipt: show ✓✓ on the last message sent by the current user
+    // Read receipt
     let receiptHtml = '';
     if (isLastMine) {
         const myRol      = currentUser?.ROL || 'GUEST';
@@ -499,13 +551,36 @@ function _appendBubble(msg, scrollDown = true, container = null, isLastMine = fa
         }
     }
 
+    // Detectar si el mensaje contiene una URL de imagen (Google Drive lh3)
+    const imgUrlMatch = msg.mensaje ? msg.mensaje.match(/(https?:\/\/lh3\.googleusercontent\.com\/d\/[^\s]+)/i) : null;
+    const imgUrl = msg._localImg ? `data:image/jpeg;base64,${msg._localImg}` : (imgUrlMatch ? imgUrlMatch[0] : null);
+    // Texto sin la URL de imagen
+    const textoSinUrl = imgUrlMatch
+        ? msg.mensaje.replace(imgUrlMatch[0], '').trim()
+        : msg.mensaje;
+
+    let contenidoHtml = '';
+    if (imgUrl) {
+        contenidoHtml += `
+            <div style="margin-bottom:${textoSinUrl ? '8px' : '0'};">
+                <a href="${imgUrlMatch ? imgUrlMatch[0] : '#'}" target="_blank" rel="noopener">
+                    <img src="${imgUrl}" alt="imagen" loading="lazy"
+                        style="max-width:220px;max-height:200px;border-radius:10px;display:block;cursor:pointer;object-fit:cover;border:${isGuestMsg ? '1.5px solid rgba(255,255,255,0.25)' : '1.5px solid #e2e8f0'};"
+                        onerror="this.style.display='none'">
+                </a>
+            </div>`;
+    }
+    if (textoSinUrl) {
+        contenidoHtml += `<div style="font-size:0.875rem;color:${textColor};line-height:1.5;word-break:break-word;">${_escapeHtml(textoSinUrl)}</div>`;
+    }
+
     const wrap = document.createElement('div');
     wrap.id = msg.id || '';
     wrap.style.cssText = `display:flex;flex-direction:column;align-items:${align};`;
     wrap.innerHTML = `
         ${!isGuestMsg ? `<div style="font-size:0.65rem;font-weight:700;color:#64748b;margin-bottom:3px;padding-left:4px;">${msg.autor}</div>` : ''}
         <div style="max-width:78%;padding:10px 14px;background:${bubbleBg};border-radius:${borderRadius};box-shadow:0 1px 4px rgba(0,0,0,0.06);">
-            <div style="font-size:0.875rem;color:${textColor};line-height:1.5;word-break:break-word;">${_escapeHtml(msg.mensaje)}</div>
+            ${contenidoHtml}
             <div style="font-size:0.6rem;color:${metaColor};margin-top:4px;text-align:right;">${_formatTime(msg.ts)}</div>
         </div>
         ${receiptHtml}`;
@@ -806,4 +881,125 @@ function _formatDateLabel(isoStr) {
 
 function _escapeHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANEJO DE IMÁGENES EN CHAT (Drive vía GAS)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Llamado cuando el usuario selecciona una imagen.
+ * Muestra preview inmediato (base64 local) y prepara los datos para enviar a GAS.
+ */
+function _chatImageSelected(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 10 * 1024 * 1024) {
+        Swal.fire({ title: 'Imagen muy grande', text: 'Máximo 10MB.', icon: 'warning', confirmButtonColor: '#3b82f6' });
+        input.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const dataUrl = e.target.result;
+        const b64 = dataUrl.split(',')[1];
+
+        // Guardar datos para enviar a GAS (mismo formato que novedades)
+        _chatPendingImageData = { base64: b64, mimeType: file.type, fileName: file.name };
+        _chatPendingImageB64  = b64;
+
+        // Mostrar preview inmediato
+        const preview    = document.getElementById('chat-img-preview');
+        const previewImg = document.getElementById('chat-img-preview-img');
+        if (preview && previewImg) {
+            previewImg.src = dataUrl;
+            preview.style.display = 'block';
+        }
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+}
+
+/**
+ * Corrige el texto del input del chat usando Gemini IA.
+ * Mismo modelo y prompt que el corrector de resoluciones.
+ */
+async function _chatCorregirIA() {
+    const input = document.getElementById('chat-input');
+    const btn   = document.getElementById('chat-ai-btn');
+    if (!input || !btn) return;
+
+    const texto = input.value.trim();
+    if (!texto) {
+        input.placeholder = 'Escribe algo primero...';
+        setTimeout(() => { input.placeholder = 'Escribe un mensaje...'; }, 1500);
+        return;
+    }
+
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+    btn.disabled  = true;
+    btn.style.borderColor = '#8b5cf6';
+    btn.style.color       = '#8b5cf6';
+
+    try {
+        if (!CONFIG.GEMINI_KEY) await fetchSecureConfig();
+        const apiKey = CONFIG.GEMINI_KEY;
+        if (!apiKey) throw new Error('Clave IA no disponible');
+
+        const prompt = `Actúa como corrector técnico industrial. Corrige ortografía, gramática y normaliza abreviaturas (ej: pta -> planta, cant -> cantidad) del siguiente texto para que sea profesional y ejecutivo. Si el texto está completamente en MAYÚSCULAS, conviértelo a formato normal con mayúsculas y minúsculas apropiadas según las reglas del español. Devuelve solo el resultado corregido sin agregar información que no esté implícita en el texto original.\n\nTexto a corregir: ${texto}`;
+
+        const res  = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemma-3n-e4b-it:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { temperature: 0.1, topP: 0.95, maxOutputTokens: 1024 }
+            })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Error IA');
+        if (!data.candidates?.length) throw new Error('Sin respuesta de IA');
+
+        let corregido = data.candidates[0].content.parts[0].text.trim().replace(/^["']|["']$/g, '');
+        input.value = corregido;
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+
+        // Feedback visual: borde verde momentáneo
+        btn.style.borderColor = '#22c55e';
+        btn.style.color       = '#22c55e';
+        setTimeout(() => {
+            btn.style.borderColor = '#e2e8f0';
+            btn.style.color       = '#94a3b8';
+        }, 1500);
+
+    } catch (err) {
+        console.error('[CHAT IA]', err);
+        btn.style.borderColor = '#ef4444';
+        btn.style.color       = '#ef4444';
+        setTimeout(() => {
+            btn.style.borderColor = '#e2e8f0';
+            btn.style.color       = '#94a3b8';
+        }, 2000);
+    } finally {
+        btn.innerHTML = originalHTML;
+        btn.disabled  = false;
+    }
+}
+
+/**
+ * Limpia la imagen pendiente y oculta el preview.
+ */
+function _chatClearImage() {
+    _chatPendingImageData = null;
+    _chatPendingImageB64  = null;
+    const preview    = document.getElementById('chat-img-preview');
+    const previewImg = document.getElementById('chat-img-preview-img');
+    if (preview) preview.style.display = 'none';
+    if (previewImg) previewImg.src = '';
 }
