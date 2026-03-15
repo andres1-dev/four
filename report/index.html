@@ -366,6 +366,144 @@
             </div>
           </div>
 
+          <!-- Botón guía AQL -->
+          <div class="mb-3">
+            <button type="button" id="aqlBtn" onclick="abrirModalAQL()"
+              style="display:none; width:100%; border-radius:14px;
+                     border:1px solid #e2e8f0; background:#f8fafc; cursor:pointer;
+                     transition:all 0.2s; padding:0; overflow:hidden;
+                     flex-direction:column; align-items:stretch;">
+              <!-- Header centrado -->
+              <div style="padding:10px 14px 8px; border-bottom:1px solid #e2e8f0;
+                           display:flex; flex-direction:column; align-items:center; gap:2px;">
+                <span style="font-size:0.75rem; font-weight:700; color:#1e293b; display:flex; align-items:center; gap:6px;">
+                  <i class="fas fa-ruler-combined" style="color:#64748b;"></i>Muestreo AQL
+                </span>
+                <span style="font-size:0.62rem; color:#94a3b8; display:flex; align-items:center; gap:3px;">
+                  Ver detalle <i class="fas fa-chevron-right" style="font-size:0.55rem;"></i>
+                </span>
+              </div>
+              <!-- Tarjetas -->
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; width:100%;">
+                <div style="padding:12px 6px; text-align:center; border-right:1px solid #e2e8f0;
+                             display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                  <div style="font-size:0.58rem; font-weight:600; text-transform:uppercase; color:#94a3b8; letter-spacing:0.04em; height:14px; display:flex; align-items:center;">Revisar</div>
+                  <div id="aqlBtnMuestra" style="font-size:1.5rem; font-weight:800; color:#1e293b; line-height:1; margin:4px 0;">—</div>
+                  <div style="font-size:0.55rem; color:#94a3b8; height:14px; display:flex; align-items:center;">unidades</div>
+                </div>
+                <div style="padding:12px 6px; text-align:center; border-right:1px solid #e2e8f0;
+                             display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                  <div style="font-size:0.58rem; font-weight:600; text-transform:uppercase; color:#94a3b8; letter-spacing:0.04em; height:14px; display:flex; align-items:center;">Aprobar si</div>
+                  <div id="aqlBtnAceptar" style="font-size:1.5rem; font-weight:800; color:#16a34a; line-height:1; margin:4px 0;">—</div>
+                  <div style="font-size:0.55rem; color:#94a3b8; height:14px; display:flex; align-items:center;">≤ defectos</div>
+                </div>
+                <div style="padding:12px 6px; text-align:center;
+                             display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                  <div style="font-size:0.58rem; font-weight:600; text-transform:uppercase; color:#94a3b8; letter-spacing:0.04em; height:14px; display:flex; align-items:center;">Rechazar si</div>
+                  <div id="aqlBtnRechazar" style="font-size:1.5rem; font-weight:800; color:#dc2626; line-height:1; margin:4px 0;">—</div>
+                  <div style="font-size:0.55rem; color:#94a3b8; height:14px; display:flex; align-items:center;">≥ defectos</div>
+                </div>
+              </div>
+            </button>
+          </div>
+
+          <!-- Modal AQL -->
+          <div id="aqlModal" style="display:none; position:fixed; inset:0; z-index:9000;
+               background:rgba(15,23,42,0.45); backdrop-filter:blur(4px);
+               align-items:center; justify-content:center;">
+            <div style="background:white; border-radius:20px; padding:24px; width:360px;
+                        max-width:calc(100vw - 32px); box-shadow:0 20px 50px rgba(0,0,0,0.2); max-height:90vh; overflow-y:auto;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                <button type="button" onclick="cerrarModalAQL()"
+                  style="background:none; border:none; color:transparent; font-size:1.2rem; cursor:default; padding:4px; visibility:hidden;">
+                  <i class="fas fa-times"></i>
+                </button>
+                <div style="text-align:center; flex:1;">
+                  <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+                    <i class="fas fa-ruler-combined" style="color:#3F51B5; font-size:1rem;"></i>
+                    <span style="font-size:1rem; font-weight:800; color:#1e293b;">Muestreo por Aceptación</span>
+                    <i class="fas fa-circle-info" style="color:#3F51B5; font-size:0.9rem; cursor:help;"
+                      title="ISO 2859-1:2026 / MIL-STD-1916 — Muestreo por Aceptacion
+
+NIVEL DE INSPECCION — define cuantas prendas se revisan:
+  I   Reducido: proveedor confiable, menos muestras
+  II  Estandar: uso general en confeccion (predeterminado)
+  III Severo: proveedor nuevo o con historial de fallas
+
+NIVEL AQL — tolerancia maxima de defectos aceptados:
+  1.0  Critico: alta gama o exportacion
+  1.5  Muy estricto: clientes exigentes
+  2.5  Estandar internacional
+  4.0  Normal: uso general en talleres (predeterminado)
+  6.5  Permisivo: proceso muy confiable
+
+RESULTADOS:
+  Revisar    prendas a tomar al azar del lote
+  Aprobar    si los defectos son iguales o menores, el lote pasa
+  Rechazar   si los defectos son iguales o mayores, el lote se rechaza"></i>
+                  </div>
+                  <div style="font-size:0.68rem; color:#94a3b8; margin-top:3px;">ISO 2859-1:2026 · Tabla Militar Estándar</div>
+                </div>
+                <button type="button" onclick="cerrarModalAQL()"
+                  style="background:none; border:none; color:#94a3b8; font-size:1.2rem; cursor:pointer; padding:4px;">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+                <div>
+                  <label style="font-size:0.7rem; font-weight:700; text-transform:uppercase; color:#64748b; display:block; margin-bottom:6px;">Nivel de inspección</label>
+                  <div class="input-with-icon">
+                    <i class="fas fa-layer-group input-icon"></i>
+                    <select id="aqlNivelInspeccion" class="form-control" onchange="calcularAQL()">
+                      <option value="I">I — Reducido</option>
+                      <option value="II" selected>II — Estándar</option>
+                      <option value="III">III — Severo</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label style="font-size:0.7rem; font-weight:700; text-transform:uppercase; color:#64748b; display:block; margin-bottom:6px;">Nivel AQL</label>
+                  <div class="input-with-icon">
+                    <i class="fas fa-sliders-h input-icon"></i>
+                    <select id="aqlNivel" class="form-control" onchange="calcularAQL()">
+                      <option value="1.0">1.0 — Crítico</option>
+                      <option value="1.5">1.5 — Estricto</option>
+                      <option value="2.5">2.5 — Normal</option>
+                      <option value="4.0" selected>4.0 — Flexible</option>
+                      <option value="6.5">6.5 — Permisivo</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div style="background:linear-gradient(135deg,#eef2ff,#f8fafc); border:1px solid #c7d2fe;
+                          border-radius:14px; padding:16px; display:grid;
+                          grid-template-columns:repeat(3,1fr); gap:8px; text-align:center; margin-bottom:10px;">
+                <div>
+                  <div style="font-size:0.55rem; font-weight:700; text-transform:uppercase; color:#64748b; margin-bottom:6px;">Revisar</div>
+                  <div id="aqlMuestra" style="font-size:2rem; font-weight:900; color:#3F51B5; line-height:1;">—</div>
+                  <div style="font-size:0.55rem; color:#94a3b8; margin-top:3px;">unidades</div>
+                </div>
+                <div style="border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0;">
+                  <div style="font-size:0.55rem; font-weight:700; text-transform:uppercase; color:#64748b; margin-bottom:6px;">Aprobar ≤</div>
+                  <div id="aqlAceptar" style="font-size:2rem; font-weight:900; color:#16a34a; line-height:1;">—</div>
+                  <div style="font-size:0.55rem; color:#94a3b8; margin-top:3px;">defectos</div>
+                </div>
+                <div>
+                  <div style="font-size:0.55rem; font-weight:700; text-transform:uppercase; color:#64748b; margin-bottom:6px;">Rechazar ≥</div>
+                  <div id="aqlRechazar" style="font-size:2rem; font-weight:900; color:#dc2626; line-height:1;">—</div>
+                  <div style="font-size:0.55rem; color:#94a3b8; margin-top:3px;">defectos</div>
+                </div>
+              </div>
+              <div id="aqlLetra" style="font-size:0.62rem; color:#94a3b8; font-weight:600; text-align:center; margin-bottom:14px;"></div>
+              <button type="button" onclick="cerrarModalAQL()"
+                style="width:100%; padding:12px; border-radius:10px; border:none;
+                       background:#3F51B5; color:white; font-weight:700; font-size:0.85rem; cursor:pointer;">
+                Entendido
+              </button>
+            </div>
+          </div>
+
+          <!-- Conclusión -->
           <div class="mb-3">
             <label for="conclusion" class="form-label">Conclusión:</label>
             <div class="input-with-icon">
@@ -376,6 +514,26 @@
                 <option value="RECHAZADO">RECHAZADO</option>
               </select>
             </div>
+          </div>
+
+          <!-- Avance de producción — visible solo en RONDA y CONTRAMUESTRA -->
+          <div id="avanceSection" class="mb-3" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <label class="form-label mb-0">Avance de producción:</label>
+              <span id="avanceValor" style="font-size:1.1rem; font-weight:800; color:#3F51B5; min-width:42px; text-align:right;">0%</span>
+            </div>
+            <div style="position:relative; padding: 6px 0;">
+              <input type="range" id="avanceSlider" min="0" max="100" step="5" value="0"
+                style="width:100%; accent-color:#3F51B5; height:6px; cursor:pointer;">
+              <div style="display:flex; justify-content:space-between; margin-top:4px;">
+                <span style="font-size:0.65rem; color:#94a3b8; font-weight:600;">0%</span>
+                <span style="font-size:0.65rem; color:#94a3b8; font-weight:600;">25%</span>
+                <span style="font-size:0.65rem; color:#94a3b8; font-weight:600;">50%</span>
+                <span style="font-size:0.65rem; color:#94a3b8; font-weight:600;">75%</span>
+                <span style="font-size:0.65rem; color:#94a3b8; font-weight:600;">100%</span>
+              </div>
+            </div>
+            <input type="hidden" id="avancePorcentaje">
           </div>
 
           <div class="mb-3">

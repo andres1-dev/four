@@ -1193,14 +1193,14 @@ function renderListProgreso() {
         ...reprogramadas,
     ];
 
-    // Nodo de inicio: 7:00 am
+    // Nodo de inicio: 7:10 am
     const startHour = 7;
-    const startDate = new Date(_selectedDay + 'T07:00:00');
+    const startDate = new Date(_selectedDay + 'T07:10:00');
     let prevTime = startDate;
 
     let rowsHtml = `
         <div class="seg-row inicio">
-            <div class="seg-row-time has-time" style="color:#3F51B5;">7:00 <small>AM</small></div>
+            <div class="seg-row-time has-time" style="color:#3F51B5;">7:10 <small>AM</small></div>
             <div class="seg-row-node"><i class="fas fa-flag"></i></div>
             <div class="seg-row-card" style="border-color:#c7d2fe;background:#eef2ff;">
                 <div class="seg-row-body">

@@ -230,6 +230,8 @@ function toggleActionSections(action) {
         }
         // Capturar coordenadas GPS en el momento de abrir el formulario
         requestCalidadLocation();
+        // Inicializar lógica dinámica del formulario
+        initCalidadForm();
     }
 
     // Limpiar historial de IA al cambiar de sección o cerrar
@@ -752,7 +754,20 @@ async function mejorarRedaccion(fieldId) {
         }
 
         const model = 'gemma-3n-e4b-it';
-        const promptIA = `Actúa como corrector técnico industrial especializado en redacción profesional. Corrige la ortografía, gramática, puntuación y estilo del siguiente texto, mejorando su claridad y coherencia sin alterar el significado original. Normaliza abreviaturas técnicas comunes cuando corresponda. Si el texto está completamente en mayúsculas, conviértelo a formato de escritura estándar utilizando mayúscula inicial al inicio de las oraciones y en nombres propios, y minúsculas en el resto del texto. Sustituye términos vulgares, ofensivos o inapropiados por equivalentes profesionales o neutrales cuando sea necesario. Mantén el contenido técnico implícito en el original y no agregues información nueva. Devuelve únicamente el texto corregido.\n\nTexto a corregir: ${textoOriginal}`;
+
+        const promptCalidad = `Eres un auditor senior de control de calidad en confección industrial. Reescribe el siguiente texto como una observación de seguimiento técnico: concisa, directa y sin ambigüedades. Usa el contexto del lote únicamente para orientar tu criterio técnico y elegir la terminología adecuada, pero no lo menciones ni lo repitas en la respuesta. Redacta de forma clara para que el personal operativo de planta o taller entienda exactamente qué se observó y qué se requiere corregir. Evita frases largas, rodeos o lenguaje administrativo innecesario. No agregues información que no esté en el texto original. No uses markdown, asteriscos, viñetas, negritas ni listas. No incluyas encabezados, títulos ni prefijos como "Observación:", "Hallazgo:", "Nota:" ni similares. Entrega únicamente el cuerpo del texto corregido en prosa continua, listo para pegar en un informe de seguimiento.
+
+Contexto del lote (solo para tu criterio, no lo menciones):
+- Prenda: ${document.getElementById('prenda')?.value || 'No especificada'}
+- Género: ${document.getElementById('genero')?.value || 'No especificado'}
+- Tejido: ${document.getElementById('tejido')?.value || 'No especificado'}
+- Proceso: ${document.getElementById('proceso')?.value || 'No especificado'}
+
+Texto a reescribir: ${textoOriginal}`;
+
+        const promptGenerico = `Actúa como corrector técnico industrial especializado en redacción profesional. Corrige la ortografía, gramática, puntuación y estilo del siguiente texto, mejorando su claridad y coherencia sin alterar el significado original. Normaliza abreviaturas técnicas comunes cuando corresponda. Si el texto está completamente en mayúsculas, conviértelo a formato de escritura estándar utilizando mayúscula inicial al inicio de las oraciones y en nombres propios, y minúsculas en el resto del texto. Sustituye términos vulgares, ofensivos o inapropiados por equivalentes profesionales o neutrales cuando sea necesario. Mantén el contenido técnico implícito en el original y no agregues información nueva. Devuelve únicamente el texto corregido.\n\nTexto a corregir: ${textoOriginal}`;
+
+        const promptIA = fieldId === 'observacionesCalidad' ? promptCalidad : promptGenerico;
 
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -777,6 +792,10 @@ async function mejorarRedaccion(fieldId) {
 
         let textoPulido = data.candidates[0].content.parts[0].text.trim();
         textoPulido = textoPulido.replace(/^["']|["']$/g, '');
+        // Limpiar markdown residual
+        textoPulido = textoPulido.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').replace(/^[-•]\s+/gm, '').trim();
+        // Eliminar encabezados tipo "Observación técnica:", "Hallazgo:", etc. al inicio
+        textoPulido = textoPulido.replace(/^[A-ZÁÉÍÓÚÑ][^:\n]{0,40}:\s*/i, '').trim();
 
         // Guardar el texto original en un atributo data
         textarea.setAttribute('data-original-text', textoOriginal);

@@ -116,6 +116,7 @@
 #mainForm, 
 #novedadesSection, 
 #calidadSection, 
+#ruteroSection,
 #actualizarDatosSection {
     background: var(--color-card-bg);
     padding: 3rem;
@@ -131,6 +132,7 @@
     #mainForm, 
     #novedadesSection, 
     #calidadSection, 
+    #ruteroSection,
     #actualizarDatosSection {
         padding: 1.5rem;
         border-radius: 0; /* Full width feel en móvil */
