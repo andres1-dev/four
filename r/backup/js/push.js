@@ -7,7 +7,7 @@
    ========================================================================== */
 
 /* URL del GAS de notificaciones (codeNotifications.gs) — ajustar tras deploy */
-const NOTIF_GAS_URL = 'https://script.google.com/macros/s/AKfycbxPLACEHOLDER_REPLACE_WITH_REAL_URL/exec';
+const NOTIF_GAS_URL = 'https://script.google.com/macros/s/AKfycbwreGMo-ZITm8PUkGJfMVu1cwKMsnUhfD1BZO18qFBa9CFcWd50VzBDKwDMKCubYhg5Cg/exec';
 
 const PUSH_STORAGE_KEY = 'sispro_push_subscribed';
 
@@ -23,11 +23,26 @@ async function registerServiceWorker() {
     _swRegistration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
     console.log('[PUSH] SW registrado:', _swRegistration.scope);
 
+    // Esperar a que el SW esté activo antes de enviarle config
+    if (_swRegistration.installing || _swRegistration.waiting) {
+      await new Promise(resolve => {
+        const sw = _swRegistration.installing || _swRegistration.waiting;
+        sw.addEventListener('statechange', function handler() {
+          if (sw.state === 'activated') { sw.removeEventListener('statechange', handler); resolve(); }
+        });
+      });
+    }
+
     // Enviar config al SW para que pueda hacer polling background
     _sendConfigToSW();
 
     // Escuchar mensajes del SW (notificaciones cuando la app está visible)
     navigator.serviceWorker.addEventListener('message', _onSwMessage);
+
+    // Si ya tiene permiso, asegurar suscripción activa
+    if (Notification.permission === 'granted') {
+      await _ensurePushSubscription();
+    }
 
     // Intentar periodic sync (Chrome Android)
     _registerPeriodicSync(_swRegistration);
@@ -40,9 +55,10 @@ async function registerServiceWorker() {
    Enviar configuración al SW
    ══════════════════════════════════════════════════════════════════════════ */
 function _sendConfigToSW() {
-  if (!_swRegistration || !_swRegistration.active) return;
+  const sw = _swRegistration?.active || _swRegistration?.installing || _swRegistration?.waiting;
+  if (!sw) return;
   const lastTs = parseInt(localStorage.getItem('sispro_last_push_ts') || '0');
-  _swRegistration.active.postMessage({
+  sw.postMessage({
     type: 'SET_CONFIG',
     gasUrl: NOTIF_GAS_URL,
     lastTs
@@ -99,7 +115,10 @@ async function _ensurePushSubscription() {
     });
     console.log('[PUSH] Suscripción creada');
     localStorage.setItem(PUSH_STORAGE_KEY, '1');
-    _sendSubscriptionToGAS(sub);
+    await _sendSubscriptionToGAS(sub);
+
+    // Notificación de bienvenida para confirmar que funciona
+    await _sendTestNotification();
   } catch (e) {
     console.warn('[PUSH] Error suscribiendo:', e.message);
   }
@@ -124,14 +143,36 @@ async function _fetchVapidPublicKey() {
    ══════════════════════════════════════════════════════════════════════════ */
 async function _sendSubscriptionToGAS(subscription) {
   try {
-    await fetch(NOTIF_GAS_URL, {
+    const res = await fetch(NOTIF_GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'subscribe', ...subscription.toJSON() })
     });
-    console.log('[PUSH] Suscripción enviada al servidor');
+    const json = await res.json().catch(() => ({}));
+    console.log('[PUSH] Suscripción enviada al servidor:', json.message || 'ok');
   } catch (e) {
     console.warn('[PUSH] Error enviando suscripción:', e.message);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Notificación de prueba al activar permisos por primera vez
+   ══════════════════════════════════════════════════════════════════════════ */
+async function _sendTestNotification() {
+  try {
+    await fetch(NOTIF_GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'send-notification',
+        title:  '¡SISPRO activado!',
+        body:   'Las notificaciones push están funcionando correctamente.',
+        icon:   ''
+      })
+    });
+    console.log('[PUSH] Notificación de prueba enviada');
+  } catch (e) {
+    console.warn('[PUSH] Error enviando notificación de prueba:', e.message);
   }
 }
 

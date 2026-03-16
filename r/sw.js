@@ -6,7 +6,7 @@
    - Anti-duplicados por ID de notificación
    ========================================================================== */
 
-const SW_VERSION   = 'sispro-v2';
+const SW_VERSION   = 'sispro-v3';
 const CACHE_NAME   = SW_VERSION;
 
 /* Archivos a cachear para funcionamiento offline básico */
@@ -138,8 +138,8 @@ self.addEventListener('message', async event => {
   }
 
   /* El cliente envía la URL del GAS de notificaciones y el ts conocido */
-  if (type === 'SET_CONFIG') {
-    GAS_NOTIF_URL = data.gasUrl;
+  if (type === 'SET_CONFIG' || type === 'SET_POLLING_CONFIG') {
+    GAS_NOTIF_URL = data.gasUrl || data.url;
     await _idbSet('gasNotifUrl', GAS_NOTIF_URL);
     if (data.lastTs) {
       _lastNotifTs = data.lastTs;
@@ -232,46 +232,43 @@ async function _showIfNew(payload) {
   const savedTs = _lastNotifTs || (await _idbGet('lastNotifTs')) || 0;
   const savedId = _lastNotifId || (await _idbGet('lastNotifId')) || null;
 
-  if (ts <= savedTs || id === savedId) {
+  if (ts > 0 && ts <= savedTs && id === savedId) {
     console.log('[SW] Notificación ya mostrada, ignorando');
     return;
   }
 
-  /* Verificar si la app está en primer plano — si sí, no mostrar push nativo
-     (la app ya muestra la notificación en la campana) */
-  const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-  const appVisible = allClients.some(c => c.visibilityState === 'visible');
-  if (appVisible) {
-    /* Solo actualizar el ts para no duplicar cuando la app esté en background */
-    _lastNotifTs = ts;
-    _lastNotifId = id;
-    await _idbSet('lastNotifTs', ts);
-    await _idbSet('lastNotifId', id);
-    /* Enviar mensaje a los clientes para que actualicen la campana */
-    allClients.forEach(c => c.postMessage({ type: 'NEW_PUSH_NOTIF', payload }));
-    return;
-  }
-
-  /* App en background o cerrada → mostrar notificación nativa */
+  // Actualizar anti-duplicados
   _lastNotifTs = ts;
   _lastNotifId = id;
   await _idbSet('lastNotifTs', ts);
   await _idbSet('lastNotifId', id);
 
+  // Verificar si la app está en primer plano
+  const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  const appVisible = allClients.some(c => c.visibilityState === 'visible');
+
+  if (appVisible) {
+    // App visible → enviar mensaje al cliente para actualizar campana
+    allClients.forEach(c => c.postMessage({ type: 'NEW_PUSH_NOTIF', payload }));
+    console.log('[SW] App visible, mensaje enviado al cliente');
+    return;
+  }
+
+  // App en background o cerrada → notificación nativa del SO
   const icon  = payload.icon  || './icons/icon-any.svg';
   const badge = './icons/icon-maskable.svg';
 
   await self.registration.showNotification(payload.title || 'SISPRO', {
-    body:    payload.body    || 'Tienes una actualización',
+    body:     payload.body    || 'Tienes una actualización',
     icon,
     badge,
-    tag:     `sispro-${id}`,
+    tag:      `sispro-${id}`,
     renotify: true,
-    vibrate: [200, 100, 200],
-    data:    { url: payload.url || './index.html', id, ts }
+    vibrate:  [200, 100, 200],
+    data:     { url: payload.url || './index.html', id, ts }
   });
 
-  console.log('[SW] Notificación mostrada:', payload.title);
+  console.log('[SW] Notificación nativa mostrada:', payload.title);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

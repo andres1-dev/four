@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test de Iconos PWA</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2563eb;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 30px;
+        }
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        .icon-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid #e2e8f0;
+        }
+        .icon-card h3 {
+            color: #1e40af;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .icon-preview {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            border: 1px solid #e2e8f0;
+        }
+        .icon-preview img {
+            max-width: 150px;
+            max-height: 150px;
+        }
+        .icon-info {
+            font-size: 14px;
+            color: #64748b;
+            line-height: 1.6;
+        }
+        .icon-info strong {
+            color: #1e40af;
+            display: block;
+            margin-top: 10px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        .badge.success {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .badge.warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .mask-demo {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .mask-item {
+            text-align: center;
+        }
+        .mask-preview {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        .mask-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .mask-circle {
+            border-radius: 50%;
+        }
+        .mask-squircle {
+            border-radius: 25%;
+        }
+        .mask-rounded {
+            border-radius: 20px;
+        }
+        .mask-square {
+            border-radius: 0;
+        }
+        .mask-label {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 500;
+        }
+        .section {
+            margin-top: 40px;
+            padding-top: 40px;
+            border-top: 2px solid #e2e8f0;
+        }
+        .section h2 {
+            color: #1e40af;
+            margin-bottom: 20px;
+        }
+        .device-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .device-card {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        .device-card h4 {
+            color: #1e40af;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .device-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 10px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e2e8f0;
+        }
+        .device-icon img {
+            width: 60px;
+            height: 60px;
+        }
+        .status {
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: #166534;
+        }
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .comparison-table th,
+        .comparison-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .comparison-table th {
+            background: #f8fafc;
+            color: #1e40af;
+            font-weight: 600;
+        }
+        .comparison-table tr:hover {
+            background: #f8fafc;
+        }
+        .check {
+            color: #166534;
+            font-weight: bold;
+        }
+        .cross {
+            color: #991b1b;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Test de Iconos PWA - Optimizado</h1>
+        <p class="subtitle">Logo a tamaño completo con safe area mínima (87.5% vs 75% anterior)</p>
+
+        <!-- Comparación de Iconos -->
+        <div class="comparison-grid">
+            <div class="icon-card">
+                <h3>icon-any.svg</h3>
+                <div class="icon-preview">
+                    <img src="./icons/icon-any.svg" alt="Icon Any">
+                </div>
+                <div class="icon-info">
+                    <strong>Propósito:</strong> Uso general
+                    <br><strong>Fondo:</strong> Transparente
+                    <br><strong>Tamaño:</strong> 100% del espacio
+                    <br><strong>Uso:</strong> Favicon, navegador
+                    <span class="badge success">✓ Tamaño Completo</span>
+                </div>
+            </div>
+
+            <div class="icon-card">
+                <h3>icon-maskable.svg</h3>
+                <div class="icon-preview" style="background: #f0f0f0;">
+                    <img src="./icons/icon-maskable.svg" alt="Icon Maskable">
+                </div>
+                <div class="icon-info">
+                    <strong>Propósito:</strong> Instalación PWA
+                    <br><strong>Fondo:</strong> Blanco sólido
+                    <br><strong>Tamaño:</strong> 87.5% (560x560px)
+                    <br><strong>Safe area:</strong> 40px (6.25%)
+                    <br><strong>Uso:</strong> iOS, Android
+                    <span class="badge success">✓ Optimizado</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demostración de Máscaras -->
+        <div class="section">
+            <h2>🎭 Prueba de Máscaras Adaptativas</h2>
+            <p style="color: #64748b; margin-bottom: 20px;">
+                El icono maskable se adapta a diferentes formas según el dispositivo:
+            </p>
+            <div class="mask-demo">
+                <div class="mask-item">
+                    <div class="mask-preview mask-circle">
+                        <img src="./icons/icon-maskable.svg" alt="Circle">
+                    </div>
+                    <div class="mask-label">Círculo<br>(iOS)</div>
+                </div>
+                <div class="mask-item">
+                    <div class="mask-preview mask-squircle">
+                        <img src="./icons/icon-maskable.svg" alt="Squircle">
+                    </div>
+                    <div class="mask-label">Squircle<br>(Android)</div>
+                </div>
+                <div class="mask-item">
+                    <div class="mask-preview mask-rounded">
+                        <img src="./icons/icon-maskable.svg" alt="Rounded">
+                    </div>
+                    <div class="mask-label">Redondeado<br>(Samsung)</div>
+                </div>
+                <div class="mask-item">
+                    <div class="mask-preview mask-square">
+                        <img src="./icons/icon-maskable.svg" alt="Square">
+                    </div>
+                    <div class="mask-label">Cuadrado<br>(Desktop)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Simulación por Dispositivo -->
+        <div class="section">
+            <h2>📱 Vista por Dispositivo</h2>
+            <div class="device-grid">
+                <div class="device-card">
+                    <h4>iPhone (iOS)</h4>
+                    <div class="device-icon" style="border-radius: 50%;">
+                        <img src="./icons/icon-maskable.svg" alt="iOS">
+                    </div>
+                    <div class="status">✓ Perfecto</div>
+                </div>
+
+                <div class="device-card">
+                    <h4>Android (Pixel)</h4>
+                    <div class="device-icon" style="border-radius: 25%;">
+                        <img src="./icons/icon-maskable.svg" alt="Android">
+                    </div>
+                    <div class="status">✓ Perfecto</div>
+                </div>
+
+                <div class="device-card">
+                    <h4>Samsung</h4>
+                    <div class="device-icon" style="border-radius: 20px;">
+                        <img src="./icons/icon-maskable.svg" alt="Samsung">
+                    </div>
+                    <div class="status">✓ Perfecto</div>
+                </div>
+
+                <div class="device-card">
+                    <h4>Desktop Chrome</h4>
+                    <div class="device-icon" style="border-radius: 8px;">
+                        <img src="./icons/icon-any.svg" alt="Desktop">
+                    </div>
+                    <div class="status">✓ Perfecto</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla Comparativa -->
+        <div class="section">
+            <h2>📊 Comparación Técnica</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Característica</th>
+                        <th>icon-any.svg</th>
+                        <th>icon-maskable.svg</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Fondo</td>
+                        <td>Transparente</td>
+                        <td>Blanco sólido</td>
+                    </tr>
+                    <tr>
+                        <td>Safe Area</td>
+                        <td>No requerida</td>
+                        <td>40px (6.25%)</td>
+                    </tr>
+                    <tr>
+                        <td>Tamaño Logo</td>
+                        <td>100%</td>
+                        <td>87.5% (560x560px)</td>
+                    </tr>
+                    <tr>
+                        <td>ViewBox</td>
+                        <td>110 108 425 425</td>
+                        <td>0 0 640 640</td>
+                    </tr>
+                    <tr>
+                        <td>Uso en iOS</td>
+                        <td class="cross">✗ Problemas</td>
+                        <td class="check">✓ Perfecto</td>
+                    </tr>
+                    <tr>
+                        <td>Uso en Android</td>
+                        <td class="cross">✗ Problemas</td>
+                        <td class="check">✓ Perfecto</td>
+                    </tr>
+                    <tr>
+                        <td>Favicon</td>
+                        <td class="check">✓ Perfecto</td>
+                        <td class="cross">✗ Fondo visible</td>
+                    </tr>
+                    <tr>
+                        <td>Máscaras adaptativas</td>
+                        <td class="cross">✗ Se corta</td>
+                        <td class="check">✓ Se adapta</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Instrucciones -->
+        <div class="section">
+            <h2>🧪 Cómo Probar</h2>
+            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #2563eb;">
+                <h3 style="color: #1e40af; margin-bottom: 15px;">Pasos para verificar:</h3>
+                <ol style="color: #64748b; line-height: 2;">
+                    <li>Abre Chrome DevTools (F12)</li>
+                    <li>Ve a Application → Manifest</li>
+                    <li>Verifica que ambos iconos carguen correctamente</li>
+                    <li>Prueba la instalación de la PWA</li>
+                    <li>Verifica el icono en la pantalla de inicio</li>
+                </ol>
+                
+                <h3 style="color: #1e40af; margin: 20px 0 15px;">Herramientas recomendadas:</h3>
+                <ul style="color: #64748b; line-height: 2;">
+                    <li><a href="https://maskable.app/editor" target="_blank" style="color: #2563eb;">Maskable.app</a> - Editor de iconos maskable</li>
+                    <li><a href="https://web.dev/maskable-icon/" target="_blank" style="color: #2563eb;">Web.dev Guide</a> - Guía oficial</li>
+                    <li>Chrome Lighthouse - Auditoría PWA</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

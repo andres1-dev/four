@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Acceso</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <meta name="theme-color" content="#FFFFFF" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- Metadatos de la PWA estáticos para compatibilidad -->
+    <meta name="apple-mobile-web-app-title" content="App" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="App" />
+    <meta name="msapplication-TileColor" content="#FFFFFF" />
+    <meta name="msapplication-tap-highlight" content="no" />
+
+    <!-- Configuración Global de la App y Branding Dinámico -->
+    <script src="./js/core/config.js"></script>
+    <script src="./js/core/biometry.js"></script>
+    <script>
+        // Aplicar branding tan pronto cargue
+        document.title = `${CONFIG.APP_NAME} - Acceso`;
+        // Intentar actualizar meta elements ya creados arriba por si el browser hace refresh dynamically
+        if (document.querySelector('meta[name="application-name"]')) document.querySelector('meta[name="application-name"]').content = CONFIG.APP_NAME;
+        if (document.querySelector('meta[name="apple-mobile-web-app-title"]')) document.querySelector('meta[name="apple-mobile-web-app-title"]').content = CONFIG.APP_SHORT_NAME;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.brand-app-name').forEach(el => el.textContent = CONFIG.APP_NAME);
+            document.querySelectorAll('.brand-app-desc').forEach(el => el.textContent = CONFIG.APP_DESCRIPTION);
+            document.querySelectorAll('.brand-logo-alt').forEach(el => el.alt = `${CONFIG.APP_NAME} Logo`);
+            document.querySelectorAll('.credits').forEach(el => el.innerHTML = CONFIG.FOOTER_CREDITS);
+            document.querySelectorAll('.social-icon[href*="facebook"]').forEach(el => el.href = CONFIG.SOCIAL_LINKS.FACEBOOK);
+            document.querySelectorAll('.social-icon[href*="instagram"]').forEach(el => el.href = CONFIG.SOCIAL_LINKS.INSTAGRAM);
+            document.querySelectorAll('.social-icon[href*="wa.me"]').forEach(el => el.href = CONFIG.SOCIAL_LINKS.WHATSAPP);
+        });
+    </script>
+
+
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="icon" href="./icons/icon-any.svg" type="image/svg+xml">
+    
+    <!-- Apple específico - DEBE usar el icono con fondo blanco -->
+    <link rel="apple-touch-icon" href="./icons/icon-maskable.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-maskable.svg">
+    <link rel="apple-touch-icon" sizes="167x167" href="./icons/icon-maskable.svg">
+    <link rel="apple-touch-icon" sizes="152x152" href="./icons/icon-maskable.svg">
+    <link rel="apple-touch-icon" sizes="120x120" href="./icons/icon-maskable.svg">
+
+    <!-- CSS Base de la app -->
+    <link rel="stylesheet" href="./css/core/base.css">
+    <link rel="stylesheet" href="./css/core/layout.css">
+
+    <style>
+        /* Estilos específicos para la página de login independiente para asegurar paridad con el diseño original */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        #login-screen {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            z-index: 9000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 360px;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 28px 20px;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .login-logo-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            background: transparent;
+            animation: subtleFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes subtleFloat {
+
+            0%,
+            100% {
+                transform: translateY(0) scale(1);
+            }
+
+            50% {
+                transform: translateY(-8px) scale(1.02);
+            }
+        }
+
+        .login-header p {
+            margin: 0;
+            font-size: 0.95rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 12px 14px 12px 42px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 15px;
+            background: #ffffff;
+            transition: all 0.2s;
+            color: #0f172a;
+            font-family: inherit;
+        }
+
+        .input-wrapper input:focus {
+            outline: none;
+            border-color: #2563eb;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .toggle-password {
+            left: auto !important;
+            right: 14px;
+            cursor: pointer;
+        }
+
+        .btn-login {
+            width: 100%;
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-login:active {
+            transform: scale(0.98);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .login-error {
+            background: #fee2e2;
+            color: #b91c1c;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .login-footer-compact {
+            margin-top: 28px;
+            text-align: center;
+        }
+
+        .forgot-link {
+            font-size: 13px;
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .forgot-link:hover {
+            color: #1e40af;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+            display: none;
+        }
+
+        .btn-login.biometric-active {
+            height: auto;
+            min-height: 120px;
+            flex-direction: column;
+            gap: 15px;
+            background: transparent;
+            color: #2563eb;
+            border: none;
+            box-shadow: none;
+            font-size: 1.15rem;
+            padding: 20px;
+        }
+
+        .btn-login.biometric-active i {
+            font-size: 2.5rem;
+        }
+
+        #loginForm {
+            transition: opacity 0.3s ease;
+        }
+
+        .hidden-form {
+            display: none !important;
+        }
+
+        .backup-link {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #64748b;
+            text-decoration: none;
+            font-weight: 500;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="login-screen">
+        <div class="login-container">
+            <div class="login-header">
+                <div class="login-logo-icon">
+                    <img src="./icons/icon-any.svg" alt="App Logo" class="brand-logo-alt" style="width: 100%; height: 100%;">
+                </div>
+                <h1 class="brand-app-name"></h1>
+                <p class="brand-app-desc"></p>
+            </div>
+
+            <div id="errorMessage" class="login-error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>ID o contraseña incorrectos</span>
+            </div>
+
+            <form id="loginForm">
+                <div id="manualFields">
+                    <div class="form-group">
+                        <label for="userId">Identificación</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-id-card"></i>
+                            <input type="text" id="userId" placeholder="Ingresa tu ID" autocomplete="username"
+                                inputmode="text">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Contraseña</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+                            <i class="fas fa-eye-slash toggle-password" id="togglePassword"></i>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submitBtn" class="btn-login" style="margin-bottom: 20px;">
+                        <span id="btnText">Entrar</span>
+                        <div class="spinner" id="spinner"></div>
+                    </button>
+
+                    <div style="text-align: center;">
+                        <a href="#" class="forgot-link" id="recoverLink">¿Olvidaste tu contraseña?</a>
+                    </div>
+                </div>
+
+                <!-- Botón de Biometría -->
+                <button type="button" id="biometricBtn" class="btn-login" style="display: none;">
+                    <i class="fas fa-fingerprint"></i>
+                    <span>Acceso Biométrico</span>
+                </button>
+
+                <a href="#" id="usePasswordLink" class="backup-link" style="display: none;">Usar contraseña</a>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = API_URL_POST;
+
+        const loginForm = document.getElementById('loginForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const biometricBtn = document.getElementById('biometricBtn');
+        const btnText = document.getElementById('btnText');
+        const spinner = document.getElementById('spinner');
+        const errorDiv = document.getElementById('errorMessage');
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        const userIdInput = document.getElementById('userId');
+
+        // --- SOLUCIÓN TECLADO INTRUSIVO ---
+        // Evitamos el foco automático al cargar para permitir que el gestor de contraseñas funcione mejor
+        window.addEventListener('load', () => {
+            // No hacemos foco en nada
+            console.log("Login loaded. Waiting for user interaction to avoid keyboard popup.");
+        });
+
+        // Toggle Password
+        togglePassword.addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            togglePassword.classList.toggle('fa-eye');
+            togglePassword.classList.toggle('fa-eye-slash');
+        });
+
+        // --- LÓGICA DE BIOMETRÍA (WEB AUTH) ---
+        async function checkBiometricSupport() {
+            if (typeof BIOMETRY === 'undefined') return;
+
+            const isSupported = await BIOMETRY.isSupported();
+            const hasBiometricId = BIOMETRY.isRegistered();
+
+            if (isSupported && hasBiometricId) {
+                // Actualizar Icono y Texto según el dispositivo (SVG Profesional)
+                const svgIcon = BIOMETRY.getSVGForType();
+                const label = BIOMETRY.getLabelForType();
+
+                biometricBtn.innerHTML = `${svgIcon}<span>${label}</span>`;
+
+                // Modo Biométrico Activo: Ocultar campos manuales
+                document.getElementById('manualFields').classList.add('hidden-form');
+
+                // DESACTIVAR INPUTS
+                userIdInput.disabled = true;
+                passwordInput.disabled = true;
+
+                biometricBtn.style.display = 'flex';
+                biometricBtn.classList.add('biometric-active');
+                document.getElementById('usePasswordLink').style.display = 'block';
+            }
+        }
+        checkBiometricSupport();
+
+        // Switch de Vuelta a Manual
+        document.getElementById('usePasswordLink').addEventListener('click', (e) => {
+            e.preventDefault();
+
+            // Ocultar modo biométrico por completo
+            biometricBtn.style.display = 'none';
+            e.target.style.display = 'none';
+
+            // Mostrar campos manuales y recuperación
+            document.getElementById('manualFields').classList.remove('hidden-form');
+
+            // REACTIVAR INPUTS
+            userIdInput.disabled = false;
+            passwordInput.disabled = false;
+
+            setTimeout(() => userIdInput.focus(), 100);
+        });
+
+        biometricBtn.addEventListener('click', async () => {
+            try {
+                const credentialIdB64 = localStorage.getItem('biometricId');
+                const userId = localStorage.getItem('userIdForBiometrics');
+
+                if (!credentialIdB64 || !userId) {
+                    showError("No se encontró registro biométrico local. Inicie con contraseña primero.");
+                    return;
+                }
+
+                errorDiv.style.display = 'none';
+                biometricBtn.disabled = true;
+
+                // Disparar autenticación del dispositivo
+                const challenge = new Uint8Array(32);
+                window.crypto.getRandomValues(challenge);
+                const credentialId = Uint8Array.from(atob(credentialIdB64), c => c.charCodeAt(0));
+
+                const assertion = await navigator.credentials.get({
+                    publicKey: {
+                        challenge: challenge,
+                        allowCredentials: [{ id: credentialId, type: 'public-key', transports: ['internal'] }],
+                        userVerification: 'required'
+                    }
+                });
+
+                if (assertion) {
+                    console.log("Validación bio-local exitosa. Autenticando servidor...");
+                    await performBiometricAutoLogin(userId);
+                }
+            } catch (err) {
+                console.error("Biometric Login Error:", err);
+                biometricBtn.disabled = false;
+            }
+        });
+
+        async function performBiometricAutoLogin(userId) {
+            submitBtn.disabled = true;
+            btnText.style.display = 'none';
+            spinner.style.display = 'block';
+
+            try {
+                const formData = new FormData();
+                formData.append('action', 'biometricLogin');
+                formData.append('id', userId);
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    processLogin(result);
+                } else {
+                    showError(result.message);
+                }
+            } catch (error) {
+                showError("Error de conexión");
+            } finally {
+                submitBtn.disabled = false;
+                btnText.style.display = 'block';
+                spinner.style.display = 'none';
+            }
+        }
+
+        function processLogin(result) {
+            console.log("Procesando login exitoso...");
+
+            // 1. Inicializar timestamp de actividad PRIMERO que nada
+            const activityKey = (typeof CONFIG !== 'undefined' && CONFIG.ACTIVITY_KEY) ? CONFIG.ACTIVITY_KEY : 'last_activity_timestamp';
+            localStorage.setItem(activityKey, Date.now().toString());
+
+            // 2. Guardar datos de usuario
+            localStorage.setItem('user', JSON.stringify(result.user));
+            if (result.token) sessionStorage.setItem('token', result.token);
+            if (result.apiKey) localStorage.setItem('apiKey', result.apiKey);
+
+            console.log("Sesión preparada. Redirigiendo...");
+
+            // 3. Pequeño delay para asegurar escritura en disco antes del salto
+            setTimeout(() => {
+                window.location.href = './index.html';
+            }, 100);
+        }
+
+        // Handle Login Normal
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            errorDiv.style.display = 'none';
+            submitBtn.disabled = true;
+            btnText.style.display = 'none';
+            spinner.style.display = 'block';
+
+            const id = userIdInput.value.trim();
+            const password = passwordInput.value.trim();
+
+            try {
+                const formData = new FormData();
+                formData.append('action', 'login');
+                formData.append('id', id);
+                formData.append('password', password);
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // El login fue exitoso, vamos a ver si podemos ofrecer biometría
+                    if (window.PublicKeyCredential) {
+                        localStorage.setItem('userIdForBiometrics', result.user.id);
+                    }
+                    processLogin(result);
+                } else {
+                    showError(result.message || 'Credenciales inválidas');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showError('Error de conexión con el servidor');
+            } finally {
+                submitBtn.disabled = false;
+                btnText.style.display = 'block';
+                spinner.style.display = 'none';
+            }
+        });
+
+        // Recuperación
+        document.getElementById('recoverLink').addEventListener('click', async (e) => {
+            e.preventDefault();
+            const id = userIdInput.value.trim();
+            if (!id) {
+                showError('Ingresa tu identificación primero.');
+                userIdInput.focus();
+                return;
+            }
+
+            const originalText = document.getElementById('recoverLink').innerText;
+            document.getElementById('recoverLink').innerText = 'Enviando...';
+
+            try {
+                const formData = new FormData();
+                formData.append('action', 'recover');
+                formData.append('id', id);
+
+                // Metadatos dinámicos completos para la plantilla de correo
+                const currentPath = window.location.pathname;
+                const basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+                const baseUrl = window.location.origin + basePath;
+
+                formData.append('appName', CONFIG.APP_NAME);
+                formData.append('appDescription', CONFIG.APP_DESCRIPTION);
+                formData.append('appLogo', `${baseUrl}icons/icon.svg`);
+                formData.append('appColor', getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#2563EB');
+                formData.append('supportEmail', 'soporte@' + CONFIG.APP_NAME.toLowerCase() + '.com');
+                formData.append('footerCredits', CONFIG.FOOTER_CREDITS);
+                formData.append('templateUrl', `${baseUrl}email_template.html`);
+                formData.append('resetBaseUrl', `${baseUrl}reset.html`);
+
+                const response = await fetch(API_URL, { method: 'POST', body: formData });
+                const result = await response.json();
+                alert(result.message);
+            } catch (error) {
+                alert('Error de conexión');
+            } finally {
+                document.getElementById('recoverLink').innerText = originalText;
+            }
+        });
+
+        function showError(msg) {
+            errorDiv.querySelector('span').textContent = msg;
+            errorDiv.style.display = 'flex';
+        }
+
+        // Verificar si ya hay sesión pero cuidando la inactividad
+        (function () {
+            const user = localStorage.getItem('user');
+            const lastActivity = parseInt(localStorage.getItem(CONFIG.ACTIVITY_KEY) || '0');
+            const now = Date.now();
+            const timeout = CONFIG.SESSION_TIMEOUT_MS;
+
+            if (user) {
+                if (lastActivity > 0 && (now - lastActivity > timeout)) {
+                    console.log("Sesión previa expirada por inactividad. Limpiando...");
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('apiKey');
+                    localStorage.removeItem(CONFIG.ACTIVITY_KEY);
+                    sessionStorage.removeItem('token');
+                } else {
+                    window.location.href = './index.html';
+                }
+            }
+        })();
+    </script>
+</body>
+
+</html>
