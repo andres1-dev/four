@@ -19,7 +19,24 @@
         H = canvas.height = window.innerHeight;
     }
     resize();
-    window.addEventListener('resize', () => { resize(); init(); });
+
+    // Solo reiniciar si el cambio de tamaño es significativo (>50px)
+    // Evita que pull-to-refresh o el teclado virtual perturben las partículas
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        const newW = window.innerWidth;
+        const newH = window.innerHeight;
+        if (Math.abs(newW - W) < 50 && Math.abs(newH - H) < 50) {
+            // Solo actualizar dimensiones del canvas sin reiniciar estrellas
+            canvas.width  = newW;
+            canvas.height = newH;
+            W = newW;
+            H = newH;
+            return;
+        }
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => { resize(); init(); }, 300);
+    });
 
     const STAR_COUNT   = () => window.innerWidth < 768 ? 45 : 90;
     const CONNECT_DIST = () => window.innerWidth < 768 ? 110 : 160;

@@ -6,9 +6,9 @@ const formatoCantidad = num => {
     if (num === null || num === undefined) return '0';
     if (typeof num === 'string') {
         const numValue = parseFloat(num.replace(/\./g, '').replace(',', '.'));
-        return !isNaN(numValue) ? numValue.toLocaleString("es-ES") : num;
+        return !isNaN(numValue) ? numValue.toLocaleString("es-ES", { useGrouping: true }) : num;
     }
-    return num.toLocaleString("es-ES");
+    return num.toLocaleString("es-ES", { useGrouping: true });
 };
 
 const extraerPorcentaje = porcentajeStr => {

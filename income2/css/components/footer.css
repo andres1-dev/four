@@ -22,9 +22,6 @@
     font-weight: var(--font-weight-normal);
     text-align: center;
     line-height: var(--line-height-tight);
-    display: flex;
-    align-items: center;
-    gap: 8px;
 }
 
 .footer-line strong {

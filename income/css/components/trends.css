@@ -1,37 +1,71 @@
-/* Trend Analysis Card Styles - matching backup.html */
+/* Trend Analysis Card Styles */
 .trend-analysis-card {
     border-radius: var(--border-radius-lg);
-    box-shadow: var(--box-shadow-md);
+    box-shadow: none;
     overflow: hidden;
     margin-top: 0;
     transition: var(--transition);
-    background: linear-gradient(135deg, #ffffff 0%, #fefefe 100%);
-    border: 1px solid var(--border-color);
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.1);
 }
 
 .trend-analysis-card:hover {
     box-shadow: var(--box-shadow-xl);
-    transform: translateY(-8px);
-    border-color: var(--primary-light);
+    transform: translateY(-5px);
+    border-color: rgba(255,255,255,0.12);
 }
 
 .card:hover .card-icon.tendencia,
 .card.expanded .card-icon.tendencia {
-    background: var(--info-color);
+    background: #7c3aed;
     color: white;
+}
+
+/* ── Sub-solapa siempre visible bajo el header ── */
+.trend-summary-peek {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.trend-summary-peek:hover {
+    background: rgba(255,255,255,0.03);
+}
+
+.trend-peek-icon {
+    font-size: 13px;
+    color: var(--warning-color);
+    flex-shrink: 0;
+    transition: color 0.3s ease;
+}
+
+.trend-summary-peek .indicator-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-medium);
+    margin-right: 0;
+}
+
+.trend-summary-peek .indicator-value {
+    font-size: 12px;
+    font-weight: 700;
 }
 
 /* Executive summary */
 .executive-summary {
-    background: var(--bg-light);
+    background: transparent;
     border-radius: var(--border-radius);
-    padding: 20px;
-    margin-bottom: 24px;
+    padding: 18px;
+    margin-bottom: 20px;
     display: flex;
     align-items: flex-start;
-    gap: 16px;
-    border: 1px solid var(--border-color);
-    border-left: 3px solid var(--primary-color);
+    gap: 14px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-left: 2px solid var(--primary-color);
 }
 
 .summary-icon {
@@ -71,31 +105,25 @@
     letter-spacing: -0.01em;
 }
 
-.indicator-value.positive {
-    color: var(--success-color);
-}
+.indicator-value.positive { color: var(--success-color); }
+.indicator-value.negative { color: var(--danger-color); }
+.indicator-value.neutral  { color: var(--warning-color); }
 
-.indicator-value.negative {
-    color: var(--danger-color);
-}
-
-.indicator-value.neutral {
-    color: var(--warning-color);
-}
-
-/* Chart styles */
+/* Chart container — flex column so scroll-wrap fills remaining height */
 .chart-container {
     position: relative;
     height: 340px;
-    margin: 28px 0;
-    background: linear-gradient(135deg, #ffffff, #fefefe);
+    margin: 20px 0;
+    background: transparent;
     border-radius: var(--border-radius);
-    padding: 28px;
-    border: 2px solid var(--border-color);
-    box-shadow: var(--box-shadow-md);
+    padding: 24px;
+    border: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    flex-direction: column;
 }
 
 .chart-toolbar {
+    flex-shrink: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -103,39 +131,63 @@
 }
 
 .chart-title {
-    font-weight: 700;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: -0.03em;
     color: var(--text-dark);
-    font-size: 18px;
-    letter-spacing: -0.02em;
 }
 
 .chart-actions {
     display: flex;
-    gap: 10px;
+    gap: 8px;
 }
 
 .chart-action-btn {
-    background: linear-gradient(135deg, var(--bg-light), var(--bg-gray));
-    border: 2px solid var(--border-color);
-    padding: 8px 16px;
-    border-radius: 10px;
-    font-size: 13px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 6px 12px;
+    border-radius: var(--border-radius-sm);
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     transition: var(--transition);
-    box-shadow: var(--box-shadow);
     color: var(--text-dark);
 }
 
 .chart-action-btn:hover {
-    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    background: var(--primary-color);
     color: white;
     border-color: var(--primary-color);
-    transform: translateY(-2px);
-    box-shadow: var(--box-shadow-md);
+    transform: translateY(-1px);
+    box-shadow: var(--box-shadow);
+}
+
+/* Scroll wrapper — fills remaining height in flex container */
+.chart-scroll-wrap {
+    flex: 1;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.12) transparent;
+}
+
+.chart-scroll-wrap::-webkit-scrollbar { height: 3px; }
+.chart-scroll-wrap::-webkit-scrollbar-track { background: transparent; }
+.chart-scroll-wrap::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.12);
+    border-radius: 99px;
+}
+
+.chart-scroll-wrap canvas {
+    display: block;
+    min-width: 100%;
+    height: 100% !important;
 }
 
 .chart-footer {
+    flex-shrink: 0;
     margin-top: 12px;
     font-size: 13px;
     color: var(--text-medium);
@@ -148,71 +200,48 @@
     opacity: 0.9;
 }
 
-/* Responsive chart - NO afecta captura */
+/* Responsive chart — NO afecta captura */
 @media (max-width: 768px) {
     .card:not(.capture-mode *) .chart-container {
-        height: 240px;
+        height: 260px;
         padding: 16px;
         margin: 16px 0;
     }
-    
-    .card:not(.capture-mode *) .chart-title {
-        font-size: 15px;
-    }
-    
-    .card:not(.capture-mode *) .chart-action-btn {
-        padding: 6px 12px;
-        font-size: 11px;
-    }
-    
-    .card:not(.capture-mode *) .chart-footer {
-        font-size: 11px;
-    }
+    .card:not(.capture-mode *) .chart-title { font-size: 15px; }
+    .card:not(.capture-mode *) .chart-action-btn { padding: 6px 12px; font-size: 11px; }
+    .card:not(.capture-mode *) .chart-footer { font-size: 11px; }
 }
 
 @media (max-width: 480px) {
     .card:not(.capture-mode *) .chart-container {
-        height: 200px;
+        height: 240px;
         padding: 12px;
         margin: 12px 0;
     }
-    
-    .card:not(.capture-mode *) .chart-title {
-        font-size: 13px;
-    }
-    
-    .card:not(.capture-mode *) .chart-action-btn {
-        padding: 5px 10px;
-        font-size: 10px;
-    }
-    
+    .card:not(.capture-mode *) .chart-title { font-size: 13px; }
+    .card:not(.capture-mode *) .chart-action-btn { padding: 5px 10px; font-size: 10px; }
     .card:not(.capture-mode *) .chart-toolbar {
         flex-direction: column;
         align-items: flex-start;
         gap: 8px;
     }
-    
-    .card:not(.capture-mode *) .chart-footer {
-        font-size: 10px;
-        text-align: center;
-    }
+    .card:not(.capture-mode *) .chart-footer { font-size: 10px; text-align: center; }
 }
 
-/* Highlight data items - mismo estilo que executive-summary */
+/* Highlight data items */
 .data-item.highlight {
-    background: var(--bg-light);
+    background: transparent;
     border-radius: var(--border-radius);
-    padding: 20px;
-    border: 1px solid var(--border-color);
-    border-left: 3px solid var(--primary-color);
+    padding: 18px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-left: 2px solid var(--primary-color);
     transition: var(--transition);
-    box-shadow: var(--box-shadow);
 }
 
 .data-item.highlight:hover {
-    border-color: var(--primary-color);
+    border-color: rgba(255,255,255,0.12);
     transform: translateY(-2px);
-    box-shadow: var(--box-shadow-md);
+    box-shadow: var(--box-shadow);
 }
 
 .data-description {
@@ -244,30 +273,29 @@
     font-weight: 600;
 }
 
-/* Comparison items in trend analysis */
+/* Comparison items */
 .comparison-item {
-    padding: 16px 18px;
+    padding: 14px 16px;
     border-radius: var(--border-radius-sm);
     transition: var(--transition);
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.9));
-    border: 2px solid transparent;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.08);
 }
 
 .comparison-item:hover {
-    background: linear-gradient(135deg, #ffffff, var(--bg-light));
-    border-color: var(--border-color);
+    border-color: rgba(255,255,255,0.1);
     transform: translateY(-2px);
     box-shadow: var(--box-shadow);
 }
 
 .comparison-item.positive {
-    border-left: 4px solid var(--success-color);
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(255, 255, 255, 0.9));
+    border-left: 2px solid var(--success-color);
+    background: rgba(16, 185, 129, 0.06);
 }
 
 .comparison-item.negative {
-    border-left: 4px solid var(--danger-color);
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(255, 255, 255, 0.9));
+    border-left: 2px solid var(--danger-color);
+    background: rgba(239, 68, 68, 0.06);
 }
 
 .comparison-description {
@@ -275,4 +303,45 @@
     color: var(--text-medium);
     margin-top: 6px;
     font-weight: 500;
+}
+
+/* ── Tarjetas internas de tendencia: siempre en una sola fila ── */
+.trend-analysis-card .data-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+}
+
+/* ── Zoom tipográfico en móvil: reduce el font-size base del contenido
+   para que todo quepa sin escalar ni romper el flujo ── */
+@media (max-width: 768px) {
+    .trend-analysis-card .card-content {
+        font-size: 0.8em;
+    }
+}
+
+@media (max-width: 480px) {
+    .trend-analysis-card .card-content {
+        font-size: 0.75em;
+    }
+}
+
+/* Porcentaje de proyección — badge pequeño inline */
+.proyeccion-pct {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 4px;
+    margin-left: 5px;
+    vertical-align: middle;
+    opacity: 0.85;
+}
+
+.proyeccion-pct.positive {
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--success-color);
+}
+
+.proyeccion-pct.negative {
+    background: rgba(239, 68, 68, 0.12);
+    color: var(--danger-color);
 }

@@ -1,37 +1,37 @@
-/* Trend Analysis Card Styles */
+/* Trend Analysis Card Styles - matching backup.html */
 .trend-analysis-card {
     border-radius: var(--border-radius-lg);
-    box-shadow: none;
+    box-shadow: var(--box-shadow-md);
     overflow: hidden;
     margin-top: 0;
     transition: var(--transition);
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.1);
+    background: linear-gradient(135deg, #ffffff 0%, #fefefe 100%);
+    border: 1px solid var(--border-color);
 }
 
 .trend-analysis-card:hover {
     box-shadow: var(--box-shadow-xl);
-    transform: translateY(-5px);
-    border-color: rgba(99,102,241,0.3);
+    transform: translateY(-8px);
+    border-color: var(--primary-light);
 }
 
 .card:hover .card-icon.tendencia,
 .card.expanded .card-icon.tendencia {
-    background: #7c3aed;
+    background: var(--info-color);
     color: white;
 }
 
 /* Executive summary */
 .executive-summary {
-    background: transparent;
+    background: var(--bg-light);
     border-radius: var(--border-radius);
-    padding: 18px;
-    margin-bottom: 20px;
+    padding: 20px;
+    margin-bottom: 24px;
     display: flex;
     align-items: flex-start;
-    gap: 14px;
-    border: 1px solid rgba(255,255,255,0.08);
-    border-left: 2px solid var(--primary-color);
+    gap: 16px;
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--primary-color);
 }
 
 .summary-icon {
@@ -87,11 +87,12 @@
 .chart-container {
     position: relative;
     height: 340px;
-    margin: 20px 0;
-    background: transparent;
+    margin: 28px 0;
+    background: linear-gradient(135deg, #ffffff, #fefefe);
     border-radius: var(--border-radius);
-    padding: 24px;
-    border: 1px solid rgba(255,255,255,0.08);
+    padding: 28px;
+    border: 2px solid var(--border-color);
+    box-shadow: var(--box-shadow-md);
 }
 
 .chart-toolbar {
@@ -102,35 +103,36 @@
 }
 
 .chart-title {
-    font-weight: 800;
+    font-weight: 700;
     color: var(--text-dark);
-    font-size: 16px;
-    letter-spacing: -0.03em;
+    font-size: 18px;
+    letter-spacing: -0.02em;
 }
 
 .chart-actions {
     display: flex;
-    gap: 8px;
+    gap: 10px;
 }
 
 .chart-action-btn {
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.1);
-    padding: 6px 12px;
-    border-radius: var(--border-radius-sm);
-    font-size: 12px;
+    background: linear-gradient(135deg, var(--bg-light), var(--bg-gray));
+    border: 2px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     transition: var(--transition);
+    box-shadow: var(--box-shadow);
     color: var(--text-dark);
 }
 
 .chart-action-btn:hover {
-    background: var(--primary-color);
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
     color: white;
     border-color: var(--primary-color);
-    transform: translateY(-1px);
-    box-shadow: var(--box-shadow);
+    transform: translateY(-2px);
+    box-shadow: var(--box-shadow-md);
 }
 
 .chart-footer {
@@ -198,18 +200,19 @@
 
 /* Highlight data items - mismo estilo que executive-summary */
 .data-item.highlight {
-    background: transparent;
+    background: var(--bg-light);
     border-radius: var(--border-radius);
-    padding: 18px;
-    border: 1px solid rgba(255,255,255,0.08);
-    border-left: 2px solid var(--primary-color);
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--primary-color);
     transition: var(--transition);
+    box-shadow: var(--box-shadow);
 }
 
 .data-item.highlight:hover {
-    border-color: rgba(99,102,241,0.3);
+    border-color: var(--primary-color);
     transform: translateY(-2px);
-    box-shadow: var(--box-shadow);
+    box-shadow: var(--box-shadow-md);
 }
 
 .data-description {
@@ -243,27 +246,28 @@
 
 /* Comparison items in trend analysis */
 .comparison-item {
-    padding: 14px 16px;
+    padding: 16px 18px;
     border-radius: var(--border-radius-sm);
     transition: var(--transition);
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.08);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.9));
+    border: 2px solid transparent;
 }
 
 .comparison-item:hover {
-    border-color: rgba(99,102,241,0.25);
+    background: linear-gradient(135deg, #ffffff, var(--bg-light));
+    border-color: var(--border-color);
     transform: translateY(-2px);
     box-shadow: var(--box-shadow);
 }
 
 .comparison-item.positive {
-    border-left: 2px solid var(--success-color);
-    background: rgba(16, 185, 129, 0.06);
+    border-left: 4px solid var(--success-color);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(255, 255, 255, 0.9));
 }
 
 .comparison-item.negative {
-    border-left: 2px solid var(--danger-color);
-    background: rgba(239, 68, 68, 0.06);
+    border-left: 4px solid var(--danger-color);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(255, 255, 255, 0.9));
 }
 
 .comparison-description {

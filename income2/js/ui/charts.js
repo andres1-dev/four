@@ -246,7 +246,7 @@ function generarGraficoTendenciaDiaria(analisisDiario, año, mesActual) {
                     label: 'Ingresos diarios',
                     data: dataActual,
                     borderColor: '#4361ee',
-                    backgroundColor: 'rgba(99,102,241,0.05)',
+                    backgroundColor: 'rgba(67, 97, 238, 0.1)',
                     borderWidth: 1,
                     tension: 0.1,
                     pointBackgroundColor: pointBackgroundColors,
@@ -282,16 +282,12 @@ function generarGraficoTendenciaDiaria(analisisDiario, año, mesActual) {
             plugins: {
                 legend: {
                     position: 'top',
-                    labels: { usePointStyle: true, padding: 20, font: { size: 12 }, color: '#64748b' }
+                    labels: { usePointStyle: true, padding: 20, font: { size: 12 } }
                 },
                 tooltip: {
                     mode: 'index',
                     intersect: false,
-                    backgroundColor: 'rgba(8,14,26,0.95)',
-                    titleColor: '#94a3b8',
-                    bodyColor: '#64748b',
-                    borderColor: 'rgba(255,255,255,0.08)',
-                    borderWidth: 1,
+                    backgroundColor: 'rgba(0,0,0,0.8)',
                     callbacks: {
                         label: function (context) {
                             let label = context.dataset.label || '';
@@ -312,12 +308,11 @@ function generarGraficoTendenciaDiaria(analisisDiario, año, mesActual) {
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: { callback: (v) => formatoCantidad(v), color: '#64748b' },
-                    grid: { color: 'rgba(255,255,255,0.04)' }
+                    ticks: { callback: (v) => formatoCantidad(v) },
+                    grid: { color: 'rgba(0, 0, 0, 0.05)' }
                 },
                 x: {
-                    grid: { display: false },
-                    ticks: { color: '#64748b' }
+                    grid: { display: false }
                 }
             }
         }
