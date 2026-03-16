@@ -252,19 +252,12 @@ function updateGrowthTrend(idPrefix, gestion) {
 
 // ============ INDICADOR DE TENDENCIA GLOBAL ============
 function updateTrendIndicator() {
-    const icon = document.getElementById("global-trend-indicator");
     const value = document.getElementById("tendencia-resumen-texto");
-    if (!icon) return;
+    if (!value) return;
 
-    const color = globalTrend === 'positive' ? 'var(--success-color)' :
-                  globalTrend === 'negative' ? 'var(--danger-color)' :
-                  'var(--warning-color)';
     const label = globalTrend === 'positive' ? 'Alza' :
                   globalTrend === 'negative' ? 'Baja' : 'Estable';
 
-    icon.style.color = color;
-    if (value) {
-        value.textContent = label;
-        value.className = 'indicator-value ' + globalTrend;
-    }
+    value.textContent = label;
+    value.className = 'days-badge ' + (globalTrend || 'neutral');
 }

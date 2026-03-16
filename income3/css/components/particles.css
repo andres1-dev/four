@@ -18,6 +18,7 @@
 .dashboard-header,
 .cards-container,
 .cards-container2,
+.cards-wrapper,
 .app-footer {
     position: relative;
     z-index: 1;

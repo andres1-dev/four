@@ -106,6 +106,7 @@
         </div>
     </div>
 
+    <div class="cards-wrapper">
     <div class="cards-container">
         <!-- Tarjeta Día -->
         <div class="card">
@@ -113,8 +114,7 @@
                 <h2 class="card-title">
                     <div class="card-icon dia"><i class="fas fa-calendar-day"></i></div>
                     <div class="title-text-group">
-                        <span class="title-main">Día</span>
-                        <span class="days-badge" id="dia-habiles"></span>
+                        <span class="title-main">Día <sup class="days-badge" id="dia-habiles"></sup></span>
                     </div>
                 </h2>
                 <div style="display: flex; align-items: center; gap: 15px;">
@@ -157,7 +157,7 @@
                 <div class="extra-stats">
                     <div class="data-item">
                         <div class="data-label">
-                            <i class="fas fa-chart-simple"></i> Gestión Anual
+                            <span class="label-text"><i class="fas fa-chart-simple"></i> Gestión Anual</span>
                             <div class="tooltip">
                                 <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
                                 <span class="tooltiptext">Comparación con el mismo día del año anterior</span>
@@ -170,7 +170,7 @@
                     </div>
                     <div class="data-item">
                         <div class="data-label">
-                            <i class="fas fa-calculator"></i> Promedio
+                            <span class="label-text"><i class="fas fa-calculator"></i> Promedio</span>
                             <div class="tooltip">
                                 <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
                                 <span class="tooltiptext">Promedio simple de ingresos hasta la fecha</span>
@@ -180,7 +180,7 @@
                     </div>
                     <div class="data-item">
                         <div class="data-label">
-                            <i class="fas fa-weight-hanging"></i> Promedio Ponderado
+                            <span class="label-text"><i class="fas fa-weight-hanging"></i> Promedio Ponderado</span>
                             <div class="tooltip">
                                 <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
                                 <span class="tooltiptext">Promedio ponderado por días hábiles</span>
@@ -190,7 +190,7 @@
                     </div>
                     <div class="data-item">
                         <div class="data-label">
-                            <i class="fas fa-chart-bar"></i> Desviación Estándar
+                            <span class="label-text"><i class="fas fa-chart-bar"></i> Desviación Estándar</span>
                             <div class="tooltip">
                                 <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
                                 <span class="tooltiptext">Variabilidad de los ingresos diarios</span>
@@ -200,7 +200,7 @@
                     </div>
                     <div class="data-item">
                         <div class="data-label">
-                            <i class="fas fa-crown"></i> Máximo
+                            <span class="label-text"><i class="fas fa-crown"></i> Máximo</span>
                             <div class="tooltip">
                                 <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
                                 <span class="tooltiptext">Ingreso diario máximo registrado</span>
@@ -264,8 +264,7 @@
                 <h2 class="card-title">
                     <div class="card-icon mes"><i class="fas fa-calendar-alt"></i></div>
                     <div class="title-text-group">
-                        <span class="title-main">Mes</span>
-                        <span class="days-badge" id="mes-habiles"></span>
+                        <span class="title-main">Mes <sup class="days-badge" id="mes-habiles"></sup></span>
                     </div>
                 </h2>
                 <div style="display: flex; align-items: center; gap: 15px;">
@@ -308,7 +307,7 @@
                 <div class="extra-stats">
                     <div class="data-item">
                         <div class="data-label">
-                            <i class="fas fa-chart-simple"></i> Gestión Anual
+                            <span class="label-text"><i class="fas fa-chart-simple"></i> Gestión Anual</span>
                             <div class="tooltip">
                                 <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
                                 <span class="tooltiptext">Comparación con el mismo mes del año anterior</span>
@@ -321,7 +320,7 @@
                     </div>
                     <div class="data-item">
                         <div class="data-label">
-                            <i class="fas fa-calculator"></i> Promedio
+                            <span class="label-text"><i class="fas fa-calculator"></i> Promedio</span>
                             <div class="tooltip">
                                 <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
                                 <span class="tooltiptext">Promedio simple de ingresos mensuales</span>
@@ -331,7 +330,7 @@
                     </div>
                     <div class="data-item">
                         <div class="data-label">
-                            <i class="fas fa-weight-hanging"></i> Promedio Ponderado
+                            <span class="label-text"><i class="fas fa-weight-hanging"></i> Promedio Ponderado</span>
                             <div class="tooltip">
                                 <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
                                 <span class="tooltiptext">Promedio ponderado por días hábiles</span>
@@ -341,7 +340,7 @@
                     </div>
                     <div class="data-item">
                         <div class="data-label">
-                            <i class="fas fa-chart-bar"></i> Desviación Estándar
+                            <span class="label-text"><i class="fas fa-chart-bar"></i> Desviación Estándar</span>
                             <div class="tooltip">
                                 <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
                                 <span class="tooltiptext">Variabilidad de los ingresos mensuales</span>
@@ -351,7 +350,7 @@
                     </div>
                     <div class="data-item">
                         <div class="data-label">
-                            <i class="fas fa-crown"></i> Máximo
+                            <span class="label-text"><i class="fas fa-crown"></i> Máximo</span>
                             <div class="tooltip">
                                 <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
                                 <span class="tooltiptext">Ingreso mensual máximo registrado</span>
@@ -415,8 +414,7 @@
                 <h2 class="card-title">
                     <div class="card-icon ano"><i class="fas fa-calendar"></i></div>
                     <div class="title-text-group">
-                        <span class="title-main">Año</span>
-                        <span class="days-badge" id="año-habiles"></span>
+                        <span class="title-main">Año <sup class="days-badge" id="año-habiles"></sup></span>
                     </div>
                 </h2>
                 <div style="display: flex; align-items: center; gap: 15px;">
@@ -459,7 +457,7 @@
                 <div class="extra-stats">
                     <div class="data-item">
                         <div class="data-label">
-                            <i class="fas fa-chart-simple"></i> Gestión
+                            <span class="label-text"><i class="fas fa-chart-simple"></i> Gestión</span>
                             <div class="tooltip">
                                 <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
                                 <span class="tooltiptext">Comparación con el año anterior completo</span>
@@ -472,7 +470,7 @@
                     </div>
                     <div class="data-item">
                         <div class="data-label">
-                            <i class="fas fa-calculator"></i> Promedio
+                            <span class="label-text"><i class="fas fa-calculator"></i> Promedio</span>
                             <div class="tooltip">
                                 <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
                                 <span class="tooltiptext">Promedio simple de ingresos anuales</span>
@@ -482,7 +480,7 @@
                     </div>
                     <div class="data-item">
                         <div class="data-label">
-                            <i class="fas fa-weight-hanging"></i> Promedio Ponderado
+                            <span class="label-text"><i class="fas fa-weight-hanging"></i> Promedio Ponderado</span>
                             <div class="tooltip">
                                 <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
                                 <span class="tooltiptext">Promedio ponderado por días hábiles</span>
@@ -492,7 +490,7 @@
                     </div>
                     <div class="data-item">
                         <div class="data-label">
-                            <i class="fas fa-chart-bar"></i> Desviación Estándar
+                            <span class="label-text"><i class="fas fa-chart-bar"></i> Desviación Estándar</span>
                             <div class="tooltip">
                                 <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
                                 <span class="tooltiptext">Variabilidad de los ingresos anuales</span>
@@ -502,7 +500,7 @@
                     </div>
                     <div class="data-item">
                         <div class="data-label">
-                            <i class="fas fa-crown"></i> Máximo
+                            <span class="label-text"><i class="fas fa-crown"></i> Máximo</span>
                             <div class="tooltip">
                                 <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
                                 <span class="tooltiptext">Ingreso anual máximo registrado</span>
@@ -567,7 +565,8 @@
             <div class="card-top-border"></div>
             <div class="card-header" onclick="toggleCard(this)">
                 <h2 class="card-title">
-                    <div class="card-icon tendencia"><i class="fas fa-chart-line"></i></div> Tendencia
+                    <div class="card-icon tendencia"><i class="fas fa-chart-line"></i></div>
+                    <span class="title-main">Tendencia <sup class="days-badge" id="tendencia-resumen-texto"></sup></span>
                 </h2>
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <span class="date-badge" id="tendencia-mes"></span>
@@ -575,30 +574,38 @@
                 </div>
             </div>
 
-            <!-- Sub-solapa siempre visible: tendencia global -->
-            <div class="trend-summary-peek" onclick="toggleCard(this.previousElementSibling)">
-                <i class="fas fa-lightbulb trend-peek-icon" id="global-trend-indicator"></i>
-                <span class="indicator-text">Tendencia:</span>
-                <span class="indicator-value" id="tendencia-resumen-texto">Calculando...</span>
-            </div>
-
             <div class="card-content">
                 <!-- Métricas clave -->
                 <div class="data-grid">
                     <div class="data-item highlight">
-                        <div class="data-label"><i class="fas fa-arrow-trend-up"></i> Tendencia Actual</div>
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-arrow-trend-up"></i> Tendencia Actual</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext">Comparación con el mes anterior</span>
+                            </div>
+                        </div>
                         <p class="data-value" id="tendencia-actual"></p>
-                        <div class="data-description">Comparación con el mes anterior</div>
                     </div>
                     <div class="data-item highlight">
-                        <div class="data-label"><i class="fas fa-project-diagram"></i> Proyección Mensual</div>
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-project-diagram"></i> Proyección Mensual</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext">Estimación basada en progreso actual</span>
+                            </div>
+                        </div>
                         <p class="data-value" id="tendencia-proyeccion"></p>
-                        <div class="data-description">Estimación basada en progreso actual</div>
                     </div>
                     <div class="data-item highlight">
-                        <div class="data-label"><i class="fas fa-calendar-week"></i> Promedio últimos 3 meses</div>
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-calendar-week"></i> Promedio Trimestre</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext">Media móvil trimestral</span>
+                            </div>
+                        </div>
                         <div class="data-value" id="tendencia-promedio-3m"></div>
-                        <div class="data-description">Media móvil trimestral</div>
                     </div>
                 </div>
 
@@ -682,6 +689,7 @@
             </div>
         </div>
     </div>
+    </div><!-- /.cards-wrapper -->
 
 
 

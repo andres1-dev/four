@@ -6,13 +6,14 @@
     margin-top: 0;
     transition: var(--transition);
     background: transparent;
-    border: 1px solid rgba(255,255,255,0.1);
+    border: none;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
 .trend-analysis-card:hover {
     box-shadow: var(--box-shadow-xl);
     transform: translateY(-5px);
-    border-color: rgba(255,255,255,0.12);
+    border-bottom-color: rgba(255,255,255,0.15);
 }
 
 .card:hover .card-icon.tendencia,
@@ -21,39 +22,8 @@
     color: white;
 }
 
-/* ── Sub-solapa siempre visible bajo el header ── */
-.trend-summary-peek {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 20px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    cursor: pointer;
-    transition: background 0.2s ease;
-}
-
-.trend-summary-peek:hover {
-    background: rgba(255,255,255,0.03);
-}
-
-.trend-peek-icon {
-    font-size: 13px;
-    color: var(--warning-color);
-    flex-shrink: 0;
-    transition: color 0.3s ease;
-}
-
-.trend-summary-peek .indicator-text {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-medium);
-    margin-right: 0;
-}
-
-.trend-summary-peek .indicator-value {
-    font-size: 12px;
-    font-weight: 700;
-}
+/* ── Sub-solapa eliminada — indicador movido al header ── */
+.trend-summary-peek { display: none; }
 
 /* Executive summary */
 .executive-summary {
@@ -305,13 +275,18 @@
     font-weight: 500;
 }
 
-/* ── Tarjetas internas de tendencia: siempre en una sola fila ── */
+/* ── Tarjetas internas de tendencia: 3 columnas en desktop ── */
 .trend-analysis-card .data-grid {
     grid-template-columns: repeat(3, 1fr) !important;
 }
 
-/* ── Zoom tipográfico en móvil: reduce el font-size base del contenido
-   para que todo quepa sin escalar ni romper el flujo ── */
+@media (max-width: 600px) {
+    .trend-analysis-card .data-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ── Zoom tipográfico en móvil ── */
 @media (max-width: 768px) {
     .trend-analysis-card .card-content {
         font-size: 0.8em;

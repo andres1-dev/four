@@ -7,12 +7,13 @@
     transition: var(--transition);
     overflow: hidden;
     margin-bottom: 0;
-    border: 1px solid rgba(255,255,255,0.1);
+    border: none;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
 .card:hover {
     transform: translateY(-5px);
-    border-color: rgba(255,255,255,0.15);
+    border-bottom-color: rgba(255,255,255,0.15);
     box-shadow: 0 8px 32px rgba(0,0,0,0.6);
 }
 
@@ -168,9 +169,25 @@
 }
 
 .days-badge {
-    font-size: var(--font-size-xs);
-    padding: 3px 6px;
+    font-size: 9px;
+    padding: 2px 5px;
+    vertical-align: super;
+    line-height: 1;
+    font-weight: 700;
+    color: var(--text-medium);
+    letter-spacing: 0.03em;
+    transition: var(--transition);
 }
+
+/* Colores semánticos para el superíndice de tendencia */
+.days-badge.positive { color: rgba(16,185,129,0.6); }
+.days-badge.negative { color: rgba(248,113,113,0.6); }
+.days-badge.neutral  { color: rgba(251,191,36,0.6); }
+
+/* Brilla al pasar el cursor por la tarjeta */
+.card:hover .days-badge.positive { color: var(--success-color); }
+.card:hover .days-badge.negative { color: var(--danger-color); }
+.card:hover .days-badge.neutral  { color: var(--warning-color); }
 
 .date-badge {
     font-size: var(--font-size-sm);
@@ -209,6 +226,8 @@
     transition: var(--transition);
     border: 1px solid rgba(255,255,255,0.05);
     box-shadow: var(--box-shadow);
+    position: relative;
+    overflow: visible;
 }
 
 .data-item:hover {
@@ -235,17 +254,36 @@
     margin-bottom: 10px;
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: 6px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.07em;
     line-height: var(--line-height-tight);
+    flex-wrap: nowrap;
+}
+
+.data-label .label-text {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.data-label .tooltip {
+    margin-left: auto;
+    flex-shrink: 0;
 }
 
 .data-label i {
     font-size: 15px;
     opacity: 1;
 }
+
 
 /* Colores semánticos por ícono de data-label */
 .data-label i.fa-bullseye          { color: #dc2626; }   /* objetivo/meta — rojo */
@@ -415,34 +453,41 @@
 /* Tooltip */
 .tooltip {
     position: relative;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
 }
 
 .tooltip .tooltiptext {
-    visibility: hidden;
-    width: 220px;
-    background: linear-gradient(135deg, #1e1e1e, #0f0f0f);
-    color: var(--text-dark);
-    text-align: center;
-    border-radius: var(--border-radius-sm);
-    padding: 10px 12px;
-    position: absolute;
-    z-index: 10;
-    bottom: 125%;
-    left: 50%;
-    transform: translateX(-50%);
-    opacity: 0;
-    transition: var(--transition);
-    font-size: 12px;
-    font-weight: 500;
-    box-shadow: var(--box-shadow-lg);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: none; /* oculto — el JS usa un tooltip global */
 }
 
-.tooltip:hover .tooltiptext {
-    visibility: visible;
+/* Tooltip global — creado por JS, siempre encima de todo */
+#global-tooltip {
+    position: fixed;
+    z-index: 99999;
+    max-width: 240px;
+    padding: 7px 12px;
+    background: #1a1d27;
+    color: #e2e8f0;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    white-space: normal;
+    word-break: break-word;
+    font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+}
+
+#global-tooltip.visible {
     opacity: 1;
-    transform: translateX(-50%) translateY(-4px);
+    transform: translateY(0);
 }
 
 /* Comparison expand/collapse */
@@ -724,7 +769,7 @@
     border-radius: var(--border-radius-sm);
     font-size: 13px;
     color: var(--text-dark);
-    background: #0d0d0d;
+    background: #161920;
     cursor: pointer;
     transition: var(--transition);
     font-family: inherit;
@@ -738,7 +783,7 @@
     border-color: var(--primary-color);
     outline: none;
     box-shadow: 0 0 0 3px rgba(255,255,255,0.06);
-    background: #111111;
+    background: #1a1d27;
     transform: translateY(-1px);
 }
 
@@ -817,7 +862,7 @@
     }
 }
 
-@media (max-width: 428px) {
+@media (max-width: 430px) {
 
     .data-grid,
     .comparison-grid,
@@ -981,7 +1026,7 @@
     }
 }
 
-@media (max-width: 428px) {
+@media (max-width: 430px) {
     .option-icon {
         width: 32px;
         height: 32px;

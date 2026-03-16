@@ -19,10 +19,12 @@ async function captureAndDownloadCards() {
         const originalStates = [];
         
         cardHeaders.forEach(header => {
-            const cardContent = header.nextElementSibling;
-            originalStates.push(cardContent.classList.contains('expanded'));
-            if (!cardContent.classList.contains('expanded')) {
+            const card = header.closest('.card');
+            const cardContent = card ? card.querySelector('.card-content') : header.nextElementSibling;
+            originalStates.push(cardContent ? cardContent.classList.contains('expanded') : false);
+            if (cardContent && !cardContent.classList.contains('expanded')) {
                 cardContent.classList.add('expanded');
+                if (card) card.classList.add('expanded');
                 const indicator = header.querySelector('.collapse-indicator');
                 if (indicator) indicator.classList.add('expanded');
             }
@@ -40,13 +42,14 @@ async function captureAndDownloadCards() {
         // Guardar estilos originales
         const originalStyles = {
             width: cardsContainer.style.width,
+            maxWidth: cardsContainer.style.maxWidth,
+            minWidth: cardsContainer.style.minWidth,
             overflow: cardsContainer.style.overflow,
             margin: cardsContainer.style.margin,
             transform: cardsContainer.style.transform,
-            zoom: document.body.style.zoom
         };
 
-        // Ajustar para captura - FORZAR ANCHO 1800px (más amplio)
+        // Ajustar para captura
         cardsContainer.style.width = '1800px';
         cardsContainer.style.maxWidth = '1800px';
         cardsContainer.style.minWidth = '1800px';
@@ -54,7 +57,7 @@ async function captureAndDownloadCards() {
         cardsContainer.style.margin = '0 auto';
         
         if (isMobile) {
-            document.body.style.zoom = '1';
+            // zoom ya no se usa, no-op
         }
 
         // 3. Capturar con html2canvas
@@ -100,19 +103,28 @@ async function captureAndDownloadCards() {
 
         // 4. Restaurar todo al estado original
         elementsToHide.forEach(el => el.style.visibility = 'visible');
-        Object.assign(cardsContainer.style, originalStyles);
-        document.body.style.zoom = originalStyles.zoom;
+        cardsContainer.style.width = originalStyles.width;
+        cardsContainer.style.maxWidth = originalStyles.maxWidth;
+        cardsContainer.style.minWidth = originalStyles.minWidth;
+        cardsContainer.style.overflow = originalStyles.overflow;
+        cardsContainer.style.margin = originalStyles.margin;
+        cardsContainer.style.transform = originalStyles.transform;
         
         // Restaurar estado de las tarjetas
         cardHeaders.forEach((header, index) => {
-            const cardContent = header.nextElementSibling;
+            const card = header.closest('.card');
+            const cardContent = card ? card.querySelector('.card-content') : header.nextElementSibling;
             const indicator = header.querySelector('.collapse-indicator');
             
-            if (!originalStates[index]) {
+            if (cardContent && !originalStates[index]) {
                 cardContent.classList.remove('expanded');
+                if (card) card.classList.remove('expanded');
                 if (indicator) indicator.classList.remove('expanded');
             }
         });
+
+        // Forzar reflow para que el DOM aplique los cambios
+        void cardsContainer.offsetHeight;
 
         // 5. Convertir canvas a Blob
         if (loadingText) loadingText.textContent = "Generando imagen...";

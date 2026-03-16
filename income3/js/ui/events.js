@@ -487,3 +487,77 @@ async function generarReporteCompleto(targetDate) {
         if (overlay.classList.contains('active')) startStream();
     }
 })();
+
+// ============ TOOLTIP GLOBAL ============
+(function initGlobalTooltip() {
+    const tip = document.createElement('div');
+    tip.id = 'global-tooltip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+
+    let hideTimer = null;
+
+    function showTip(text, triggerEl) {
+        clearTimeout(hideTimer);
+        tip.textContent = text;
+        tip.classList.add('visible');
+        positionTip(triggerEl);
+    }
+
+    function hideTip() {
+        hideTimer = setTimeout(() => tip.classList.remove('visible'), 80);
+    }
+
+    function positionTip(el) {
+        const rect = el.getBoundingClientRect();
+        const tipW = tip.offsetWidth || 200;
+        const tipH = tip.offsetHeight || 36;
+        const margin = 8;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+
+        // Preferir arriba; si no cabe, abajo
+        let top = rect.top - tipH - margin;
+        if (top < margin) top = rect.bottom + margin;
+
+        // Centrar horizontalmente
+        let left = rect.left + rect.width / 2 - tipW / 2;
+        if (left < margin) left = margin;
+        if (left + tipW > vw - margin) left = vw - tipW - margin;
+        if (top + tipH > vh - margin) top = vh - tipH - margin;
+
+        tip.style.top = top + 'px';
+        tip.style.left = left + 'px';
+    }
+
+    // Desktop hover
+    document.addEventListener('mouseover', e => {
+        const trigger = e.target.closest('.tooltip');
+        if (!trigger) return;
+        const text = trigger.querySelector('.tooltiptext')?.textContent?.trim();
+        if (text) showTip(text, trigger);
+    });
+
+    document.addEventListener('mouseout', e => {
+        if (e.target.closest('.tooltip')) hideTip();
+    });
+
+    // Touch — tap para mostrar/ocultar
+    document.addEventListener('touchstart', e => {
+        const trigger = e.target.closest('.tooltip');
+        if (!trigger) { hideTip(); return; }
+        const text = trigger.querySelector('.tooltiptext')?.textContent?.trim();
+        if (!text) return;
+        e.preventDefault();
+        if (tip.classList.contains('visible') && tip.textContent === text) {
+            hideTip();
+        } else {
+            showTip(text, trigger);
+        }
+    }, { passive: false });
+
+    // Ocultar al hacer scroll
+    window.addEventListener('scroll', () => tip.classList.remove('visible'), { passive: true });
+})();
+
+
