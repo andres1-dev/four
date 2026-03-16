@@ -102,10 +102,8 @@ function initProveedorFilter() {
         selectedProveedor = select.value;
         if (allIncomeData.length === 0) return;
 
-        // Re-consolidate data with provider filter
         reconsolidateWithFilter();
 
-        // Regenerate report for current date
         const datePicker = document.getElementById('datePicker');
         const selectedDate = datePicker ? (datePicker.valueAsDate || new Date()) : new Date();
 
@@ -216,19 +214,18 @@ async function updateReportWithDate(newDate, forceReload = false) {
 
 async function cargarDatosIniciales() {
     try {
-        const [mainData, recData, rec2024Data, budget] = await Promise.all([
-            getParsedMainData(),
-            getREC(),
-            getREC2024(),
+        // Income (3 requests paralelas) + Budget (1 request batchGet) simultáneos
+        const [incomeData, budget] = await Promise.all([
+            getAllIncomeData(),
             getBudgetData()
         ]);
-        // Store raw data for provider re-filtering
-        allIncomeData = [...mainData, ...recData, ...rec2024Data];
+
+        allIncomeData = incomeData;
         budgetData = budget;
 
-        // Apply current provider filter
         reconsolidateWithFilter();
 
+        // Apps Script es lento, no bloquea la carga principal
         datosCargarEndpoint();
     } catch (error) {
         console.error("Initial load error:", error);
@@ -276,3 +273,183 @@ async function generarReporteCompleto(targetDate) {
 
     return report;
 }
+
+
+
+// ── Loading Stream ────────────────────────────────────────────────────────────
+(function () {
+    const LINES = [
+        ['Inicializando entorno de ejecución',           'mid'],
+        ['Verificando integridad del sistema',           'dim'],
+        ['Cargando módulos principales',                 'mid'],
+        ['Estableciendo conexión segura',                'mid'],
+        ['Autenticando credenciales',                    'dim'],
+        ['Validando permisos de acceso',                 'dim'],
+        ['Conexión establecida',                         'accent'],
+        ['Inicializando motor de datos',                 'mid'],
+        ['Configurando protocolo de transferencia',      'dim'],
+        ['Preparando solicitudes en paralelo',           'mid'],
+        ['Enviando solicitud al servidor primario',      'dim'],
+        ['Enviando solicitud al servidor secundario',    'dim'],
+        ['Enviando solicitud al servidor terciario',     'dim'],
+        ['Esperando respuesta del servidor',             'dim'],
+        ['Recibiendo paquetes de datos',                 'mid'],
+        ['Verificando integridad de paquetes',           'dim'],
+        ['Descomprimiendo payload',                      'dim'],
+        ['Deserializando estructura de datos',           'mid'],
+        ['Validando esquema de respuesta',               'dim'],
+        ['Esquema validado correctamente',               'accent'],
+        ['Procesando registros fuente primaria',         'bright'],
+        ['Normalizando campos de texto',                 'dim'],
+        ['Normalizando campos numéricos',                'dim'],
+        ['Normalizando campos de fecha',                 'dim'],
+        ['Aplicando zona horaria UTC-5',                 'dim'],
+        ['Resolviendo referencias cruzadas',             'mid'],
+        ['Clasificando registros por categoría',         'dim'],
+        ['Aplicando reglas de negocio',                  'mid'],
+        ['Filtrando registros inválidos',                'dim'],
+        ['Fuente primaria procesada',                    'accent'],
+        ['Procesando registros fuente secundaria',       'bright'],
+        ['Mapeando estructura de columnas',              'dim'],
+        ['Validando tipos de datos por campo',           'dim'],
+        ['Aplicando transformaciones de normalización',  'dim'],
+        ['Resolviendo entidades relacionadas',           'mid'],
+        ['Calculando campos derivados',                  'dim'],
+        ['Aplicando filtros de integridad',              'mid'],
+        ['Fuente secundaria procesada',                  'accent'],
+        ['Procesando registros fuente histórica',        'bright'],
+        ['Cargando datos del período anterior',          'dim'],
+        ['Normalizando serie temporal histórica',        'dim'],
+        ['Alineando períodos para comparación',          'mid'],
+        ['Fuente histórica procesada',                   'accent'],
+        ['Cargando parámetros presupuestales',           'bright'],
+        ['Procesando estructura de presupuesto',         'dim'],
+        ['Calculando distribución por período',          'dim'],
+        ['Calculando días hábiles por mes',              'dim'],
+        ['Calculando meta diaria por período',           'mid'],
+        ['Parámetros presupuestales cargados',           'accent'],
+        ['Iniciando consolidación de fuentes',           'bright'],
+        ['Unificando registros de todas las fuentes',    'mid'],
+        ['Agrupando transacciones por fecha',            'dim'],
+        ['Calculando totales diarios',                   'dim'],
+        ['Calculando diferencia vs objetivo',            'dim'],
+        ['Calculando porcentaje de cumplimiento',        'dim'],
+        ['Asignando semana ISO a cada registro',         'dim'],
+        ['Generando índice temporal',                    'mid'],
+        ['Consolidación completada',                     'accent'],
+        ['Iniciando cálculo de métricas',                'bright'],
+        ['Calculando métricas del período diario',       'mid'],
+        ['Calculando métricas del período mensual',      'mid'],
+        ['Calculando métricas del período anual',        'mid'],
+        ['Calculando promedio aritmético',               'dim'],
+        ['Calculando promedio ponderado',                'dim'],
+        ['Calculando desviación estándar',               'dim'],
+        ['Calculando varianza del período',              'dim'],
+        ['Identificando valor máximo',                   'dim'],
+        ['Identificando valor mínimo',                   'dim'],
+        ['Calculando percentil 75',                      'dim'],
+        ['Calculando percentil 25',                      'dim'],
+        ['Buscando fecha de referencia más cercana',     'mid'],
+        ['Métricas del período actual calculadas',       'accent'],
+        ['Calculando métricas comparativas',             'bright'],
+        ['Cargando datos del mismo período año anterior','dim'],
+        ['Alineando fechas para comparación interanual', 'dim'],
+        ['Calculando variación absoluta',                'dim'],
+        ['Calculando variación porcentual',              'dim'],
+        ['Calculando gestión interanual',                'mid'],
+        ['Métricas comparativas calculadas',             'accent'],
+        ['Iniciando análisis de tendencia',              'bright'],
+        ['Construyendo serie temporal',                  'dim'],
+        ['Aplicando regresión lineal',                   'dim'],
+        ['Calculando coeficiente de correlación',        'dim'],
+        ['Calculando pendiente de tendencia',            'dim'],
+        ['Generando proyección conservadora',            'dim'],
+        ['Generando proyección optimista',               'dim'],
+        ['Calculando intervalo de confianza',            'dim'],
+        ['Identificando mejor período',                  'mid'],
+        ['Identificando período crítico',                'mid'],
+        ['Análisis de tendencia completado',             'accent'],
+        ['Preparando capa de presentación',              'bright'],
+        ['Compilando datos para visualización',          'dim'],
+        ['Renderizando componentes gráficos',            'mid'],
+        ['Generando gráfico de tendencia',               'dim'],
+        ['Aplicando paleta de colores',                  'dim'],
+        ['Calculando escala de ejes',                    'dim'],
+        ['Renderizando tarjeta de período diario',       'mid'],
+        ['Renderizando tarjeta de período mensual',      'mid'],
+        ['Renderizando tarjeta de período anual',        'mid'],
+        ['Actualizando indicadores de progreso',         'dim'],
+        ['Aplicando umbrales de color por rendimiento',  'dim'],
+        ['Actualizando indicadores de gestión',          'dim'],
+        ['Interfaz de usuario actualizada',              'accent'],
+        ['Inicializando módulo de exportación',          'mid'],
+        ['Preparando motor de exportación CSV',          'dim'],
+        ['Preparando motor de exportación JSON',         'dim'],
+        ['Preparando motor de exportación Excel',        'dim'],
+        ['Configurando selector de rango de fechas',     'dim'],
+        ['Módulo de exportación listo',                  'accent'],
+        ['Registrando Service Worker',                   'mid'],
+        ['Verificando recursos en caché',                'dim'],
+        ['Sincronizando estado de la aplicación',        'dim'],
+        ['Aplicando preferencias del usuario',           'dim'],
+        ['Optimizando rendimiento de renderizado',       'dim'],
+        ['Liberando memoria temporal',                   'dim'],
+        ['Todos los módulos inicializados',              'accent'],
+        ['Sistema operativo',                            'accent'],
+    ];
+
+    let currentEl = null;
+    let idx = 0;
+    let timer = null;
+
+    function showNext() {
+        const container = document.getElementById('loadingStream');
+        if (!container) return;
+
+        if (currentEl) currentEl.classList.remove('visible');
+
+        const [text, cls] = LINES[idx % LINES.length];
+        const el = document.createElement('div');
+        el.className = `loading-stream-line ${cls}`;
+        el.textContent = text;
+        container.appendChild(el);
+
+        el.getBoundingClientRect();
+        el.classList.add('visible');
+
+        if (currentEl) {
+            const old = currentEl;
+            setTimeout(() => old.remove(), 300);
+        }
+
+        currentEl = el;
+        idx++;
+        timer = setTimeout(showNext, 150);
+    }
+
+    function startStream() {
+        idx = 0;
+        currentEl = null;
+        clearTimeout(timer);
+        const container = document.getElementById('loadingStream');
+        if (container) container.innerHTML = '';
+        showNext();
+    }
+
+    function stopStream() {
+        clearTimeout(timer);
+        const container = document.getElementById('loadingStream');
+        if (container) container.innerHTML = '';
+        currentEl = null;
+    }
+
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        const observer = new MutationObserver(() => {
+            if (overlay.classList.contains('active')) startStream();
+            else stopStream();
+        });
+        observer.observe(overlay, { attributes: true, attributeFilter: ['class'] });
+        if (overlay.classList.contains('active')) startStream();
+    }
+})();

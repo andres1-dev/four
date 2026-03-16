@@ -3,7 +3,7 @@
     position: relative;
     z-index: 1;
     margin-top: var(--spacing-2xl);
-    padding: var(--spacing-xl) var(--spacing-md) var(--spacing-2xl);
+    padding: var(--spacing-xl) var(--spacing-md) var(--spacing-lg);
     background: transparent;
 }
 
@@ -22,21 +22,17 @@
     font-weight: var(--font-weight-normal);
     text-align: center;
     line-height: var(--line-height-tight);
-    display: flex;
-    align-items: center;
-    gap: 4px;
 }
 
 .footer-line strong {
     font-weight: var(--font-weight-bold);
-    color: var(--text-medium);
+    color: var(--text-dark);
 }
 
 .footer-copyright,
 .footer-powered {
-    font-size: 15px;
+    font-size: var(--font-size-sm);
     color: var(--text-light);
-    gap: 4px;
 }
 
 /* Ocultar footer durante captura */
@@ -60,7 +56,7 @@
     
     .footer-copyright,
     .footer-powered {
-        font-size: 14px;
+        font-size: var(--font-size-sm);
     }
 }
 
@@ -75,6 +71,6 @@
     
     .footer-copyright,
     .footer-powered {
-        font-size: 13px;
+        font-size: var(--font-size-xs);
     }
 }

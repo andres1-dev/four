@@ -4,11 +4,11 @@
 
 function toggleCard(header) {
     const card = header.closest('.card');
-    const cardContent = card.querySelector('.card-content');
+    const cardContent = header.nextElementSibling;
     const indicator = header.querySelector('.collapse-indicator');
     
     card.classList.toggle('expanded');
-    if (cardContent) cardContent.classList.toggle('expanded');
+    cardContent.classList.toggle('expanded');
     if (indicator) indicator.classList.toggle('expanded');
 }
 
@@ -73,10 +73,7 @@ function initDatePicker() {
     if (!datePicker) return;
 
     datePicker.valueAsDate = new Date();
-    fitInputWidth(datePicker);
-
     datePicker.addEventListener('change', () => {
-        fitInputWidth(datePicker);
         const selectedDate = datePicker.valueAsDate;
         if (selectedDate && consolidatedData.length > 0) {
             generarReporteCompleto(selectedDate).then(reporte => {
@@ -97,47 +94,18 @@ function initDatePicker() {
     }
 }
 
-// Ajusta el ancho de un input/select al contenido exacto
-function fitInputWidth(el) {
-    const tmp = document.createElement('canvas');
-    const ctx = tmp.getContext('2d');
-    const style = window.getComputedStyle(el);
-    ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-
-    let text = '';
-    if (el.tagName === 'SELECT') {
-        const opt = el.options[el.selectedIndex];
-        text = opt ? opt.text : '';
-    } else {
-        // Para input date, formatear la fecha como se muestra
-        if (el.value) {
-            const [y, m, d] = el.value.split('-');
-            text = `${d}/${m}/${y}`;
-        } else {
-            text = 'dd/mm/aaaa';
-        }
-    }
-
-    // Padding izquierdo (ícono) + texto + padding derecho + flecha select
-    const iconPad = el.tagName === 'SELECT' ? 30 : 34;
-    const arrowPad = el.tagName === 'SELECT' ? 26 : 8;
-    const measured = ctx.measureText(text).width;
-    el.style.width = `${Math.ceil(measured + iconPad + arrowPad + 16)}px`;
-}
-
 function initProveedorFilter() {
     const select = document.getElementById('proveedorFilter');
     if (!select) return;
 
-    fitInputWidth(select);
-
     select.addEventListener('change', async () => {
-        fitInputWidth(select);
         selectedProveedor = select.value;
         if (allIncomeData.length === 0) return;
 
+        // Re-consolidate data with provider filter
         reconsolidateWithFilter();
 
+        // Regenerate report for current date
         const datePicker = document.getElementById('datePicker');
         const selectedDate = datePicker ? (datePicker.valueAsDate || new Date()) : new Date();
 
@@ -248,18 +216,19 @@ async function updateReportWithDate(newDate, forceReload = false) {
 
 async function cargarDatosIniciales() {
     try {
-        // Income (3 requests paralelas) + Budget (1 request batchGet) simultáneos
-        const [incomeData, budget] = await Promise.all([
-            getAllIncomeData(),
+        const [mainData, recData, rec2024Data, budget] = await Promise.all([
+            getParsedMainData(),
+            getREC(),
+            getREC2024(),
             getBudgetData()
         ]);
-
-        allIncomeData = incomeData;
+        // Store raw data for provider re-filtering
+        allIncomeData = [...mainData, ...recData, ...rec2024Data];
         budgetData = budget;
 
+        // Apply current provider filter
         reconsolidateWithFilter();
 
-        // Apps Script es lento, no bloquea la carga principal
         datosCargarEndpoint();
     } catch (error) {
         console.error("Initial load error:", error);
@@ -307,183 +276,3 @@ async function generarReporteCompleto(targetDate) {
 
     return report;
 }
-
-
-
-// ── Loading Stream ────────────────────────────────────────────────────────────
-(function () {
-    const LINES = [
-        ['Inicializando entorno de ejecución',           'mid'],
-        ['Verificando integridad del sistema',           'dim'],
-        ['Cargando módulos principales',                 'cyan'],
-        ['Estableciendo conexión segura',                'indigo'],
-        ['Autenticando credenciales',                    'dim'],
-        ['Validando permisos de acceso',                 'yellow'],
-        ['Conexión establecida',                         'accent'],
-        ['Inicializando motor de datos',                 'cyan'],
-        ['Configurando protocolo de transferencia',      'dim'],
-        ['Preparando solicitudes en paralelo',           'indigo'],
-        ['Enviando solicitud al servidor primario',      'dim'],
-        ['Enviando solicitud al servidor secundario',    'dim'],
-        ['Enviando solicitud al servidor terciario',     'dim'],
-        ['Esperando respuesta del servidor',             'yellow'],
-        ['Recibiendo paquetes de datos',                 'cyan'],
-        ['Verificando integridad de paquetes',           'dim'],
-        ['Descomprimiendo payload',                      'dim'],
-        ['Deserializando estructura de datos',           'mid'],
-        ['Validando esquema de respuesta',               'dim'],
-        ['Esquema validado correctamente',               'accent'],
-        ['Procesando registros fuente primaria',         'bright'],
-        ['Normalizando campos de texto',                 'dim'],
-        ['Normalizando campos numéricos',                'cyan'],
-        ['Normalizando campos de fecha',                 'dim'],
-        ['Aplicando zona horaria UTC-5',                 'yellow'],
-        ['Resolviendo referencias cruzadas',             'indigo'],
-        ['Clasificando registros por categoría',         'dim'],
-        ['Aplicando reglas de negocio',                  'mid'],
-        ['Filtrando registros inválidos',                'red'],
-        ['Fuente primaria procesada',                    'accent'],
-        ['Procesando registros fuente secundaria',       'bright'],
-        ['Mapeando estructura de columnas',              'cyan'],
-        ['Validando tipos de datos por campo',           'dim'],
-        ['Aplicando transformaciones de normalización',  'dim'],
-        ['Resolviendo entidades relacionadas',           'indigo'],
-        ['Calculando campos derivados',                  'dim'],
-        ['Aplicando filtros de integridad',              'mid'],
-        ['Fuente secundaria procesada',                  'accent'],
-        ['Procesando registros fuente histórica',        'bright'],
-        ['Cargando datos del período anterior',          'cyan'],
-        ['Normalizando serie temporal histórica',        'dim'],
-        ['Alineando períodos para comparación',          'indigo'],
-        ['Fuente histórica procesada',                   'accent'],
-        ['Cargando parámetros presupuestales',           'bright'],
-        ['Procesando estructura de presupuesto',         'dim'],
-        ['Calculando distribución por período',          'cyan'],
-        ['Calculando días hábiles por mes',              'yellow'],
-        ['Calculando meta diaria por período',           'mid'],
-        ['Parámetros presupuestales cargados',           'accent'],
-        ['Iniciando consolidación de fuentes',           'bright'],
-        ['Unificando registros de todas las fuentes',    'indigo'],
-        ['Agrupando transacciones por fecha',            'dim'],
-        ['Calculando totales diarios',                   'cyan'],
-        ['Calculando diferencia vs objetivo',            'yellow'],
-        ['Calculando porcentaje de cumplimiento',        'dim'],
-        ['Asignando semana ISO a cada registro',         'dim'],
-        ['Generando índice temporal',                    'mid'],
-        ['Consolidación completada',                     'accent'],
-        ['Iniciando cálculo de métricas',                'bright'],
-        ['Calculando métricas del período diario',       'cyan'],
-        ['Calculando métricas del período mensual',      'indigo'],
-        ['Calculando métricas del período anual',        'bright'],
-        ['Calculando promedio aritmético',               'dim'],
-        ['Calculando promedio ponderado',                'dim'],
-        ['Calculando desviación estándar',               'yellow'],
-        ['Calculando varianza del período',              'dim'],
-        ['Identificando valor máximo',                   'accent'],
-        ['Identificando valor mínimo',                   'red'],
-        ['Calculando percentil 75',                      'dim'],
-        ['Calculando percentil 25',                      'dim'],
-        ['Buscando fecha de referencia más cercana',     'cyan'],
-        ['Métricas del período actual calculadas',       'accent'],
-        ['Calculando métricas comparativas',             'bright'],
-        ['Cargando datos del mismo período año anterior','dim'],
-        ['Alineando fechas para comparación interanual', 'indigo'],
-        ['Calculando variación absoluta',                'dim'],
-        ['Calculando variación porcentual',              'yellow'],
-        ['Calculando gestión interanual',                'mid'],
-        ['Métricas comparativas calculadas',             'accent'],
-        ['Iniciando análisis de tendencia',              'bright'],
-        ['Construyendo serie temporal',                  'cyan'],
-        ['Aplicando regresión lineal',                   'indigo'],
-        ['Calculando coeficiente de correlación',        'dim'],
-        ['Calculando pendiente de tendencia',            'dim'],
-        ['Generando proyección conservadora',            'yellow'],
-        ['Generando proyección optimista',               'accent'],
-        ['Calculando intervalo de confianza',            'dim'],
-        ['Identificando mejor período',                  'accent'],
-        ['Identificando período crítico',                'red'],
-        ['Análisis de tendencia completado',             'accent'],
-        ['Preparando capa de presentación',              'bright'],
-        ['Compilando datos para visualización',          'cyan'],
-        ['Renderizando componentes gráficos',            'indigo'],
-        ['Generando gráfico de tendencia',               'bright'],
-        ['Aplicando paleta de colores',                  'yellow'],
-        ['Calculando escala de ejes',                    'dim'],
-        ['Renderizando tarjeta de período diario',       'cyan'],
-        ['Renderizando tarjeta de período mensual',      'indigo'],
-        ['Renderizando tarjeta de período anual',        'bright'],
-        ['Actualizando indicadores de progreso',         'dim'],
-        ['Aplicando umbrales de color por rendimiento',  'yellow'],
-        ['Actualizando indicadores de gestión',          'mid'],
-        ['Interfaz de usuario actualizada',              'accent'],
-        ['Inicializando módulo de exportación',          'cyan'],
-        ['Preparando motor de exportación CSV',          'dim'],
-        ['Preparando motor de exportación JSON',         'dim'],
-        ['Preparando motor de exportación Excel',        'indigo'],
-        ['Configurando selector de rango de fechas',     'dim'],
-        ['Módulo de exportación listo',                  'accent'],
-        ['Registrando Service Worker',                   'cyan'],
-        ['Verificando recursos en caché',                'dim'],
-        ['Sincronizando estado de la aplicación',        'indigo'],
-        ['Aplicando preferencias del usuario',           'dim'],
-        ['Optimizando rendimiento de renderizado',       'yellow'],
-        ['Liberando memoria temporal',                   'dim'],
-        ['Todos los módulos inicializados',              'accent'],
-        ['Sistema operativo',                            'bright'],
-    ];
-
-    let currentEl = null;
-    let idx = 0;
-    let timer = null;
-
-    function showNext() {
-        const container = document.getElementById('loadingStream');
-        if (!container) return;
-
-        if (currentEl) currentEl.classList.remove('visible');
-
-        const [text, cls] = LINES[idx % LINES.length];
-        const el = document.createElement('div');
-        el.className = `loading-stream-line ${cls}`;
-        el.textContent = text;
-        container.appendChild(el);
-
-        el.getBoundingClientRect();
-        el.classList.add('visible');
-
-        if (currentEl) {
-            const old = currentEl;
-            setTimeout(() => old.remove(), 300);
-        }
-
-        currentEl = el;
-        idx++;
-        timer = setTimeout(showNext, 150);
-    }
-
-    function startStream() {
-        idx = 0;
-        currentEl = null;
-        clearTimeout(timer);
-        const container = document.getElementById('loadingStream');
-        if (container) container.innerHTML = '';
-        showNext();
-    }
-
-    function stopStream() {
-        clearTimeout(timer);
-        const container = document.getElementById('loadingStream');
-        if (container) container.innerHTML = '';
-        currentEl = null;
-    }
-
-    const overlay = document.getElementById('loadingOverlay');
-    if (overlay) {
-        const observer = new MutationObserver(() => {
-            if (overlay.classList.contains('active')) startStream();
-            else stopStream();
-        });
-        observer.observe(overlay, { attributes: true, attributeFilter: ['class'] });
-        if (overlay.classList.contains('active')) startStream();
-    }
-})();

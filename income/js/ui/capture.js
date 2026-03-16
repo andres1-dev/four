@@ -67,36 +67,11 @@ async function captureAndDownloadCards() {
             scrollY: 0,
             windowWidth: isMobile ? 3000 : 1800,
             windowHeight: cardsContainer.scrollHeight,
-            backgroundColor: null  // transparente para ver partículas
+            backgroundColor: '#f9fafb'
         };
 
         await new Promise(resolve => setTimeout(resolve, 300));
-        const uiCanvas = await html2canvas(cardsContainer, canvasOptions);
-
-        // Componer: fondo sólido + partículas + UI
-        const particlesCanvas = document.getElementById('particlesCanvas');
-        const finalCanvas = document.createElement('canvas');
-        finalCanvas.width  = uiCanvas.width;
-        finalCanvas.height = uiCanvas.height;
-        const fCtx = finalCanvas.getContext('2d');
-
-        // 1. Fondo base
-        fCtx.fillStyle = '#000000';
-        fCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-
-        // 2. Partículas escaladas al tamaño del canvas final
-        if (particlesCanvas) {
-            fCtx.drawImage(
-                particlesCanvas,
-                0, 0, particlesCanvas.width, particlesCanvas.height,
-                0, 0, finalCanvas.width, finalCanvas.height
-            );
-        }
-
-        // 3. UI encima
-        fCtx.drawImage(uiCanvas, 0, 0);
-
-        const canvas = finalCanvas;
+        const canvas = await html2canvas(cardsContainer, canvasOptions);
 
         // 4. Restaurar todo al estado original
         elementsToHide.forEach(el => el.style.visibility = 'visible');

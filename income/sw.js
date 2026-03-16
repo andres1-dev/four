@@ -1,5 +1,5 @@
 // Service Worker - Rutas Relativas
-const CACHE_NAME = 'ingresos-mp-v20';
+const CACHE_NAME = 'ingresos-mp-v19-final';
 const urlsToCache = [
   './',
   './index.html',

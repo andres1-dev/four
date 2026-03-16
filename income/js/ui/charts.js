@@ -34,9 +34,9 @@ function cargarDatosTendencia() {
 
 // Actualizar la UI con los resultados del análisis diario
 function actualizarTendenciaUI(analisisDiario, actual, anterior) {
-    const { proyeccion } = analisisDiario;
+    const { proyeccion, patronesSemanales } = analisisDiario;
 
-    // Tendencia actual (comparación con mes anterior)
+    // Actualizar tendencia actual (comparación con mes anterior)
     if (anterior) {
         const crecimiento = calculateGrowthValue(actual.ingreso, anterior.ingreso);
         const tendenciaEl = document.getElementById("tendencia-actual");
@@ -47,16 +47,15 @@ function actualizarTendenciaUI(analisisDiario, actual, anterior) {
         tendenciaValues.push(crecimiento.tendencia);
     }
 
-    // Proyección mensual
+    // Actualizar proyección mensual
     if (proyeccion) {
         const proyeccionEl = document.getElementById("tendencia-proyeccion");
         const diferencia = proyeccion.proyeccionConservadora - actual.meta;
         const porcentaje = ((diferencia / actual.meta) * 100).toFixed(1);
-        const tendencia = diferencia >= 0 ? "positive" : "negative";
 
         if (proyeccionEl) {
-            proyeccionEl.innerHTML = `${formatoCantidad(proyeccion.proyeccionConservadora)}<span class="proyeccion-pct ${tendencia}">${porcentaje >= 0 ? '+' : ''}${porcentaje}%</span>`;
-            proyeccionEl.className = "data-value " + tendencia;
+            proyeccionEl.textContent = `${formatoCantidad(proyeccion.proyeccionConservadora)} (${porcentaje >= 0 ? '+' : ''}${porcentaje}%)`;
+            proyeccionEl.className = "data-value " + (diferencia >= 0 ? "positive" : "negative");
         }
 
         updateResumenEjecutivo('proyeccion', {
@@ -65,6 +64,34 @@ function actualizarTendenciaUI(analisisDiario, actual, anterior) {
             porcentaje: porcentaje,
             tendencia: diferencia >= 0 ? "positive" : "negative"
         });
+    }
+
+    // Actualizar crecimiento interanual
+    if (anterior) {
+        const crecimiento = calculateGrowthValue(actual.ingreso, anterior.ingreso);
+        const crecimientoEl = document.getElementById("tendencia-crecimiento");
+        if (crecimientoEl) {
+            crecimientoEl.textContent = crecimiento.value;
+            crecimientoEl.className = "data-value " + crecimiento.tendencia;
+        }
+        tendenciaValues.push(crecimiento.tendencia);
+
+        updateResumenEjecutivo('interanual', {
+            valor: crecimiento.value,
+            tendencia: crecimiento.tendencia
+        });
+    }
+
+    // Actualizar resumen con patrones semanales
+    if (patronesSemanales && patronesSemanales.viernes) {
+        const resumenEl = document.getElementById("tendencia-resumen-texto");
+        const promedioViernes = patronesSemanales.viernes.promedio;
+        const promedioGeneral = analisisDiario.datosDiarios.reduce((sum, d) => sum + d.Ingreso, 0) / analisisDiario.datosDiarios.length;
+        const incrementoViernes = ((promedioViernes - promedioGeneral) / promedioGeneral * 100).toFixed(1);
+
+        if (resumenEl) {
+            resumenEl.textContent = `Patrón detectado: Los viernes tienen un incremento del ${incrementoViernes}% respecto al promedio diario.`;
+        }
     }
 }
 
@@ -199,8 +226,8 @@ function generarGraficoTendenciaDiaria(analisisDiario, año, mesActual) {
     });
 
     const dataActual = datosDiarios.map(d => d.Ingreso);
-    const canvas = document.getElementById('tendenciaChart');
-    if (!canvas) return;
+    const ctx = document.getElementById('tendenciaChart');
+    if (!ctx) return;
 
     if (tendenciaChart) tendenciaChart.destroy();
 
@@ -210,7 +237,7 @@ function generarGraficoTendenciaDiaria(analisisDiario, año, mesActual) {
         return fecha.getDay() === 5 ? '#e74c3c' : '#9b59b6';
     });
 
-    tendenciaChart = new Chart(canvas.getContext('2d'), {
+    tendenciaChart = new Chart(ctx.getContext('2d'), {
         type: 'line',
         data: {
             labels: labels,
@@ -219,12 +246,11 @@ function generarGraficoTendenciaDiaria(analisisDiario, año, mesActual) {
                     label: 'Ingresos diarios',
                     data: dataActual,
                     borderColor: '#4361ee',
-                    backgroundColor: 'rgba(255,255,255,0.03)',
+                    backgroundColor: 'rgba(67, 97, 238, 0.1)',
                     borderWidth: 1,
                     tension: 0.1,
                     pointBackgroundColor: pointBackgroundColors,
                     pointRadius: 4,
-                    pointHoverRadius: 7,
                     fill: true
                 },
                 {
@@ -235,7 +261,6 @@ function generarGraficoTendenciaDiaria(analisisDiario, año, mesActual) {
                     borderWidth: 2,
                     tension: 0.4,
                     pointRadius: 0,
-                    pointHoverRadius: 5,
                     borderDash: [5, 5],
                     fill: false
                 },
@@ -247,7 +272,6 @@ function generarGraficoTendenciaDiaria(analisisDiario, año, mesActual) {
                     borderWidth: 2,
                     tension: 0,
                     pointRadius: 0,
-                    pointHoverRadius: 5,
                     fill: false
                 }
             ]
@@ -255,24 +279,15 @@ function generarGraficoTendenciaDiaria(analisisDiario, año, mesActual) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
             plugins: {
                 legend: {
                     position: 'top',
-                    labels: { usePointStyle: true, padding: 20, font: { size: 12 }, color: '#64748b' }
+                    labels: { usePointStyle: true, padding: 20, font: { size: 12 } }
                 },
                 tooltip: {
                     mode: 'index',
                     intersect: false,
-                    backgroundColor: 'rgba(0,0,0,0.95)',
-                    titleColor: '#94a3b8',
-                    bodyColor: '#64748b',
-                    borderColor: 'rgba(255,255,255,0.08)',
-                    borderWidth: 1,
-                    padding: 12,
+                    backgroundColor: 'rgba(0,0,0,0.8)',
                     callbacks: {
                         label: function (context) {
                             let label = context.dataset.label || '';
@@ -293,12 +308,11 @@ function generarGraficoTendenciaDiaria(analisisDiario, año, mesActual) {
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: { callback: (v) => formatoCantidad(v), color: '#64748b', maxTicksLimit: 6 },
-                    grid: { color: 'rgba(255,255,255,0.04)' }
+                    ticks: { callback: (v) => formatoCantidad(v) },
+                    grid: { color: 'rgba(0, 0, 0, 0.05)' }
                 },
                 x: {
-                    grid: { display: false },
-                    ticks: { color: '#64748b', maxRotation: 0, autoSkip: true, maxTicksLimit: 10 }
+                    grid: { display: false }
                 }
             }
         }
