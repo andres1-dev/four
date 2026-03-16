@@ -7,7 +7,7 @@
    - Escucha mensajes NEW_PUSH_NOTIF del SW → actualiza campana en tiempo real
    ========================================================================== */
 
-const NOTIF_GAS_URL    = 'https://script.google.com/macros/s/AKfycbwreGMo-ZITm8PUkGJfMVu1cwKMsnUhfD1BZO18qFBa9CFcWd50VzBDKwDMKCubYhg5Cg/exec';
+const NOTIF_GAS_URL    = 'https://script.google.com/macros/s/AKfycbzPkZzYLgMuqWzUZtcZ9MqEsliJFbjplxwB7wN98SDHF4mIHMFKYCkZUhFtMOIdTahh/exec';
 const PUSH_STORAGE_KEY = 'sispro_push_subscribed';
 
 let _swRegistration          = null;
@@ -224,12 +224,12 @@ function _onSwMessage(event) {
   const notifType = payload.notifType || 'estado';
 
   if (notifType === 'chat' && typeof _addOperatorChatNotif === 'function') {
-    _addOperatorChatNotif({
-      idNovedad: payload.idNovedad,
-      lote:      payload.lote,
-      planta:    payload.planta,
-      msg:       { mensaje: payload.body, ts: payload.timestamp }
-    });
+    _addOperatorChatNotif(
+      payload.idNovedad,
+      { mensaje: payload.body, ts: payload.timestamp },
+      payload.lote,
+      payload.planta
+    );
   } else if (notifType === 'estado' && typeof _addNotifications === 'function') {
     _addNotifications([{
       nov: {

@@ -4,7 +4,7 @@ const DRIVE_IMAGE_PREFIX = 'https://lh3.googleusercontent.com/d/';
 const CHAT_FOLDER_NAME   = 'CHATS';
 
 /* URL del GAS de notificaciones (codeNotifications.gs) — actualizar tras deploy */
-const NOTIF_GAS_URL = 'https://script.google.com/macros/s/AKfycbwreGMo-ZITm8PUkGJfMVu1cwKMsnUhfD1BZO18qFBa9CFcWd50VzBDKwDMKCubYhg5Cg/exec';
+const NOTIF_GAS_URL = 'https://script.google.com/macros/s/AKfycbzPkZzYLgMuqWzUZtcZ9MqEsliJFbjplxwB7wN98SDHF4mIHMFKYCkZUhFtMOIdTahh/exec';
 
 let _ssCache = null;
 function _ss() {
@@ -20,14 +20,22 @@ function _sheet(name) {
 function _pushNotif(title, body, extra) {
   if (!NOTIF_GAS_URL || NOTIF_GAS_URL.indexOf('PLACEHOLDER') >= 0) return;
   try {
-    // Usar form-urlencoded — codeNotifications.gs lee e.parameter, no e.postData.contents
+    // form-urlencoded — codeNotifications.gs lee e.parameter
     var form = 'action=send-notification'
-      + '&title='  + encodeURIComponent(title  || '')
-      + '&body='   + encodeURIComponent(body   || '')
-      + '&icon='   + encodeURIComponent((extra && extra.icon) || '');
+      + '&title=' + encodeURIComponent(title || '')
+      + '&body='  + encodeURIComponent(body  || '')
+      + '&icon='  + encodeURIComponent((extra && extra.icon) || '');
 
-    // Serializar campos extra como data JSON (el GAS los ignora pero quedan para debug)
-    if (extra) form += '&data=' + encodeURIComponent(JSON.stringify(extra));
+    // Pasar cada campo extra como param individual para que el GAS los incluya en el payload
+    if (extra) {
+      var skip = { icon: 1 };
+      for (var k in extra) {
+        if (!skip[k] && extra[k] !== undefined) {
+          form += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(String(extra[k]));
+        }
+      }
+      form += '&data=' + encodeURIComponent(JSON.stringify(extra));
+    }
 
     UrlFetchApp.fetch(NOTIF_GAS_URL, {
       method: 'post',
@@ -391,15 +399,26 @@ function _updateEstado(d) {
       if (d.respuesta && d.correo) _mailSolucion(d.correo, d);
 
       // Push notification al GUEST cuando cambia el estado
-      var lote   = String(allRows[i][hdrs.indexOf('LOTE')]   || '');
-      var planta = String(allRows[i][hdrs.indexOf('PLANTA')] || '');
+      var lote   = String(allRows[i][hdrs.indexOf('LOTE')]        || '');
+      var planta = String(allRows[i][hdrs.indexOf('PLANTA')]      || '');
+      var ref    = String(allRows[i][hdrs.indexOf('REFERENCIA')]  || '');
+      var area   = String(allRows[i][hdrs.indexOf('AREA')]        || '');
+
+      var emoji      = d.nuevoEstado === 'FINALIZADO' ? '✅' : '🔧';
       var estadoLabel = d.nuevoEstado === 'FINALIZADO' ? 'Solucionado' : 'En Elaboración';
-      _pushNotif(
-        'Lote ' + lote + ' — ' + estadoLabel,
-        planta + ': tu novedad cambió de estado.',
-        { notifType: 'estado', idNovedad: target, lote: lote, planta: planta,
-          estadoAnterior: prevVal, estadoActual: d.nuevoEstado }
-      );
+      var pushTitle  = emoji + ' Lote ' + lote + ' — ' + estadoLabel;
+      var pushBody   = (ref ? 'Ref: ' + ref : '') + (area ? ' · ' + area : '') + '\n' + planta;
+
+      _pushNotif(pushTitle, pushBody.trim(), {
+        notifType:      'estado',
+        idNovedad:      target,
+        lote:           lote,
+        planta:         planta,
+        referencia:     ref,
+        area:           area,
+        estadoAnterior: prevVal,
+        estadoActual:   d.nuevoEstado
+      });
 
       return ok('Estado actualizado exitosamente.');
     }
@@ -752,10 +771,11 @@ function _sendChatMsg(d) {
 
     // Push notification cuando se envía un mensaje de chat
     var isGuest = String(d.rol||'').toUpperCase() === 'GUEST';
+    var emoji = isGuest ? '💬' : '💬';
     var pushTitle = isGuest
-      ? 'Mensaje de ' + String(d.planta||'Planta') + ' — Lote ' + String(d.lote||'')
-      : 'Respuesta del equipo — Lote ' + String(d.lote||'');
-    var pushBody = String(d.mensaje||'').substring(0, 80);
+      ? emoji + ' Mensaje — Lote ' + String(d.lote||'S/N')
+      : emoji + ' Respuesta — Lote ' + String(d.lote||'S/N');
+    var pushBody = (isGuest ? String(d.planta||'Planta') : 'Equipo') + ': ' + String(d.mensaje||'').substring(0, 80);
     _pushNotif(pushTitle, pushBody, {
       notifType: 'chat',
       idNovedad: String(d.idNovedad||''),

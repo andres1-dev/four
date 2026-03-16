@@ -3,6 +3,9 @@ const CARPETA_RAIZ_ID    = '1jeZrMgwwhBHA5G4oUqRHNDGhAEx2LMGQ';
 const DRIVE_IMAGE_PREFIX = 'https://lh3.googleusercontent.com/d/';
 const CHAT_FOLDER_NAME   = 'CHATS';
 
+/* URL del GAS de notificaciones (codeNotifications.gs) — actualizar tras deploy */
+const NOTIF_GAS_URL = 'https://script.google.com/macros/s/AKfycbwreGMo-ZITm8PUkGJfMVu1cwKMsnUhfD1BZO18qFBa9CFcWd50VzBDKwDMKCubYhg5Cg/exec';
+
 let _ssCache = null;
 function _ss() {
   if (!_ssCache) _ssCache = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -11,6 +14,36 @@ function _ss() {
 
 function _sheet(name) {
   return _ss().getSheetByName(name);
+}
+
+/* ── Enviar push a todos los suscriptores via codeNotifications.gs ── */
+function _pushNotif(title, body, extra) {
+  if (!NOTIF_GAS_URL || NOTIF_GAS_URL.indexOf('PLACEHOLDER') >= 0) return;
+  try {
+    // form-urlencoded — codeNotifications.gs lee e.parameter
+    var form = 'action=send-notification'
+      + '&title=' + encodeURIComponent(title || '')
+      + '&body='  + encodeURIComponent(body  || '')
+      + '&icon='  + encodeURIComponent((extra && extra.icon) || '');
+
+    // Pasar cada campo extra como param individual para que el GAS los incluya en el payload
+    if (extra) {
+      var skip = { icon: 1 };
+      for (var k in extra) {
+        if (!skip[k] && extra[k] !== undefined) {
+          form += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(String(extra[k]));
+        }
+      }
+      form += '&data=' + encodeURIComponent(JSON.stringify(extra));
+    }
+
+    UrlFetchApp.fetch(NOTIF_GAS_URL, {
+      method: 'post',
+      contentType: 'application/x-www-form-urlencoded',
+      payload: form,
+      muteHttpExceptions: true
+    });
+  } catch(e) { console.warn('[PUSH] Error enviando notificación:', e.message); }
 }
 
 function _json(obj) {
@@ -364,6 +397,29 @@ function _updateEstado(d) {
       if (colHist   > 0) sheet.getRange(row, colHist).setValue(prevHist ? prevHist + '|' + entrada : entrada);
 
       if (d.respuesta && d.correo) _mailSolucion(d.correo, d);
+
+      // Push notification al GUEST cuando cambia el estado
+      var lote   = String(allRows[i][hdrs.indexOf('LOTE')]        || '');
+      var planta = String(allRows[i][hdrs.indexOf('PLANTA')]      || '');
+      var ref    = String(allRows[i][hdrs.indexOf('REFERENCIA')]  || '');
+      var area   = String(allRows[i][hdrs.indexOf('AREA')]        || '');
+
+      var emoji      = d.nuevoEstado === 'FINALIZADO' ? '✅' : '🔧';
+      var estadoLabel = d.nuevoEstado === 'FINALIZADO' ? 'Solucionado' : 'En Elaboración';
+      var pushTitle  = emoji + ' Lote ' + lote + ' — ' + estadoLabel;
+      var pushBody   = (ref ? 'Ref: ' + ref : '') + (area ? ' · ' + area : '') + '\n' + planta;
+
+      _pushNotif(pushTitle, pushBody.trim(), {
+        notifType:      'estado',
+        idNovedad:      target,
+        lote:           lote,
+        planta:         planta,
+        referencia:     ref,
+        area:           area,
+        estadoAnterior: prevVal,
+        estadoActual:   d.nuevoEstado
+      });
+
       return ok('Estado actualizado exitosamente.');
     }
     return err('No se encontró la novedad con ese ID.');
@@ -712,6 +768,22 @@ function _sendChatMsg(d) {
     }
     const id = _uid('MSG');
     sheet.appendRow([id, String(d.idNovedad||''), String(d.planta||''), String(d.rol||''), String(d.autor||''), msg, ts]);
+
+    // Push notification cuando se envía un mensaje de chat
+    var isGuest = String(d.rol||'').toUpperCase() === 'GUEST';
+    var pushTitle = isGuest
+      ? 'Mensaje de ' + String(d.planta||'Planta') + ' — Lote ' + String(d.lote||'')
+      : 'Respuesta del equipo — Lote ' + String(d.lote||'');
+    var pushBody = String(d.mensaje||'').substring(0, 80);
+    _pushNotif(pushTitle, pushBody, {
+      notifType: 'chat',
+      idNovedad: String(d.idNovedad||''),
+      lote:      String(d.lote||''),
+      planta:    String(d.planta||''),
+      autor:     String(d.autor||''),
+      rol:       String(d.rol||'')
+    });
+
     return ok('Mensaje enviado.', { id, ts });
   } catch (e) { return err('Error al enviar mensaje: ' + e.message); }
 }

@@ -223,42 +223,6 @@ async function _checkAndNotify() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   FORMATEAR NOTIFICACIÓN según notifType
-   ══════════════════════════════════════════════════════════════════════════ */
-function _formatNotif(payload) {
-  const notifType = payload.notifType || 'estado';
-  const lote      = payload.lote    || '';
-  const planta    = payload.planta  || '';
-  const ref       = payload.referencia || '';
-  const area      = payload.area    || '';
-  const idNovedad = payload.idNovedad || '';
-
-  let title, body, url;
-
-  if (notifType === 'chat') {
-    // Mensaje de chat
-    const autor = payload.autor || planta || 'Planta';
-    title = '💬 Mensaje — Lote ' + (lote || 'S/N');
-    body  = autor + ': ' + (payload.body || '').substring(0, 80);
-    url   = './index.html';
-  } else {
-    // Cambio de estado
-    const estado = (payload.estadoActual || '').toUpperCase();
-    const emoji  = estado === 'FINALIZADO' ? '✅' : '🔧';
-    const label  = estado === 'FINALIZADO' ? 'Solucionado' : 'En Elaboración';
-    title = emoji + ' Lote ' + (lote || 'S/N') + ' — ' + label;
-    const parts = [];
-    if (ref)   parts.push('Ref: ' + ref);
-    if (area)  parts.push(area);
-    if (planta) parts.push(planta);
-    body  = parts.join(' · ');
-    url   = idNovedad ? ('./seguimiento.html#' + idNovedad) : './seguimiento.html';
-  }
-
-  return { title, body, url };
-}
-
-/* ══════════════════════════════════════════════════════════════════════════
    MOSTRAR NOTIFICACIÓN (anti-duplicados)
    ══════════════════════════════════════════════════════════════════════════ */
 async function _showIfNew(payload) {
@@ -291,21 +255,20 @@ async function _showIfNew(payload) {
   }
 
   // App en background o cerrada → notificación nativa del SO
-  const { title, body, url } = _formatNotif(payload);
-  const icon  = './icons/icon-any.svg';
+  const icon  = payload.icon  || './icons/icon-any.svg';
   const badge = './icons/icon-maskable.svg';
 
-  await self.registration.showNotification(title, {
-    body,
+  await self.registration.showNotification(payload.title || 'SISPRO', {
+    body:     payload.body    || 'Tienes una actualización',
     icon,
     badge,
     tag:      `sispro-${id}`,
     renotify: true,
     vibrate:  [200, 100, 200],
-    data:     { url, id, ts, notifType: payload.notifType || 'estado' }
+    data:     { url: payload.url || './index.html', id, ts }
   });
 
-  console.log('[SW] Notificación nativa mostrada:', title);
+  console.log('[SW] Notificación nativa mostrada:', payload.title);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -318,18 +281,9 @@ self.addEventListener('notificationclick', event => {
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then(clients => {
-        // Buscar una ventana que ya tenga la URL destino abierta
         for (const c of clients) {
-          if (c.url.includes(target.replace('./', '')) && 'focus' in c) {
-            return c.focus();
-          }
+          if ('focus' in c) return c.focus();
         }
-        // Si hay alguna ventana abierta, navegar a la URL correcta
-        for (const c of clients) {
-          if ('navigate' in c) return c.navigate(target).then(wc => wc && wc.focus());
-          if ('focus' in c)    return c.focus();
-        }
-        // Sin ventanas → abrir nueva
         return self.clients.openWindow(target);
       })
   );

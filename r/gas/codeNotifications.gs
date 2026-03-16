@@ -202,13 +202,30 @@ function enviarNotificacionATodos(params) {
       return crearRespuestaJSON({ success: true, message: 'Sin suscriptores', sent: 0 });
 
     // Payload JSON que el Service Worker leerá con event.data.json()
+    // Incluir todos los campos extra que vengan en params (notifType, lote, planta, etc.)
     var payloadObj = {
-      id: Utilities.getUuid(), // ID único
-      title: title,
-      body:  body,
-      icon:  icon,
+      id:        Utilities.getUuid(),
+      title:     title,
+      body:      body,
+      icon:      icon,
       timestamp: Date.now()
     };
+    // Copiar campos extra (notifType, lote, planta, idNovedad, estadoActual, etc.)
+    var reservados = { action:1, title:1, body:1, icon:1, data:1, p256dh:1, auth:1, endpoint:1 };
+    for (var k in params) {
+      if (!reservados[k] && params[k] !== undefined && params[k] !== '') {
+        payloadObj[k] = params[k];
+      }
+    }
+    // Si viene un campo 'data' JSON con campos extra, expandirlo también
+    if (params.data) {
+      try {
+        var extra = JSON.parse(params.data);
+        for (var ek in extra) {
+          if (!reservados[ek]) payloadObj[ek] = extra[ek];
+        }
+      } catch(_) {}
+    }
     var payloadJson = JSON.stringify(payloadObj);
 
     // Guardar última notificación para PULL (iOS)
