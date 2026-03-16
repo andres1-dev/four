@@ -102,7 +102,7 @@ async function _sendMsg(mensaje, imagenData = null) {
     if (!mensaje.trim() && !imagenData || !_chatNovedadId) return;
     const autor = currentUser.USUARIO || currentUser.PLANTA || 'Usuario';
     const rol   = currentUser.ROL || 'GUEST';
-    return _chatFetch({ accion: 'SEND_CHAT_MSG', idNovedad: _chatNovedadId, planta: _chatPlanta, autor, rol, mensaje: mensaje.trim(), imagen: imagenData || null });
+    return _chatFetch({ accion: 'SEND_CHAT_MSG', idNovedad: _chatNovedadId, planta: _chatPlanta, lote: _chatLote || '', autor, rol, mensaje: mensaje.trim(), imagen: imagenData || null });
 }
 
 async function _archiveChat(idNovedad) {

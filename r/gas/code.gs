@@ -20,11 +20,19 @@ function _sheet(name) {
 function _pushNotif(title, body, extra) {
   if (!NOTIF_GAS_URL || NOTIF_GAS_URL.indexOf('PLACEHOLDER') >= 0) return;
   try {
-    var payload = Object.assign({ action: 'send-notification', title: title, body: body }, extra || {});
+    // Usar form-urlencoded — codeNotifications.gs lee e.parameter, no e.postData.contents
+    var form = 'action=send-notification'
+      + '&title='  + encodeURIComponent(title  || '')
+      + '&body='   + encodeURIComponent(body   || '')
+      + '&icon='   + encodeURIComponent((extra && extra.icon) || '');
+
+    // Serializar campos extra como data JSON (el GAS los ignora pero quedan para debug)
+    if (extra) form += '&data=' + encodeURIComponent(JSON.stringify(extra));
+
     UrlFetchApp.fetch(NOTIF_GAS_URL, {
       method: 'post',
-      contentType: 'application/json',
-      payload: JSON.stringify(payload),
+      contentType: 'application/x-www-form-urlencoded',
+      payload: form,
       muteHttpExceptions: true
     });
   } catch(e) { console.warn('[PUSH] Error enviando notificación:', e.message); }
