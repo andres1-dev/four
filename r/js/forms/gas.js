@@ -204,6 +204,7 @@ function _showUploadError(id) {
 
 /**
  * Al iniciar la app, reintenta subidas pendientes que quedaron en localStorage.
+ * Se ejecuta automáticamente en cualquier página que cargue gas.js.
  */
 function retryPendingUploads() {
     const keys = Object.keys(localStorage).filter(k => k.startsWith('pending_upload_'));
@@ -219,3 +220,12 @@ function retryPendingUploads() {
         }
     });
 }
+
+/* Auto-ejecutar al cargar cualquier página que incluya gas.js */
+(function _autoRetryOnLoad() {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', retryPendingUploads);
+    } else {
+        retryPendingUploads();
+    }
+})();

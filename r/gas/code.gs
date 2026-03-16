@@ -16,34 +16,54 @@ function _sheet(name) {
   return _ss().getSheetByName(name);
 }
 
-/* ── Enviar push a todos los suscriptores via codeNotifications.gs ── */
+/* ── Enviar push async via trigger de 1 minuto (no bloquea la respuesta) ── */
 function _pushNotif(title, body, extra) {
-  if (!NOTIF_GAS_URL || NOTIF_GAS_URL.indexOf('PLACEHOLDER') >= 0) return;
+  if (!NOTIF_GAS_URL) return;
   try {
-    // form-urlencoded — codeNotifications.gs lee e.parameter
-    var form = 'action=send-notification'
-      + '&title=' + encodeURIComponent(title || '')
-      + '&body='  + encodeURIComponent(body  || '')
-      + '&icon='  + encodeURIComponent((extra && extra.icon) || '');
+    // Guardar en PropertiesService para que el trigger lo lea
+    var job = JSON.stringify({ title: title || 'SISPRO', body: body || '', extra: extra || {}, ts: Date.now() });
+    PropertiesService.getScriptProperties().setProperty('PENDING_PUSH', job);
+    // Trigger de 1 minuto — se ejecuta fuera del request actual
+    ScriptApp.newTrigger('_runPendingPush').timeBased().after(1000).create();
+  } catch(e) {
+    console.error('[PUSH] Error encolando notificación:', e.message);
+  }
+}
 
-    // Pasar cada campo extra como param individual para que el GAS los incluya en el payload
-    if (extra) {
-      var skip = { icon: 1 };
-      for (var k in extra) {
-        if (!skip[k] && extra[k] !== undefined) {
-          form += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(String(extra[k]));
-        }
+/* ── Ejecutado por el trigger — envía el push sin bloquear nada ── */
+function _runPendingPush() {
+  // Limpiar triggers anteriores de este tipo para no acumular
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === '_runPendingPush') ScriptApp.deleteTrigger(t);
+  });
+
+  try {
+    var job = PropertiesService.getScriptProperties().getProperty('PENDING_PUSH');
+    if (!job) return;
+    PropertiesService.getScriptProperties().deleteProperty('PENDING_PUSH');
+
+    var data = JSON.parse(job);
+    var payload = 'action=send-notification'
+      + '&title=' + encodeURIComponent(data.title)
+      + '&body='  + encodeURIComponent(data.body);
+
+    var extra = data.extra || {};
+    for (var k in extra) {
+      if (extra[k] !== undefined && extra[k] !== null) {
+        payload += '&' + k + '=' + encodeURIComponent(String(extra[k]));
       }
-      form += '&data=' + encodeURIComponent(JSON.stringify(extra));
     }
 
-    UrlFetchApp.fetch(NOTIF_GAS_URL, {
+    var resp = UrlFetchApp.fetch(NOTIF_GAS_URL, {
       method: 'post',
       contentType: 'application/x-www-form-urlencoded',
-      payload: form,
+      payload: payload,
       muteHttpExceptions: true
     });
-  } catch(e) { console.warn('[PUSH] Error enviando notificación:', e.message); }
+    console.log('[PUSH] Enviado:', resp.getResponseCode(), resp.getContentText().substring(0, 150));
+  } catch(e) {
+    console.error('[PUSH] Error en _runPendingPush:', e.message);
+  }
 }
 
 function _json(obj) {
@@ -404,19 +424,15 @@ function _updateEstado(d) {
       var ref    = String(allRows[i][hdrs.indexOf('REFERENCIA')]  || '');
       var area   = String(allRows[i][hdrs.indexOf('AREA')]        || '');
 
-      var emoji      = d.nuevoEstado === 'FINALIZADO' ? '✅' : '🔧';
-      var estadoLabel = d.nuevoEstado === 'FINALIZADO' ? 'Solucionado' : 'En Elaboración';
-      var pushTitle  = emoji + ' Lote ' + lote + ' — ' + estadoLabel;
-      var pushBody   = (ref ? 'Ref: ' + ref : '') + (area ? ' · ' + area : '') + '\n' + planta;
+      var estadoLabel = d.nuevoEstado === 'FINALIZADO' ? 'Solucionado' : 'En Elaboracion';
+      var pushTitle  = 'Lote ' + lote + ' - ' + estadoLabel;
+      var pushBody   = (ref ? ref : '') + (area ? ' - ' + area : '') + (planta ? ' - ' + planta : '');
 
       _pushNotif(pushTitle, pushBody.trim(), {
         notifType:      'estado',
         idNovedad:      target,
         lote:           lote,
         planta:         planta,
-        referencia:     ref,
-        area:           area,
-        estadoAnterior: prevVal,
         estadoActual:   d.nuevoEstado
       });
 
@@ -771,18 +787,15 @@ function _sendChatMsg(d) {
 
     // Push notification cuando se envía un mensaje de chat
     var isGuest = String(d.rol||'').toUpperCase() === 'GUEST';
-    var emoji = isGuest ? '💬' : '💬';
     var pushTitle = isGuest
-      ? emoji + ' Mensaje — Lote ' + String(d.lote||'S/N')
-      : emoji + ' Respuesta — Lote ' + String(d.lote||'S/N');
+      ? 'Mensaje - Lote ' + String(d.lote||'S/N')
+      : 'Respuesta - Lote ' + String(d.lote||'S/N');
     var pushBody = (isGuest ? String(d.planta||'Planta') : 'Equipo') + ': ' + String(d.mensaje||'').substring(0, 80);
     _pushNotif(pushTitle, pushBody, {
       notifType: 'chat',
       idNovedad: String(d.idNovedad||''),
       lote:      String(d.lote||''),
-      planta:    String(d.planta||''),
-      autor:     String(d.autor||''),
-      rol:       String(d.rol||'')
+      planta:    String(d.planta||'')
     });
 
     return ok('Mensaje enviado.', { id, ts });
@@ -949,4 +962,58 @@ function _reopenChat(d) {
     info.sheet.getRange(info.row, info.col).setValue('');
     return ok('Chat reabierto.', { count: archived.length });
   } catch (e) { return err('Error al reabrir chat: ' + e.message); }
+}
+
+/* ══════════════════════════════════════════
+   TEST — ejecutar desde el editor GAS para
+   verificar que el envío de push funciona.
+   Abre Ejecutar > testPushEstado / testPushChat
+══════════════════════════════════════════ */
+function testPushEstado() {
+  _pushNotif('Lote 9999 - Solucionado', 'REF-001 - CORTE - Planta Test', {
+    notifType:    'estado',
+    idNovedad:    'NOV-TEST',
+    lote:         '9999',
+    planta:       'Planta Test',
+    estadoActual: 'FINALIZADO'
+  });
+  // Ejecutar inmediato para el test (en producción lo hace el trigger)
+  _runPendingPush();
+  console.log('[TEST] testPushEstado ejecutado');
+}
+
+function testPushChat() {
+  _pushNotif('Mensaje - Lote 9999', 'Planta Test: Hola, esto es una prueba de notificacion', {
+    notifType: 'chat',
+    idNovedad: 'NOV-TEST',
+    lote:      '9999',
+    planta:    'Planta Test'
+  });
+  _runPendingPush();
+  console.log('[TEST] testPushChat ejecutado');
+}
+
+/* ══════════════════════════════════════════
+   SOLICITAR PERMISOS — ejecutar UNA vez desde
+   el editor para forzar autorización de scopes.
+   Ejecutar > solicitarPermisos
+══════════════════════════════════════════ */
+function solicitarPermisos() {
+  // Fuerza el scope script.external_request
+  var resp = UrlFetchApp.fetch('https://www.google.com', { muteHttpExceptions: true });
+  console.log('UrlFetchApp OK:', resp.getResponseCode());
+
+  // Fuerza scope spreadsheets
+  SpreadsheetApp.openById(SPREADSHEET_ID).getName();
+  console.log('SpreadsheetApp OK');
+
+  // Fuerza scope drive
+  DriveApp.getRootFolder().getName();
+  console.log('DriveApp OK');
+
+  // Fuerza scope mail
+  MailApp.getRemainingDailyQuota();
+  console.log('MailApp OK');
+
+  console.log('Todos los permisos solicitados correctamente.');
 }
