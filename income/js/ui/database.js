@@ -71,11 +71,27 @@ function initFlatpickr() {
             mode: "range",
             dateFormat: "Y-m-d",
             defaultDate: [primerDiaMes, hoy],
+            onReady: () => {
+                const el = document.getElementById('filtro-fechas');
+                if (el) fitFlatpickrWidth(el);
+            },
             onChange: (selectedDates) => {
                 rangoSeleccionado = selectedDates.length === 1 ? [selectedDates[0], selectedDates[0]] : selectedDates;
+                const el = document.getElementById('filtro-fechas');
+                if (el) fitFlatpickrWidth(el);
             }
         });
     }
+}
+
+function fitFlatpickrWidth(el) {
+    const tmp = document.createElement('canvas');
+    const ctx = tmp.getContext('2d');
+    const style = window.getComputedStyle(el);
+    ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    const text = el.value || 'aaaa-mm-dd';
+    const measured = ctx.measureText(text).width;
+    el.style.width = `${Math.ceil(measured + 24 + 16)}px`; // padding izq + respiro
 }
 
 function datosDescargarExcelFiltrado() {

@@ -1,6 +1,7 @@
 // Service Worker - Rutas Relativas
-const CACHE_NAME = 'ingresos-mp-v19-final';
+const CACHE_NAME = 'ingresos-mp-v22';
 const urlsToCache = [
+  /*
   './',
   './index.html',
   './css/base.css',
@@ -25,6 +26,7 @@ const urlsToCache = [
   './js/pwa/sw_init.js',
   './icons/icon-192.png',
   './icons/icon-512.png'
+  */
 ];
 
 // Instalación

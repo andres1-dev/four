@@ -3,7 +3,7 @@
     position: relative;
     z-index: 1;
     margin-top: var(--spacing-2xl);
-    padding: var(--spacing-xl) var(--spacing-md) var(--spacing-lg);
+    padding: var(--spacing-xl) var(--spacing-md) var(--spacing-2xl);
     background: transparent;
 }
 
@@ -22,17 +22,21 @@
     font-weight: var(--font-weight-normal);
     text-align: center;
     line-height: var(--line-height-tight);
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .footer-line strong {
     font-weight: var(--font-weight-bold);
-    color: var(--text-dark);
+    color: var(--text-medium);
 }
 
 .footer-copyright,
 .footer-powered {
-    font-size: var(--font-size-sm);
+    font-size: 15px;
     color: var(--text-light);
+    gap: 4px;
 }
 
 /* Ocultar footer durante captura */
@@ -56,7 +60,7 @@
     
     .footer-copyright,
     .footer-powered {
-        font-size: var(--font-size-sm);
+        font-size: 14px;
     }
 }
 
@@ -71,6 +75,6 @@
     
     .footer-copyright,
     .footer-powered {
-        font-size: var(--font-size-xs);
+        font-size: 13px;
     }
 }
