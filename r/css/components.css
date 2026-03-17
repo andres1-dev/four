@@ -521,14 +521,13 @@ textarea.form-control {
 }
 
 .brand-tag {
-    font-weight: 800;
-    font-size: 0.75rem;
-    letter-spacing: 1.5px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.3px;
     color: var(--color-primary);
-    background: var(--color-primary-shadow);
-    padding: 3px 10px;
-    border-radius: 4px;
-    text-transform: uppercase;
+    background: none;
+    padding: 0;
+    border-radius: 0;
 }
 
 /* Compensación para el header fixed */
@@ -626,7 +625,7 @@ textarea.form-control {
 .avatar-mini {
     width: 28px;
     height: 28px;
-    background: #94a3b8; /* Default Guest */
+    background: #94a3b8;
     color: white;
     border-radius: 50%;
     display: flex;
@@ -634,7 +633,6 @@ textarea.form-control {
     justify-content: center;
     font-weight: 700;
     font-size: 0.75rem;
-    transition: background-color 0.3s ease;
 }
 
 /* Colores mini por rol */
@@ -656,7 +654,7 @@ textarea.form-control {
     background: white;
     z-index: 2500;
     box-shadow: -10px 0 30px rgba(0,0,0,0.1);
-    transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: right 0.22s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
 }
@@ -676,7 +674,7 @@ textarea.form-control {
     z-index: 2400;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.4s ease;
+    transition: opacity 0.22s ease, visibility 0.22s ease;
 }
 
 .sidebar-backdrop.active {
@@ -686,8 +684,9 @@ textarea.form-control {
 
 /* Sidebar Content */
 .sidebar-header {
-    padding: 40px 30px 30px;
+    padding: 28px 30px 20px;
     border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
 }
 
 .sidebar-user-card {
@@ -742,6 +741,7 @@ textarea.form-control {
 .sidebar-body {
     flex: 1;
     padding: 30px;
+    overflow-y: auto;
 }
 
 .sidebar-label {
@@ -1000,3 +1000,240 @@ textarea.form-control {
     0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
     30%            { transform: translateY(-4px); opacity: 1; }
 }
+
+/* ── Avatar customizer ── */
+.avatar-edit-btn {
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: inline-block;
+    border-radius: 50%;
+}
+
+.avatar-edit-btn .avatar-overlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.38);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    font-size: 1.1rem;
+    color: white;
+    pointer-events: none;
+}
+
+.avatar-edit-btn:hover .avatar-overlay { opacity: 1; }
+.avatar-edit-btn.customizer-open .avatar-overlay { opacity: 1; background: rgba(239,68,68,0.45); }
+
+/* Botón de subir foto dentro del panel */
+.avatar-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    background: white;
+    border: 1.5px solid var(--color-primary);
+    border-radius: 8px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.avatar-upload-btn:hover { background: #eef2ff; }
+
+.avatar-customizer-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.avatar-customizer {
+    margin-top: 12px;
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 12px 14px;
+    flex-direction: column;
+    gap: 12px;
+    animation: slideDownFade 0.18s ease-out;
+}
+
+@keyframes slideDownFade {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.avatar-customizer {
+    margin-top: 14px;
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.avatar-customizer-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.avatar-customizer-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #94a3b8;
+    min-width: 36px;
+}
+
+.avatar-color-picker-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.avatar-color-picker-wrap input[type="color"] {
+    width: 0; height: 0; opacity: 0;
+    position: absolute; pointer-events: none;
+}
+
+.avatar-color-preview {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid rgba(0,0,0,0.08);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    transition: transform 0.15s;
+    flex-shrink: 0;
+}
+
+.avatar-color-preview:hover { transform: scale(1.1); }
+
+.avatar-color-hex {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.5px;
+}
+
+.avatar-icon-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    flex: 1;
+}
+
+.avatar-icon-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1.5px solid #e2e8f0;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    color: #64748b;
+    transition: all 0.15s;
+}
+
+.avatar-icon-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background: #eef2ff;
+    transform: scale(1.1);
+}
+
+.avatar-icon-btn.active {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: white;
+}
+
+/* ── Sidebar Settings Panel ── */
+.sidebar-settings-section {
+    border-top: 1px solid #f1f5f9;
+    padding: 16px 30px 20px;
+}
+
+.sidebar-settings-label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 14px;
+}
+
+.settings-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #f8fafc;
+}
+
+.settings-toggle-row:last-child { border-bottom: none; }
+
+.settings-toggle-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.settings-toggle-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.settings-toggle-sub {
+    font-size: 0.7rem;
+    color: #94a3b8;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+.toggle-track {
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    background: #e2e8f0;
+    cursor: pointer;
+    transition: background 0.25s;
+}
+
+.toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    transition: transform 0.25s;
+}
+
+.toggle-switch input:checked + .toggle-track { background: var(--color-primary); }
+.toggle-switch input:checked + .toggle-track::after { transform: translateX(18px); }
+.toggle-switch input:disabled + .toggle-track { opacity: 0.45; cursor: not-allowed; }
+.toggle-track.is-on { background: var(--color-primary); }
+.toggle-track.is-on::after { transform: translateX(18px); }
+.toggle-track.is-disabled { opacity: 0.45; cursor: not-allowed; }

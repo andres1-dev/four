@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "SISPRO — Grupo TMD",
   "short_name": "SISPRO",
   "description": "Sistema de Producción y Novedades — Grupo TMD",
@@ -10,21 +10,21 @@
   "theme_color": "#3b82f6",
   "lang": "es",
   "icons": [
-    { "src": "icons/icon-any.svg",      "sizes": "any",     "type": "image/svg+xml", "purpose": "any" },
-    { "src": "icons/icon-maskable.svg", "sizes": "any",     "type": "image/svg+xml", "purpose": "maskable" },
-    { "src": "icons/apple-touch-icon.svg", "sizes": "180x180", "type": "image/svg+xml" }
+    { "src": "icons/TDM_variable_colors.svg",      "sizes": "any",     "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/TDM_variable_colors.svg", "sizes": "any",     "type": "image/svg+xml", "purpose": "maskable" },
+    { "src": "icons/TDM_variable_colors.svg", "sizes": "180x180", "type": "image/svg+xml" }
   ],
   "categories": ["business", "productivity"],
   "shortcuts": [
     {
       "name": "Reportar Novedad",
       "url": "./index.html",
-      "icons": [{ "src": "icons/icon-any.svg", "sizes": "any" }]
+      "icons": [{ "src": "icons/TDM_variable_colors.svg", "sizes": "any" }]
     },
     {
       "name": "Seguimiento",
       "url": "./seguimiento.html",
-      "icons": [{ "src": "icons/icon-any.svg", "sizes": "any" }]
+      "icons": [{ "src": "icons/TDM_variable_colors.svg", "sizes": "any" }]
     }
   ]
 }

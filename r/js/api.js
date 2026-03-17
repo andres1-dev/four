@@ -11,20 +11,22 @@ let secureConfigPromise = null;
 
 /**
  * Recupera las llaves de API desde Google Apps Script (GAS).
- * Singleton pattern para evitar múltiples llamadas paralelas.
+ * Singleton pattern — evita múltiples llamadas paralelas.
+ * Cache en localStorage con TTL de 6h.
  */
 async function fetchSecureConfig() {
     if (secureConfigPromise) return secureConfigPromise;
 
     secureConfigPromise = (async () => {
         try {
-            const cachedConfig = localStorage.getItem('app_secure_config');
-            const now = new Date().getTime();
-            
-            if (cachedConfig) {
-                const parsed = JSON.parse(cachedConfig);
-                if (now - parsed.timestamp < 86400000 && parsed.API_KEY) {
-                    CONFIG.API_KEY = parsed.API_KEY;
+            const cached = localStorage.getItem('app_secure_config');
+            const now = Date.now();
+
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                // TTL: 6 horas
+                if (now - parsed.timestamp < 6 * 3600 * 1000 && parsed.API_KEY) {
+                    CONFIG.API_KEY   = parsed.API_KEY;
                     CONFIG.GEMINI_KEY = parsed.GEMINI_KEY;
                     return CONFIG;
                 }
@@ -33,25 +35,24 @@ async function fetchSecureConfig() {
             const res = await fetch(GAS_ENDPOINT, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ accion: "GET_CONFIG" })
+                body: JSON.stringify({ accion: 'GET_CONFIG' })
             });
 
-            if (!res.ok) throw new Error('Error al obtener configuración desde GAS');
-            
+            if (!res.ok) throw new Error(`GAS config HTTP ${res.status}`);
+
             const data = await res.json();
-            if (data && data.API_KEY) {
-                CONFIG.API_KEY = data.API_KEY;
+            if (data?.API_KEY) {
+                CONFIG.API_KEY    = data.API_KEY;
                 CONFIG.GEMINI_KEY = data.GEMINI_KEY;
-                
                 localStorage.setItem('app_secure_config', JSON.stringify({
-                    API_KEY: data.API_KEY,
+                    API_KEY:   data.API_KEY,
                     GEMINI_KEY: data.GEMINI_KEY,
                     timestamp: now
                 }));
             }
             return CONFIG;
         } catch (error) {
-            secureConfigPromise = null; // Reintentar en la próxima llamada
+            secureConfigPromise = null; // Permitir reintento en la próxima llamada
             throw error;
         }
     })();
@@ -61,60 +62,65 @@ async function fetchSecureConfig() {
 
 /**
  * Obtiene los datos de una hoja específica del spreadsheet.
- *
- * @param {string} sheetName — Nombre de la pestaña en Sheets.
- * @param {number[]} indices — Posiciones de columna a extraer.
- * @param {string[]} headers — Nombres lógicos para cada columna.
- * @returns {Promise<Object[]>} Lista de registros {header: valor}.
- * @throws {Error} Si la petición HTTP falla.
+ * Reintenta hasta 3 veces con backoff exponencial.
+ * Si falla por key inválida (401/403), limpia cache y refresca la key.
  */
 async function fetchSheetData(sheetName, indices, headers) {
-    // Asegurar que la configuración esté disponible antes de peticionar
-    if (!CONFIG.API_KEY) {
-        await fetchSecureConfig();
-    }
-    
-    const url =
-        `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}` +
-        `/values/${sheetName}!A:AF?key=${CONFIG.API_KEY}&majorDimension=ROWS`;
+    if (!CONFIG.API_KEY) await fetchSecureConfig();
 
-    const response = await fetch(url, { cache: 'no-store' });
+    const MAX_RETRIES = 3;
+    let lastError;
 
-    if (!response.ok) {
-        throw new Error(`HTTP ${response.status} al obtener ${sheetName}`);
-    }
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+            const url =
+                `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}` +
+                `/values/${sheetName}!A:AF?key=${CONFIG.API_KEY}&majorDimension=ROWS`;
 
-    const { values = [] } = await response.json();
-    if (values.length <= 1) return [];
+            const response = await fetch(url, { cache: 'no-store' });
 
-    let records = values.slice(1).map((row) => {
-        const record = {};
-        indices.forEach((colIndex, i) => {
-            record[headers[i]] = colIndex < row.length ? row[colIndex] : '';
-        });
-        return record;
-    });
+            // Key inválida o expirada — limpiar cache y refrescar antes del próximo intento
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('app_secure_config');
+                CONFIG.API_KEY = null;
+                secureConfigPromise = null;
+                await fetchSecureConfig();
+                lastError = new Error(`HTTP ${response.status} — key refrescada, reintentando`);
+                continue;
+            }
 
-    /**
-     * FILTRO DE SEGURIDAD CRÍTICO:
-     * Si el usuario es tipo "GUEST" (Planta/Taller), solo puede ver datos de su propia planta.
-     */
-    const sessionUser = (typeof currentUser !== 'undefined') ? currentUser : null;
-    if (sessionUser && sessionUser.ROL === 'GUEST' && sessionUser.PLANTA) {
-        const userPlanta = String(sessionUser.PLANTA).trim().toUpperCase();
-        
-        // Solo filtrar si la hoja contiene una columna llamada "PLANTA"
-        // Esto aplica a SISPRO, NOVEDADES y REPORTES
-        if (headers.includes('PLANTA')) {
-            const originalCount = records.length;
-            records = records.filter(r => 
-                String(r.PLANTA || '').trim().toUpperCase() === userPlanta
-            );
-            console.log(`[SECURITY] Filtrados ${originalCount - records.length} registros de otra planta para el usuario: ${userPlanta}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status} al obtener ${sheetName}`);
+
+            const { values = [] } = await response.json();
+            if (values.length <= 1) return [];
+
+            let records = values.slice(1).map((row) => {
+                const record = {};
+                indices.forEach((colIndex, i) => {
+                    record[headers[i]] = colIndex < row.length ? row[colIndex] : '';
+                });
+                return record;
+            });
+
+            // Filtro de seguridad: GUEST solo ve su propia planta
+            const sessionUser = (typeof currentUser !== 'undefined') ? currentUser : null;
+            if (sessionUser && sessionUser.ROL === 'GUEST' && sessionUser.PLANTA && headers.includes('PLANTA')) {
+                const userPlanta = String(sessionUser.PLANTA).trim().toUpperCase();
+                records = records.filter(r => String(r.PLANTA || '').trim().toUpperCase() === userPlanta);
+            }
+
+            return records;
+
+        } catch (error) {
+            lastError = error;
+            if (attempt < MAX_RETRIES - 1) {
+                // Backoff: 500ms, 1500ms
+                await new Promise(r => setTimeout(r, 500 * Math.pow(3, attempt)));
+            }
         }
     }
 
-    return records;
+    throw lastError;
 }
 
 /**

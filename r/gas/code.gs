@@ -178,6 +178,9 @@ function doPost(e) {
       case 'UPDATE_ARCHIVO_URL':         return _updateArchivoUrl(d);
       case 'SUBIR_ARCHIVO':              return _subirArchivo(d);
       case 'ACTUALIZAR_PLANTA':          return _actualizarPlanta(d);
+      case 'UPDATE_AVATAR':              return _updateAvatar(d);
+      case 'GET_CONFIG_USER':            return _getConfigUser(d);
+      case 'SET_CONFIG_USER':            return _setConfigUser(d);
     }
 
     const hoja = d.hoja;
@@ -1016,4 +1019,87 @@ function solicitarPermisos() {
   console.log('MailApp OK');
 
   console.log('Todos los permisos solicitados correctamente.');
+}
+
+/* ══════════════════════════════════════════
+   CONFIGURACIONES — Hoja dedicada por usuario/planta
+   Columnas: ID | NOMBRE | AVATAR | NOTIF_PREFS | UPDATED
+   Upsert por ID: si existe actualiza, si no inserta.
+══════════════════════════════════════════ */
+
+function _getConfigsSheet() {
+  return _getOrCreateSheet('CONFIGURACIONES');
+}
+
+function _ensureConfigHeaders(sheet) {
+  const expected = ['ID', 'NOMBRE', 'AVATAR', 'NOTIF_PREFS', 'UPDATED'];
+  if (sheet.getLastRow() === 0) { sheet.appendRow(expected); return; }
+  const cur = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+  const missing = expected.filter(h => !cur.includes(h));
+  if (missing.length) sheet.getRange(1, cur.length + 1, 1, missing.length).setValues([missing]);
+}
+
+function _getConfigUser(d) {
+  try {
+    const id = String(d.id || '').trim();
+    if (!id) return err('Falta id.');
+    const sheet = _getConfigsSheet();
+    _ensureConfigHeaders(sheet);
+    const lr = sheet.getLastRow();
+    if (lr < 2) return ok('Sin configuración.', { config: null });
+    const rows = sheet.getRange(2, 1, lr - 1, 5).getValues();
+    for (var i = 0; i < rows.length; i++) {
+      if (String(rows[i][0]).trim() === id) {
+        return ok('OK', {
+          config: {
+            id:          rows[i][0],
+            nombre:      rows[i][1],
+            avatar:      rows[i][2] ? JSON.parse(rows[i][2]) : null,
+            notifPrefs:  rows[i][3] ? JSON.parse(rows[i][3]) : null,
+            updated:     rows[i][4]
+          }
+        });
+      }
+    }
+    return ok('Sin configuración.', { config: null });
+  } catch(e) { return err('Error: ' + e.message); }
+}
+
+function _setConfigUser(d) {
+  try {
+    const id     = String(d.id     || '').trim();
+    const nombre = String(d.nombre || '').trim();
+    if (!id) return err('Falta id.');
+
+    const sheet = _getConfigsSheet();
+    _ensureConfigHeaders(sheet);
+    const ts  = _ts();
+    const lr  = sheet.getLastRow();
+
+    // Buscar fila existente
+    if (lr >= 2) {
+      const ids = sheet.getRange(2, 1, lr - 1, 1).getValues();
+      for (var i = 0; i < ids.length; i++) {
+        if (String(ids[i][0]).trim() === id) {
+          // Actualizar solo los campos enviados
+          const row = sheet.getRange(i + 2, 1, 1, 5).getValues()[0];
+          const newAvatar     = d.avatar     !== undefined ? JSON.stringify(d.avatar)     : row[2];
+          const newNotifPrefs = d.notifPrefs !== undefined ? JSON.stringify(d.notifPrefs) : row[3];
+          sheet.getRange(i + 2, 1, 1, 5).setValues([[id, nombre || row[1], newAvatar, newNotifPrefs, ts]]);
+          return ok('Configuración actualizada.');
+        }
+      }
+    }
+
+    // No existe — insertar nueva fila
+    const avatarJson     = d.avatar     !== undefined ? JSON.stringify(d.avatar)     : '';
+    const notifPrefsJson = d.notifPrefs !== undefined ? JSON.stringify(d.notifPrefs) : '';
+    _insertTop(sheet, [id, nombre, avatarJson, notifPrefsJson, ts]);
+    return ok('Configuración creada.');
+  } catch(e) { return err('Error: ' + e.message); }
+}
+
+/* Mantener _updateAvatar como alias por compatibilidad */
+function _updateAvatar(d) {
+  return _setConfigUser({ id: d.id, nombre: d.nombre || '', avatar: d.avatar });
 }

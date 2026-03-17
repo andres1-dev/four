@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    sw.js — Service Worker SISPRO v2
    - Push real (Android/Chrome via VAPID)
    - Polling fallback para iOS (fetch periódico)
@@ -6,7 +6,7 @@
    - Anti-duplicados por ID de notificación
    ========================================================================== */
 
-const SW_VERSION   = 'sispro-v3';
+const SW_VERSION   = 'sispro-v4';
 const CACHE_NAME   = SW_VERSION;
 
 /* Archivos a cachear para funcionamiento offline básico */
@@ -18,8 +18,6 @@ const ASSETS_CACHE = [
   './js/config.js',
   './js/api.js',
   './js/auth.js',
-  './icons/icon-any.svg',
-  './icons/icon-maskable.svg',
 ];
 
 /* ── GAS endpoint para pull de última notificación (iOS tickle) ── */
@@ -292,8 +290,8 @@ async function _showIfNew(payload) {
 
   // App en background o cerrada → notificación nativa del SO
   const { title, body, url } = _formatNotif(payload);
-  const icon  = './icons/icon-any.svg';
-  const badge = './icons/icon-maskable.svg';
+  const icon  = './icons/TDM_variable_colors.svg';
+  const badge = './icons/TDM_variable_colors.svg';
 
   await self.registration.showNotification(title, {
     body,

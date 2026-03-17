@@ -88,7 +88,8 @@ function hideSections() {
  * Muestra el indicador de sincronización y oculta el error.
  */
 function showLoader() {
-    DOM.loader().style.display = 'block';
+    const el = DOM.loader();
+    if (el) el.style.display = 'block';
     DOM.errorMessage().classList.add('hidden');
 }
 
@@ -96,7 +97,8 @@ function showLoader() {
  * Oculta el indicador de sincronización.
  */
 function hideLoaderShowForm() {
-    DOM.loader().style.display = 'none';
+    const el = DOM.loader();
+    if (el) el.style.display = 'none';
 }
 
 /**

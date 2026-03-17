@@ -1,4 +1,4 @@
-// Detección robusta de página de Login
+﻿// Detección robusta de página de Login
 const IS_LOGIN_PAGE = window.location.pathname.toLowerCase().includes('login.html');
 
 // Función auxiliar para validar si existe una sesión real y válida
@@ -31,6 +31,67 @@ let currentUser = (() => {
 })();
 let allUsers = [];
 let allPlantas = [];
+
+/* ── Avatar helpers — todo en localStorage, sin GAS ── */
+const AVATAR_PREFS_KEY = 'sispro_avatar_prefs';
+
+function getAvatarPrefs() {
+    try { return JSON.parse(localStorage.getItem(AVATAR_PREFS_KEY) || '{}'); } catch(_) { return {}; }
+}
+
+function saveAvatarPrefs(prefs) {
+    localStorage.setItem(AVATAR_PREFS_KEY, JSON.stringify(prefs));
+}
+
+// Iconos creativos disponibles para el avatar
+const AVATAR_ICONS = [
+    { cls: 'fas fa-user-shield',    label: 'Escudo'      },
+    { cls: 'fas fa-user-astronaut', label: 'Astronauta'  },
+    { cls: 'fas fa-user-ninja',     label: 'Ninja'       },
+    { cls: 'fas fa-user-tie',       label: 'Corbata'     },
+    { cls: 'fas fa-ghost',          label: 'Fantasma'    },
+    { cls: 'fas fa-robot',          label: 'Robot'       },
+    { cls: 'fas fa-cat',            label: 'Gato'        },
+    { cls: 'fas fa-dragon',         label: 'Dragón'      },
+    { cls: 'fas fa-crown',          label: 'Corona'      },
+    { cls: 'fas fa-star',           label: 'Estrella'    },
+    { cls: 'fas fa-bolt',           label: 'Rayo'        },
+    { cls: 'fas fa-fire',           label: 'Fuego'       },
+    { cls: 'fas fa-leaf',           label: 'Hoja'        },
+    { cls: 'fas fa-gem',            label: 'Gema'        },
+    { cls: 'fas fa-rocket',         label: 'Cohete'      },
+    { cls: 'fas fa-skull',          label: 'Calavera'    },
+];
+
+/** Calcula si un color hex es oscuro (para decidir color del icono) */
+function _isColorDark(hex) {
+    const c = hex.replace('#','');
+    const r = parseInt(c.substr(0,2),16);
+    const g = parseInt(c.substr(2,2),16);
+    const b = parseInt(c.substr(4,2),16);
+    return (r*299 + g*587 + b*114) / 1000 < 128;
+}
+
+/** Returns inline style string for an avatar element based on saved prefs */
+function _avatarStyle(size = 'large') {
+    const prefs = getAvatarPrefs();
+    if (prefs.image) {
+        const dim = size === 'mini' ? '28px' : '64px';
+        return `background:url('${prefs.image}') center/cover no-repeat; width:${dim}; height:${dim};`;
+    }
+    if (prefs.color) return `background:${prefs.color};`;
+    return '';
+}
+
+/** Returns inner HTML for avatar — uses custom icon if set, hides if image */
+function _avatarInner(defaultIconClass) {
+    const prefs = getAvatarPrefs();
+    if (prefs.image) return '';
+    const iconCls = prefs.icon || defaultIconClass;
+    const color = prefs.color || null;
+    const iconColor = color ? (_isColorDark(color) ? 'white' : '#1e293b') : 'white';
+    return `<i class="${iconCls}" style="color:${iconColor};"></i>`;
+}
 
 /**
  * Redirige al portal de acceso profesional.
@@ -138,6 +199,9 @@ async function loadUsers() {
 
                 localStorage.setItem('sispro_user', JSON.stringify(currentUser));
                 
+                // Sincronizar config (avatar, prefs) desde servidor en background
+                // (desactivado — todo en localStorage)
+
                 // SI TODO BIEN, QUITAR EL ESCUDO Y APLICAR PERMISOS
                 document.body.classList.add('auth-shield-pass');
                 applyAccessControl();
@@ -392,10 +456,11 @@ function updateAuthUI() {
     // Renderizar Header HTML
     const isGuest = currentUser && currentUser.ROL === 'GUEST';
     const showBell = !!currentUser; // campana en TODAS las páginas para cualquier usuario autenticado
+    const avatarStyle = currentUser ? _avatarStyle('mini') : '';
     navContainer.innerHTML = `
         <div class="nav-brand-area">
-            <img src="icons/icon-any.svg" alt="Logo TMD" class="nav-logo">
-            <span class="brand-tag">TDM</span>
+            <img src="icons/app.svg" alt="Logo TMD" class="nav-logo">
+            <span class="brand-tag">Grupo TDM</span>
         </div>
         <div class="nav-user-area" style="display:flex;align-items:center;gap:6px;">
             ${showBell ? `
@@ -420,7 +485,7 @@ function updateAuthUI() {
             </div>
             ` : ''}
             <button onclick="toggleSidebar()" class="btn-profile-toggle ${profileType}" id="profileToggle">
-                <span class="avatar-mini"><i class="${iconClass}"></i></span>
+                <span class="avatar-mini" style="${avatarStyle}">${_avatarInner(iconClass)}</span>
                 <i class="fas fa-bars"></i>
             </button>
         </div>
@@ -466,17 +531,80 @@ function createSidebar() {
         else if (currentUser.ROL === 'USER-P') roleIcon = 'fas fa-user';
         else if (currentUser.ROL === 'GUEST') roleIcon = 'fas fa-user-secret';
 
+        const prefs = getAvatarPrefs();
+        const avatarLargeStyle = _avatarStyle('large');
+        const avatarLargeInner = _avatarInner(roleIcon);
+
+        // Icon picker HTML
+        const iconsHtml = AVATAR_ICONS.map(ic =>
+            `<button class="avatar-icon-btn${(prefs.icon === ic.cls && !prefs.image) ? ' active' : ''}"
+                onclick="setAvatarIcon('${ic.cls}')" title="${ic.label}" type="button">
+                <i class="${ic.cls}"></i>
+            </button>`
+        ).join('');
+
+        // Current color for picker
+        const currentColor = prefs.color || '#3f51b5';
+
+        // Notification toggle state
+        let notifPermission = (typeof Notification !== 'undefined') ? Notification.permission : 'default';
+        const hasActiveSub = localStorage.getItem('sispro_push_subscribed') === '1';
+        
+        // Fallback para localhost: si hay suscripción activa pero permission=default, asumir granted
+        if (hasActiveSub && notifPermission === 'default') {
+            notifPermission = 'granted';
+        }
+        
+        const notifEnabled = notifPermission === 'granted';
+        const notifDenied  = notifPermission === 'denied';
+        // Internal soft-disable (user turned off but browser still granted)
+        const notifSoftOff = localStorage.getItem('sispro_notif_soft_off') === '1';
+        const notifChecked = notifEnabled && !notifSoftOff;
+
+        // Location toggle — relevant for calidad roles
+        const hasCalidad = ['ADMIN','MODERATOR','USER-C'].includes(currentUser.ROL);
+        const gpsKey = `gps_calidad_${currentUser.ID || currentUser.ID_USUARIO || 'u'}`;
+        const gpsEnabled = localStorage.getItem(gpsKey) !== 'disabled';
+
         sidebar.innerHTML = `
             <div class="sidebar-header">
                 <div class="sidebar-user-card">
-                    <div class="user-avatar-large ${roleClass}"><i class="${roleIcon}"></i></div>
+                    <div class="avatar-edit-btn" onclick="toggleAvatarCustomizer()" title="Personalizar avatar">
+                        <div class="user-avatar-large ${roleClass}" id="sidebar-avatar-large" style="${avatarLargeStyle}">${avatarLargeInner}</div>
+                        <div class="avatar-overlay"><i class="fas fa-pen"></i></div>
+                    </div>
                     <div class="user-meta">
                         <span class="u-name">${currentUser.USUARIO || currentUser.PLANTA || 'Usuario'}</span>
                         <span class="u-role">${currentUser.ROL}</span>
+                        ${prefs.image ? `<button onclick="clearAvatarImage()" type="button" style="margin-top:4px;font-size:0.68rem;color:#94a3b8;background:none;border:none;cursor:pointer;padding:0;text-align:left;"><i class="fas fa-times me-1"></i>Quitar foto</button>` : ''}
+                    </div>
+                </div>
+
+                <!-- Avatar customizer — oculto por defecto -->
+                <div class="avatar-customizer" id="avatar-customizer-panel" style="display:none;">
+                    <div class="avatar-customizer-actions">
+                        <label class="avatar-upload-btn" title="Subir foto">
+                            <i class="fas fa-camera"></i> Subir foto
+                            <input type="file" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)">
+                        </label>
+                    </div>
+                    <div class="avatar-customizer-row">
+                        <span class="avatar-customizer-label">Color</span>
+                        <div class="avatar-color-picker-wrap">
+                            <input type="color" id="avatar-color-input" value="${currentColor}"
+                                oninput="setAvatarColor(this.value)"
+                                title="Elige un color">
+                            <span class="avatar-color-preview" style="background:${currentColor};" onclick="document.getElementById('avatar-color-input').click()"></span>
+                            <span class="avatar-color-hex" id="avatar-color-hex">${currentColor}</span>
+                        </div>
+                    </div>
+                    <div class="avatar-customizer-row" style="align-items:flex-start;">
+                        <span class="avatar-customizer-label" style="padding-top:6px;">Icono</span>
+                        <div class="avatar-icon-grid">${iconsHtml}</div>
                     </div>
                 </div>
             </div>
-            <div class="sidebar-body">
+            <div class="sidebar-body" style="overflow-y:auto;">
                 <div class="sidebar-label">MENÚ DE ACCESO</div>
                 <a href="index.html" class="sidebar-link ${(path.includes('index.html') || path.endsWith('/')) ? 'active' : ''}">
                     <i class="fas fa-home"></i> Reportes
@@ -496,7 +624,8 @@ function createSidebar() {
                         : `<a href="seguimiento.html" class="sidebar-link ${path.includes('seguimiento.html') ? 'active' : ''}">
                                <i class="fas fa-shipping-fast"></i> Seguimiento
                            </a>`;
-                })() : ''}                ${(currentUser.ROL === 'ADMIN' || currentUser.ROL === 'MODERATOR') ? `
+                })() : ''}
+                ${(currentUser.ROL === 'ADMIN' || currentUser.ROL === 'MODERATOR') ? `
                     <a href="calidad.html" class="sidebar-link ${path.includes('calidad.html') ? 'active' : ''}">
                         <i class="fas fa-microscope"></i> Calidad
                     </a>
@@ -511,6 +640,34 @@ function createSidebar() {
                         <i class="fas fa-users-cog"></i> Usuarios
                     </a>
                 ` : ''}
+
+                <div class="sidebar-settings-section">
+                    <div class="sidebar-settings-label">Configuración</div>
+
+                    <div class="settings-toggle-row">
+                        <div class="settings-toggle-info">
+                            <span class="settings-toggle-title"><i class="fas fa-bell" style="margin-right:6px;color:#94a3b8;font-size:0.8rem;"></i>Notificaciones</span>
+                            <span class="settings-toggle-sub">${notifDenied ? 'Bloqueadas en el navegador' : notifChecked ? 'Push activadas' : 'Toca para activar'}</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-notif" ${notifChecked ? 'checked' : ''} ${notifDenied ? 'disabled' : ''} onchange="togglePushNotifications(this.checked)">
+                            <span class="toggle-track ${notifChecked ? 'is-on' : ''} ${notifDenied ? 'is-disabled' : ''}"></span>
+                        </label>
+                    </div>
+
+                    ${hasCalidad ? `
+                    <div class="settings-toggle-row">
+                        <div class="settings-toggle-info">
+                            <span class="settings-toggle-title"><i class="fas fa-location-dot" style="margin-right:6px;color:#94a3b8;font-size:0.8rem;"></i>Ubicación (Calidad)</span>
+                            <span class="settings-toggle-sub">Requerida para reportes</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-gps" ${gpsEnabled ? 'checked' : ''} onchange="toggleGpsFromSidebar(this.checked)">
+                            <span class="toggle-track"></span>
+                        </label>
+                    </div>
+                    ` : ''}
+                </div>
             </div>
             <div class="sidebar-footer">
                 <button onclick="logout()" class="btn-logout-full mb-3">
@@ -557,14 +714,268 @@ function createSidebar() {
     }
 }
 
+/** Abre/cierra el panel de personalización del avatar */
+function toggleAvatarCustomizer() {
+    const panel = document.getElementById('avatar-customizer-panel');
+    const avatarBtn = document.querySelector('.avatar-edit-btn');
+    if (!panel) return;
+    const isOpen = panel.style.display !== 'none';
+    panel.style.display = isOpen ? 'none' : 'flex';
+    if (avatarBtn) avatarBtn.classList.toggle('customizer-open', !isOpen);
+}
+
+/** Cambia el color de fondo del avatar y lo persiste */
+function setAvatarColor(color) {
+    const prefs = getAvatarPrefs();
+    prefs.color = color;
+    delete prefs.image;
+    saveAvatarPrefs(prefs);
+    // Actualizar preview en vivo sin reconstruir todo el sidebar
+    const hex = document.getElementById('avatar-color-hex');
+    const preview = document.querySelector('.avatar-color-preview');
+    const avatarEl = document.getElementById('sidebar-avatar-large');
+    if (hex) hex.textContent = color;
+    if (preview) preview.style.background = color;
+    if (avatarEl) {
+        avatarEl.style.background = color;
+        const icon = avatarEl.querySelector('i');
+        if (icon) icon.style.color = _isColorDark(color) ? 'white' : '#1e293b';
+    }
+    const miniAvatar = document.querySelector('.avatar-mini');
+    if (miniAvatar && !prefs.image) miniAvatar.style.background = color;
+}
+
+/** Cambia el icono del avatar */
+function setAvatarIcon(iconCls) {
+    const prefs = getAvatarPrefs();
+    prefs.icon = iconCls;
+    delete prefs.image;
+    saveAvatarPrefs(prefs);
+    // Actualizar botones activos
+    document.querySelectorAll('.avatar-icon-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.querySelector('i')?.className === iconCls);
+    });
+    // Actualizar avatar en vivo
+    const avatarEl = document.getElementById('sidebar-avatar-large');
+    if (avatarEl) {
+        const color = prefs.color || null;
+        const iconColor = color ? (_isColorDark(color) ? 'white' : '#1e293b') : 'white';
+        avatarEl.innerHTML = `<i class="${iconCls}" style="color:${iconColor};"></i>`;
+    }
+    const miniAvatar = document.querySelector('.avatar-mini');
+    if (miniAvatar) {
+        const color = prefs.color || null;
+        const iconColor = color ? (_isColorDark(color) ? 'white' : '#1e293b') : 'white';
+        miniAvatar.innerHTML = `<i class="${iconCls}" style="color:${iconColor};"></i>`;
+    }
+}
+
+/** Sube una imagen como avatar — solo localStorage (base64) */
+function handleAvatarUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const prefs = getAvatarPrefs();
+        prefs.image = e.target.result;
+        saveAvatarPrefs(prefs);
+        updateAuthUI();
+    };
+    reader.readAsDataURL(file);
+}
+
+/** Quita la imagen del avatar */
+function clearAvatarImage() {
+    const prefs = getAvatarPrefs();
+    delete prefs.image;
+    saveAvatarPrefs(prefs);
+    updateAuthUI();
+}
+
+/** Sincroniza visualmente el toggle de notificaciones con el estado real */
+function _syncNotifToggleUI() {
+    const softOff    = localStorage.getItem('sispro_notif_soft_off') === '1';
+    
+    // Leer el permiso de múltiples fuentes (Notification.permission puede ser buggy en localhost)
+    let permission = 'default';
+    if (typeof Notification !== 'undefined') {
+        permission = Notification.permission;
+    }
+    
+    // Fallback: si tenemos una suscripción activa guardada, asumir que el permiso está granted
+    const hasActiveSub = localStorage.getItem('sispro_push_subscribed') === '1';
+    if (hasActiveSub && permission === 'default') {
+        console.log('[SYNC] Detectada suscripción activa pero permission=default (bug de localhost), asumiendo granted');
+        permission = 'granted';
+    }
+    
+    const isGranted  = permission === 'granted';
+    const isDenied   = permission === 'denied';
+    const isActive   = isGranted && !softOff;
+
+    console.log('[SYNC] _syncNotifToggleUI ejecutándose:', { permission, softOff, hasActiveSub, isGranted, isDenied, isActive });
+
+    const input = document.getElementById('toggle-notif');
+    const track = input ? input.nextElementSibling : null;
+    const subEl = input?.closest('.settings-toggle-row')?.querySelector('.settings-toggle-sub');
+
+    if (input) {
+        console.log('[SYNC] Seteando input.checked =', isActive, ', input.disabled =', isDenied);
+        input.checked  = isActive;
+        input.disabled = isDenied;
+    } else {
+        console.warn('[SYNC] No se encontró el input toggle-notif');
+    }
+    
+    if (track) {
+        track.classList.toggle('is-on',       isActive);
+        track.classList.toggle('is-disabled', isDenied);
+    }
+    
+    if (subEl) {
+        const newText = isDenied ? 'Bloqueadas en el navegador'
+            : isActive ? 'Push activadas'
+            : 'Toca para activar';
+        console.log('[SYNC] Actualizando texto a:', newText);
+        subEl.textContent = newText;
+    }
+}
+
+/** Toggle de notificaciones push desde el sidebar */
+async function togglePushNotifications(enable) {
+    console.log('[TOGGLE] togglePushNotifications llamado con enable =', enable);
+    const permission = (typeof Notification !== 'undefined') ? Notification.permission : 'default';
+    console.log('[TOGGLE] Permiso actual:', permission);
+
+    if (enable) {
+        // ACTIVAR
+        if (permission === 'denied') {
+            Swal.fire({
+                icon: 'info',
+                title: 'Notificaciones bloqueadas',
+                text: 'El navegador bloqueó los permisos. Ve a Configuración del sitio y permite las notificaciones manualmente.',
+                confirmButtonColor: '#3f51b5'
+            });
+            return;
+        }
+
+        // Limpiar soft-off ANTES de cualquier operación
+        console.log('[TOGGLE] Limpiando soft-off');
+        localStorage.removeItem('sispro_notif_soft_off');
+
+        if (permission === 'granted') {
+            // Ya tiene permiso — solo re-suscribir
+            console.log('[TOGGLE] Ya tiene permiso, re-suscribiendo');
+            if (typeof _subscribeToPush === 'function') {
+                await _subscribeToPush().catch(e => console.warn('[TOGGLE] Error suscribiendo:', e));
+            }
+        } else {
+            // permission === 'default' — pedir permiso
+            console.log('[TOGGLE] Pidiendo permiso al navegador');
+            let finalPerm = 'default';
+            if (typeof _requestPushPermission === 'function') {
+                finalPerm = await _requestPushPermission();
+            }
+            
+            // Usar el resultado retornado por _requestPushPermission, no Notification.permission
+            console.log('[TOGGLE] Resultado retornado por _requestPushPermission:', finalPerm);
+            
+            if (finalPerm !== 'granted') {
+                console.log('[TOGGLE] Usuario rechazó, seteando soft-off');
+                localStorage.setItem('sispro_notif_soft_off', '1');
+            } else {
+                console.log('[TOGGLE] Usuario aceptó, soft-off sigue limpio');
+            }
+        }
+    } else {
+        // DESACTIVAR
+        console.log('[TOGGLE] Desactivando notificaciones');
+        localStorage.setItem('sispro_notif_soft_off', '1');
+        
+        if ('serviceWorker' in navigator) {
+            const reg = await navigator.serviceWorker.ready.catch(() => null);
+            if (reg) {
+                const sub = await reg.pushManager.getSubscription().catch(() => null);
+                if (sub) await sub.unsubscribe().catch(() => {});
+            }
+        }
+        localStorage.removeItem('sispro_push_subscribed');
+    }
+
+    // Sincronizar UI después de todas las operaciones
+    console.log('[TOGGLE] Sincronizando UI...');
+    const softOffFinal = localStorage.getItem('sispro_notif_soft_off');
+    console.log('[TOGGLE] Estado final antes de sync: softOff =', softOffFinal);
+    
+    // Forzar sync inmediato con el estado que sabemos que es correcto
+    // (no confiar en Notification.permission que puede tardar en actualizarse)
+    if (enable && !softOffFinal) {
+        // El usuario activó y no hay soft-off → forzar toggle ON
+        console.log('[TOGGLE] Forzando toggle ON inmediatamente (enable=true, softOff=null)');
+        const input = document.getElementById('toggle-notif');
+        const track = input ? input.nextElementSibling : null;
+        const subEl = input?.closest('.settings-toggle-row')?.querySelector('.settings-toggle-sub');
+        
+        if (input) {
+            input.checked = true;
+            input.disabled = false;
+        }
+        if (track) {
+            track.classList.add('is-on');
+            track.classList.remove('is-disabled');
+        }
+        if (subEl) {
+            subEl.textContent = 'Push activadas';
+        }
+    }
+    
+    // Dar tiempo al navegador para actualizar Notification.permission y re-sincronizar
+    setTimeout(() => {
+        const permFinal = (typeof Notification !== 'undefined') ? Notification.permission : 'default';
+        console.log('[TOGGLE] Ejecutando _syncNotifToggleUI (100ms), permission =', permFinal);
+        _syncNotifToggleUI();
+    }, 100);
+    
+    setTimeout(() => {
+        const permFinal = (typeof Notification !== 'undefined') ? Notification.permission : 'default';
+        console.log('[TOGGLE] Ejecutando _syncNotifToggleUI (600ms), permission =', permFinal);
+        _syncNotifToggleUI();
+    }, 600);
+}
+
+/** Toggle de GPS desde el sidebar (no afecta la validación del formulario de calidad) */
+function toggleGpsFromSidebar(enable) {
+    const gpsKey = `gps_calidad_${currentUser?.ID || currentUser?.ID_USUARIO || 'u'}`;
+    localStorage.setItem(gpsKey, enable ? 'enabled' : 'disabled');
+    if (typeof applyGpsToggleUI === 'function') {
+        applyGpsToggleUI(enable);
+        if (!enable && typeof showGpsBlockedOverlay === 'function') showGpsBlockedOverlay();
+        if (enable && typeof requestCalidadLocation === 'function') requestCalidadLocation();
+    }
+}
+
+/** Construye el objeto notifPrefs actual (solo para referencia interna) */
+function _buildNotifPrefs() {
+    const softOff = localStorage.getItem('sispro_notif_soft_off') === '1';
+    const pushOn  = (typeof Notification !== 'undefined') && Notification.permission === 'granted' && !softOff;
+    const gpsKey  = `gps_calidad_${currentUser?.ID || currentUser?.ID_USUARIO || 'u'}`;
+    const gpsOn   = localStorage.getItem(gpsKey) !== 'disabled';
+    return { push: pushOn, gps: gpsOn };
+}
+
 /**
- * Abre/Cierra el sidebar.
+ * Abre/Cierra el sidebar — regenera el contenido al abrir para reflejar estado actual.
  */
 function toggleSidebar() {
     const sidebar = document.getElementById('user-sidebar');
     const overlay = document.getElementById('sidebar-overlay');
     if (!sidebar) return;
 
+    const isOpen = sidebar.classList.contains('open');
+    if (!isOpen) {
+        // Regenerar contenido antes de abrir para que refleje estado real
+        createSidebar();
+    }
     sidebar.classList.toggle('open');
     overlay.classList.toggle('active');
 }

@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    push.js — PWA Push Notifications SISPRO v2
    - Registra el Service Worker
    - Solicita permiso al primer clic en la campana
@@ -102,30 +102,59 @@ function _sendPollingConfigToSW() {
    Solicitar permiso + suscribir (llamado al primer clic en campana)
    ══════════════════════════════════════════════════════════════════════════ */
 async function _requestPushPermission() {
-  if (!('Notification' in window) || !('PushManager' in window)) return;
-  if (Notification.permission === 'denied') return;
-
-  if (Notification.permission === 'granted') {
-    await _subscribeToPush();
-    return;
+  console.log('[PUSH] _requestPushPermission iniciando');
+  if (!('Notification' in window) || !('PushManager' in window)) {
+    console.warn('[PUSH] Notification o PushManager no disponibles');
+    return 'unavailable';
+  }
+  
+  const currentPerm = Notification.permission;
+  console.log('[PUSH] Permiso actual:', currentPerm);
+  
+  if (currentPerm === 'denied') {
+    console.log('[PUSH] Permiso denegado, abortando');
+    return 'denied';
   }
 
-  // permission === 'default' → pedir una sola vez
-  if (_pushPermissionRequested) return;
+  if (currentPerm === 'granted') {
+    console.log('[PUSH] Ya tiene permiso, suscribiendo directamente');
+    await _subscribeToPush();
+    if (typeof _syncNotifToggleUI === 'function') _syncNotifToggleUI();
+    return 'granted';
+  }
+
+  // permission === 'default' → pedir permiso (reseteable si fue denegado/ignorado)
+  if (_pushPermissionRequested) {
+    console.log('[PUSH] Ya se pidió permiso en esta sesión, abortando');
+    return currentPerm;
+  }
   _pushPermissionRequested = true;
+  console.log('[PUSH] Pidiendo permiso al navegador...');
 
   try {
     const result = await Notification.requestPermission();
+    console.log('[PUSH] Resultado del diálogo:', result);
+    
     if (result === 'granted') {
-      console.log('[PUSH] Permiso concedido');
-      // Notificación local inmediata de confirmación (sin pasar por GAS)
+      console.log('[PUSH] Permiso concedido, mostrando notif de prueba y suscribiendo');
       _showLocalTestNotif();
       await _subscribeToPush();
+      
+      // Verificar que Notification.permission se actualizó
+      console.log('[PUSH] Verificando Notification.permission después de suscribir:', Notification.permission);
+      if (Notification.permission !== 'granted') {
+        console.warn('[PUSH] ⚠️ BUG DEL NAVEGADOR: requestPermission retornó granted pero Notification.permission sigue siendo', Notification.permission);
+      }
     } else {
-      console.log('[PUSH] Permiso denegado o ignorado');
+      console.log('[PUSH] Permiso denegado o ignorado por el usuario');
+      _pushPermissionRequested = false;
     }
+    console.log('[PUSH] _requestPushPermission terminado, retornando:', result);
+    return result;
   } catch (e) {
     console.warn('[PUSH] Error solicitando permiso:', e.message);
+    _pushPermissionRequested = false;
+    return 'default';
   }
 }
 
@@ -136,8 +165,8 @@ function _showLocalTestNotif() {
   if (!_swRegistration || Notification.permission !== 'granted') return;
   _swRegistration.showNotification('¡SISPRO activado!', {
     body:    'Las notificaciones push están funcionando correctamente.',
-    icon:    './icons/icon-any.svg',
-    badge:   './icons/icon-maskable.svg',
+    icon:    './icons/TDM_variable_colors.svg',
+    badge:   './icons/TDM_variable_colors.svg',
     vibrate: [100, 50, 100],
     tag:     'sispro-test'
   });
