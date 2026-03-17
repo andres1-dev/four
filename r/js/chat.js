@@ -726,6 +726,9 @@ function _addOperatorChatNotif(idNovedad, msg, lote, planta) {
         bellBtn.classList.add('has-unread');
         bellBtn.addEventListener('animationend', () => bellBtn.classList.remove('has-unread'), { once: true });
     }
+    
+    // Reproducir sonido de chat
+    if (typeof playChatSound === 'function') playChatSound();
 }
 
 function _persistOperatorNotifs() {

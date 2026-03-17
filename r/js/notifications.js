@@ -271,6 +271,8 @@ function _processUpdates(novedades) {
 /* ── Almacén ── */
 
 function _addNotifications(items) {
+    let hasNewNotifs = false;
+    
     items.forEach(item => {
         const id = `${item.nov.ID_NOVEDAD}_${item.estadoActual}`;
         // Evitar duplicados exactos (misma novedad + mismo estado)
@@ -283,6 +285,7 @@ function _addNotifications(items) {
             ts: new Date(),
             read: false
         });
+        hasNewNotifs = true;
     });
 
     if (_notifications.length > 30) _notifications = _notifications.slice(0, 30);
@@ -295,6 +298,11 @@ function _addNotifications(items) {
     if (bellBtn) {
         bellBtn.classList.add('has-unread');
         bellBtn.addEventListener('animationend', () => bellBtn.classList.remove('has-unread'), { once: true });
+    }
+    
+    // Reproducir sonido de cambio de estado si hay notificaciones nuevas
+    if (hasNewNotifs && typeof playStateChangeSound === 'function') {
+        playStateChangeSound();
     }
 }
 

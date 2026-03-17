@@ -21,47 +21,18 @@ function initPlantasMasks() {
     }
 
     if (emailInput) {
-        // Normalizar a minúsculas en tiempo real y mostrar sugerencias de dominio
         emailInput.addEventListener('input', (e) => {
-            const raw = e.target.value;
-            const lower = raw.toLowerCase();
-            // Forzar minúsculas sin mover el cursor
-            if (raw !== lower) {
-                const pos = e.target.selectionStart;
-                e.target.value = lower;
-                e.target.setSelectionRange(pos, pos);
-            }
-
+            const value = e.target.value;
             const datalist = document.getElementById('emailOptions');
-            if (!datalist) return;
-            datalist.innerHTML = '';
-
-            const atIdx = lower.indexOf('@');
-            if (atIdx > 0) {
-                const username = lower.slice(0, atIdx);
-                const afterAt  = lower.slice(atIdx + 1);
-                const domains  = ['gmail.com','outlook.com','hotmail.com','yahoo.com','icloud.com','live.com'];
-                // Solo mostrar dominios que coincidan con lo que ya escribió después del @
-                domains
-                    .filter(d => d.startsWith(afterAt))
-                    .forEach(d => {
-                        const opt = document.createElement('option');
-                        opt.value = username + '@' + d;
-                        datalist.appendChild(opt);
-                    });
-            }
-        });
-
-        // Validar formato al salir del campo
-        emailInput.addEventListener('blur', (e) => {
-            const val = e.target.value.trim().toLowerCase();
-            e.target.value = val;
-            if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
-                e.target.style.borderColor = '#ef4444';
-                e.target.title = 'Correo inválido — debe tener formato usuario@dominio.com';
-            } else {
-                e.target.style.borderColor = '';
-                e.target.title = '';
+            if (datalist && value.includes('@')) {
+                const [username] = value.split('@');
+                const commonDomains = ['gmail.com','outlook.com','hotmail.com','yahoo.com','icloud.com','live.com'];
+                datalist.innerHTML = '';
+                commonDomains.forEach(d => {
+                    const option = document.createElement('option');
+                    option.value = username + '@' + d;
+                    datalist.appendChild(option);
+                });
             }
         });
     }
@@ -83,24 +54,7 @@ async function handleActualizarDatosSubmit(e) {
     const rawCedula    = inputCed.value.replace(/\D/g, '');
     const nombrePlanta = document.getElementById('nombrePlanta').value;
     const direccion    = document.getElementById('direccionPlanta').value;
-    const emailPlanta  = document.getElementById('emailPlanta').value.trim().toLowerCase();
-
-    // Validar correo antes de continuar
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailPlanta)) {
-        const emailInput = document.getElementById('emailPlanta');
-        emailInput.style.borderColor = '#ef4444';
-        emailInput.focus();
-        Swal.fire({
-            icon: 'warning',
-            title: 'Correo inválido',
-            text: 'Ingresa un correo válido con formato usuario@dominio.com',
-            confirmButtonColor: '#3F51B5',
-        });
-        return;
-    }
-
-    // Normalizar a minúsculas en el campo
-    document.getElementById('emailPlanta').value = emailPlanta;
+    const emailPlanta  = document.getElementById('emailPlanta').value;
 
     btn.disabled  = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';

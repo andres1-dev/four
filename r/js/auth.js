@@ -642,31 +642,46 @@ function createSidebar() {
                 ` : ''}
 
                 <div class="sidebar-settings-section">
-                    <div class="sidebar-settings-label">Configuración</div>
-
-                    <div class="settings-toggle-row">
-                        <div class="settings-toggle-info">
-                            <span class="settings-toggle-title"><i class="fas fa-bell" style="margin-right:6px;color:#94a3b8;font-size:0.8rem;"></i>Notificaciones</span>
-                            <span class="settings-toggle-sub">${notifDenied ? 'Bloqueadas en el navegador' : notifChecked ? 'Push activadas' : 'Toca para activar'}</span>
-                        </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-notif" ${notifChecked ? 'checked' : ''} ${notifDenied ? 'disabled' : ''} onchange="togglePushNotifications(this.checked)">
-                            <span class="toggle-track ${notifChecked ? 'is-on' : ''} ${notifDenied ? 'is-disabled' : ''}"></span>
-                        </label>
+                    <div class="sidebar-settings-header" onclick="toggleSettingsPanel()">
+                        <span class="sidebar-label" style="margin-bottom:0;">CONFIGURACIÓN</span>
                     </div>
 
-                    ${hasCalidad ? `
-                    <div class="settings-toggle-row">
-                        <div class="settings-toggle-info">
-                            <span class="settings-toggle-title"><i class="fas fa-location-dot" style="margin-right:6px;color:#94a3b8;font-size:0.8rem;"></i>Ubicación (Calidad)</span>
-                            <span class="settings-toggle-sub">Requerida para reportes</span>
+                    <div class="sidebar-settings-content" id="settings-content">
+                        <div class="settings-toggle-row">
+                            <div class="settings-toggle-info">
+                                <span class="settings-toggle-title"><i class="fas fa-bell"></i> Notificaciones</span>
+                                <span class="settings-toggle-sub">${notifDenied ? 'Bloqueadas en el navegador' : notifChecked ? 'Push activadas' : 'Toca para activar'}</span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggle-notif" ${notifChecked ? 'checked' : ''} ${notifDenied ? 'disabled' : ''} onchange="togglePushNotifications(this.checked)">
+                                <span class="toggle-track ${notifChecked ? 'is-on' : ''} ${notifDenied ? 'is-disabled' : ''}"></span>
+                            </label>
                         </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-gps" ${gpsEnabled ? 'checked' : ''} onchange="toggleGpsFromSidebar(this.checked)">
-                            <span class="toggle-track"></span>
-                        </label>
+
+                        <div class="settings-toggle-row">
+                            <div class="settings-toggle-info">
+                                <span class="settings-toggle-title"><i class="fas fa-volume-high"></i> Sonidos</span>
+                                <span class="settings-toggle-sub">Audio para notificaciones</span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggle-sounds" ${(typeof getSoundPrefs === 'function' && getSoundPrefs().enabled) ? 'checked' : ''} onchange="toggleSounds(this.checked)">
+                                <span class="toggle-track ${(typeof getSoundPrefs === 'function' && getSoundPrefs().enabled) ? 'is-on' : ''}"></span>
+                            </label>
+                        </div>
+
+                        ${hasCalidad ? `
+                        <div class="settings-toggle-row">
+                            <div class="settings-toggle-info">
+                                <span class="settings-toggle-title"><i class="fas fa-location-dot"></i> Ubicación</span>
+                                <span class="settings-toggle-sub">Requerida para reportes</span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggle-gps" ${gpsEnabled ? 'checked' : ''} onchange="toggleGpsFromSidebar(this.checked)">
+                                <span class="toggle-track ${gpsEnabled ? 'is-on' : ''}"></span>
+                            </label>
+                        </div>
+                        ` : ''}
                     </div>
-                    ` : ''}
                 </div>
             </div>
             <div class="sidebar-footer">
@@ -792,63 +807,49 @@ function clearAvatarImage() {
     updateAuthUI();
 }
 
-/** Sincroniza visualmente el toggle de notificaciones con el estado real */
-function _syncNotifToggleUI() {
-    const softOff    = localStorage.getItem('sispro_notif_soft_off') === '1';
-    
-    // Leer el permiso de múltiples fuentes (Notification.permission puede ser buggy en localhost)
-    let permission = 'default';
-    if (typeof Notification !== 'undefined') {
-        permission = Notification.permission;
-    }
-    
-    // Fallback: si tenemos una suscripción activa guardada, asumir que el permiso está granted
-    const hasActiveSub = localStorage.getItem('sispro_push_subscribed') === '1';
-    if (hasActiveSub && permission === 'default') {
-        console.log('[SYNC] Detectada suscripción activa pero permission=default (bug de localhost), asumiendo granted');
-        permission = 'granted';
-    }
-    
-    const isGranted  = permission === 'granted';
-    const isDenied   = permission === 'denied';
-    const isActive   = isGranted && !softOff;
+/** Sincroniza visualmente el toggle de notificaciones con el estado real.
+ *  @param {string|null} knownPerm - permiso conocido (evita depender de Notification.permission buggy en localhost)
+ */
+function _syncNotifToggleUI(knownPerm = null) {
+    const softOff = localStorage.getItem('sispro_notif_soft_off') === '1';
 
-    console.log('[SYNC] _syncNotifToggleUI ejecutándose:', { permission, softOff, hasActiveSub, isGranted, isDenied, isActive });
+    let permission = knownPerm;
+    if (!permission) {
+        permission = (typeof Notification !== 'undefined') ? Notification.permission : 'default';
+        // Fallback: suscripción activa guardada → asumir granted (bug de localhost)
+        if (permission === 'default' && localStorage.getItem('sispro_push_subscribed') === '1') {
+            permission = 'granted';
+        }
+    }
+
+    const isGranted = permission === 'granted';
+    const isDenied  = permission === 'denied';
+    const isActive  = isGranted && !softOff;
 
     const input = document.getElementById('toggle-notif');
     const track = input ? input.nextElementSibling : null;
     const subEl = input?.closest('.settings-toggle-row')?.querySelector('.settings-toggle-sub');
 
     if (input) {
-        console.log('[SYNC] Seteando input.checked =', isActive, ', input.disabled =', isDenied);
         input.checked  = isActive;
         input.disabled = isDenied;
-    } else {
-        console.warn('[SYNC] No se encontró el input toggle-notif');
     }
-    
     if (track) {
         track.classList.toggle('is-on',       isActive);
         track.classList.toggle('is-disabled', isDenied);
     }
-    
     if (subEl) {
-        const newText = isDenied ? 'Bloqueadas en el navegador'
+        subEl.textContent = isDenied ? 'Bloqueadas en el navegador'
             : isActive ? 'Push activadas'
             : 'Toca para activar';
-        console.log('[SYNC] Actualizando texto a:', newText);
-        subEl.textContent = newText;
     }
 }
 
 /** Toggle de notificaciones push desde el sidebar */
 async function togglePushNotifications(enable) {
-    console.log('[TOGGLE] togglePushNotifications llamado con enable =', enable);
     const permission = (typeof Notification !== 'undefined') ? Notification.permission : 'default';
-    console.log('[TOGGLE] Permiso actual:', permission);
 
     if (enable) {
-        // ACTIVAR
         if (permission === 'denied') {
             Swal.fire({
                 icon: 'info',
@@ -859,39 +860,29 @@ async function togglePushNotifications(enable) {
             return;
         }
 
-        // Limpiar soft-off ANTES de cualquier operación
-        console.log('[TOGGLE] Limpiando soft-off');
         localStorage.removeItem('sispro_notif_soft_off');
 
+        let finalPerm = permission;
         if (permission === 'granted') {
-            // Ya tiene permiso — solo re-suscribir
-            console.log('[TOGGLE] Ya tiene permiso, re-suscribiendo');
             if (typeof _subscribeToPush === 'function') {
-                await _subscribeToPush().catch(e => console.warn('[TOGGLE] Error suscribiendo:', e));
+                await _subscribeToPush().catch(e => console.warn('[PUSH] Error suscribiendo:', e));
             }
         } else {
-            // permission === 'default' — pedir permiso
-            console.log('[TOGGLE] Pidiendo permiso al navegador');
-            let finalPerm = 'default';
             if (typeof _requestPushPermission === 'function') {
                 finalPerm = await _requestPushPermission();
             }
-            
-            // Usar el resultado retornado por _requestPushPermission, no Notification.permission
-            console.log('[TOGGLE] Resultado retornado por _requestPushPermission:', finalPerm);
-            
             if (finalPerm !== 'granted') {
-                console.log('[TOGGLE] Usuario rechazó, seteando soft-off');
                 localStorage.setItem('sispro_notif_soft_off', '1');
-            } else {
-                console.log('[TOGGLE] Usuario aceptó, soft-off sigue limpio');
             }
         }
+
+        // Sincronizar con el permiso real que obtuvimos (no Notification.permission que puede ser buggy)
+        _syncNotifToggleUI(finalPerm === 'granted' ? 'granted' : null);
+        // Re-sync tardío por si el navegador actualiza Notification.permission con delay
+        setTimeout(() => _syncNotifToggleUI(), 800);
+
     } else {
-        // DESACTIVAR
-        console.log('[TOGGLE] Desactivando notificaciones');
         localStorage.setItem('sispro_notif_soft_off', '1');
-        
         if ('serviceWorker' in navigator) {
             const reg = await navigator.serviceWorker.ready.catch(() => null);
             if (reg) {
@@ -900,47 +891,8 @@ async function togglePushNotifications(enable) {
             }
         }
         localStorage.removeItem('sispro_push_subscribed');
-    }
-
-    // Sincronizar UI después de todas las operaciones
-    console.log('[TOGGLE] Sincronizando UI...');
-    const softOffFinal = localStorage.getItem('sispro_notif_soft_off');
-    console.log('[TOGGLE] Estado final antes de sync: softOff =', softOffFinal);
-    
-    // Forzar sync inmediato con el estado que sabemos que es correcto
-    // (no confiar en Notification.permission que puede tardar en actualizarse)
-    if (enable && !softOffFinal) {
-        // El usuario activó y no hay soft-off → forzar toggle ON
-        console.log('[TOGGLE] Forzando toggle ON inmediatamente (enable=true, softOff=null)');
-        const input = document.getElementById('toggle-notif');
-        const track = input ? input.nextElementSibling : null;
-        const subEl = input?.closest('.settings-toggle-row')?.querySelector('.settings-toggle-sub');
-        
-        if (input) {
-            input.checked = true;
-            input.disabled = false;
-        }
-        if (track) {
-            track.classList.add('is-on');
-            track.classList.remove('is-disabled');
-        }
-        if (subEl) {
-            subEl.textContent = 'Push activadas';
-        }
-    }
-    
-    // Dar tiempo al navegador para actualizar Notification.permission y re-sincronizar
-    setTimeout(() => {
-        const permFinal = (typeof Notification !== 'undefined') ? Notification.permission : 'default';
-        console.log('[TOGGLE] Ejecutando _syncNotifToggleUI (100ms), permission =', permFinal);
         _syncNotifToggleUI();
-    }, 100);
-    
-    setTimeout(() => {
-        const permFinal = (typeof Notification !== 'undefined') ? Notification.permission : 'default';
-        console.log('[TOGGLE] Ejecutando _syncNotifToggleUI (600ms), permission =', permFinal);
-        _syncNotifToggleUI();
-    }, 600);
+    }
 }
 
 /** Toggle de GPS desde el sidebar (no afecta la validación del formulario de calidad) */
@@ -978,4 +930,13 @@ function toggleSidebar() {
     }
     sidebar.classList.toggle('open');
     overlay.classList.toggle('active');
+}
+
+/**
+ * Toggle del panel de configuraciones colapsable
+ */
+function toggleSettingsPanel() {
+    const content = document.getElementById('settings-content');
+    if (!content) return;
+    content.classList.toggle('open');
 }

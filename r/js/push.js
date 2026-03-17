@@ -102,54 +102,28 @@ function _sendPollingConfigToSW() {
    Solicitar permiso + suscribir (llamado al primer clic en campana)
    ══════════════════════════════════════════════════════════════════════════ */
 async function _requestPushPermission() {
-  console.log('[PUSH] _requestPushPermission iniciando');
-  if (!('Notification' in window) || !('PushManager' in window)) {
-    console.warn('[PUSH] Notification o PushManager no disponibles');
-    return 'unavailable';
-  }
-  
+  if (!('Notification' in window) || !('PushManager' in window)) return 'unavailable';
+
   const currentPerm = Notification.permission;
-  console.log('[PUSH] Permiso actual:', currentPerm);
-  
-  if (currentPerm === 'denied') {
-    console.log('[PUSH] Permiso denegado, abortando');
-    return 'denied';
-  }
+  if (currentPerm === 'denied') return 'denied';
 
   if (currentPerm === 'granted') {
-    console.log('[PUSH] Ya tiene permiso, suscribiendo directamente');
     await _subscribeToPush();
-    if (typeof _syncNotifToggleUI === 'function') _syncNotifToggleUI();
+    if (typeof _syncNotifToggleUI === 'function') _syncNotifToggleUI('granted');
     return 'granted';
   }
 
-  // permission === 'default' → pedir permiso (reseteable si fue denegado/ignorado)
-  if (_pushPermissionRequested) {
-    console.log('[PUSH] Ya se pidió permiso en esta sesión, abortando');
-    return currentPerm;
-  }
+  if (_pushPermissionRequested) return currentPerm;
   _pushPermissionRequested = true;
-  console.log('[PUSH] Pidiendo permiso al navegador...');
 
   try {
     const result = await Notification.requestPermission();
-    console.log('[PUSH] Resultado del diálogo:', result);
-    
     if (result === 'granted') {
-      console.log('[PUSH] Permiso concedido, mostrando notif de prueba y suscribiendo');
       _showLocalTestNotif();
       await _subscribeToPush();
-      
-      // Verificar que Notification.permission se actualizó
-      console.log('[PUSH] Verificando Notification.permission después de suscribir:', Notification.permission);
-      if (Notification.permission !== 'granted') {
-        console.warn('[PUSH] ⚠️ BUG DEL NAVEGADOR: requestPermission retornó granted pero Notification.permission sigue siendo', Notification.permission);
-      }
     } else {
-      console.log('[PUSH] Permiso denegado o ignorado por el usuario');
       _pushPermissionRequested = false;
     }
-    console.log('[PUSH] _requestPushPermission terminado, retornando:', result);
     return result;
   } catch (e) {
     console.warn('[PUSH] Error solicitando permiso:', e.message);
