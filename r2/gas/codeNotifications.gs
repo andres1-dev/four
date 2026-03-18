@@ -63,29 +63,14 @@ function crearRespuestaError(err) {
 }
 
 // ============================================
-// Cola de notificaciones pendientes (PULL para iOS)
-// Guarda hasta 10 notificaciones sin sobreescribir.
-// El SW las consume y vacía la cola al recibirlas.
+// Obtener última notificación (PULL para iOS)
 // ============================================
 function getLatestNotification() {
   try {
     var props = PropertiesService.getScriptProperties();
-
-    // Cola nueva (array)
-    var queueJson = props.getProperty('NOTIF_QUEUE');
-    if (queueJson) {
-      var queue = [];
-      try { queue = JSON.parse(queueJson); } catch(_) {}
-      if (queue.length > 0) {
-        props.deleteProperty('NOTIF_QUEUE');
-        return crearRespuestaJSON({ success: true, notifications: queue, notification: queue[0] });
-      }
-    }
-
-    // Fallback: propiedad legacy LAST_NOTIFICATION
     var json = props.getProperty('LAST_NOTIFICATION');
     if (!json) return crearRespuestaJSON({ success: false, message: 'No hay notificaciones' });
-    return crearRespuestaJSON({ success: true, notifications: [JSON.parse(json)], notification: JSON.parse(json) });
+    return crearRespuestaJSON({ success: true, notification: JSON.parse(json) });
   } catch(err) { return crearRespuestaError(err); }
 }
 
@@ -132,60 +117,24 @@ function guardarSuscripcion(params, e) {
     if (!sub || !sub.endpoint)
       return crearRespuestaJSON({ success: false, message: 'Endpoint requerido' });
 
-    var userId = String(params.userId || sub.userId || '').trim();
-    console.log('[SUB] endpoint:', sub.endpoint.substring(0, 50), '| userId:', userId);
-
     var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheet = ss.getSheetByName('suscripciones');
-
     if (!sheet) {
       sheet = ss.insertSheet('suscripciones');
-      sheet.appendRow(['endpoint','p256dh','auth','subscription_json','userId','created_at']);
-      console.log('[SUB] Hoja creada con esquema nuevo');
-    } else {
-      // Migración: si no tiene columna userId, agregarla al final
-      var ncols = sheet.getLastColumn();
-      var hdrs  = sheet.getRange(1, 1, 1, ncols).getValues()[0].map(String);
-      if (hdrs.indexOf('userId') === -1) {
-        sheet.getRange(1, ncols + 1).setValue('userId');
-        console.log('[SUB] Columna userId agregada en col', ncols + 1);
-        // Actualizar hdrs y ncols
-        ncols = ncols + 1;
-        hdrs.push('userId');
-      }
+      sheet.appendRow(['endpoint','p256dh','auth','subscription_json','created_at']);
     }
-
-    var p256dh   = (sub.keys && sub.keys.p256dh) ? sub.keys.p256dh : '';
-    var auth     = (sub.keys && sub.keys.auth)   ? sub.keys.auth   : '';
-    var hdrs2    = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
-    var colUserId = hdrs2.indexOf('userId') + 1; // 1-based, 0 si no existe
-
-    var rows = sheet.getDataRange().getValues();
+    var p256dh = (sub.keys && sub.keys.p256dh) ? sub.keys.p256dh : '';
+    var auth   = (sub.keys && sub.keys.auth)   ? sub.keys.auth   : '';
+    var rows   = sheet.getDataRange().getValues();
     for (var i = 1; i < rows.length; i++) {
       if (rows[i][0] === sub.endpoint) {
-        // Actualizar campos base
-        sheet.getRange(i+1, 1, 1, 4).setValues([[sub.endpoint, p256dh, auth, JSON.stringify(sub)]]);
-        // Actualizar userId en su columna real
-        if (colUserId > 0) sheet.getRange(i+1, colUserId).setValue(userId);
-        console.log('[SUB] Actualizada fila', i+1);
+        sheet.getRange(i+1,1,1,4).setValues([[sub.endpoint, p256dh, auth, JSON.stringify(sub)]]);
         return crearRespuestaJSON({ success: true, message: 'Suscripcion actualizada' });
       }
     }
-
-    // Nueva fila — construir según headers actuales
-    var newRow = [];
-    var hdrs3  = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
-    var map    = { endpoint: sub.endpoint, p256dh: p256dh, auth: auth, subscription_json: JSON.stringify(sub), userId: userId, created_at: getFormattedDateTime() };
-    for (var h = 0; h < hdrs3.length; h++) {
-      newRow.push(map[hdrs3[h]] !== undefined ? map[hdrs3[h]] : '');
-    }
-    sheet.appendRow(newRow);
-    console.log('[SUB] Nueva fila insertada, userId:', userId);
+    sheet.appendRow([sub.endpoint, p256dh, auth, JSON.stringify(sub), getFormattedDateTime()]);
     return crearRespuestaJSON({ success: true, message: 'Suscripcion guardada' });
-  } catch(err) {
-    console.error('[SUB] ERROR:', err.toString());
-    return crearRespuestaError(err);
-  }
+  } catch(err) { return crearRespuestaError(err); }
 }
 
 // ============================================
@@ -213,17 +162,9 @@ function listarSuscripciones() {
   try {
     var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('suscripciones');
     if (!sheet) return crearRespuestaJSON({ success: true, count: 0, subscriptions: [] });
-    var data  = sheet.getDataRange().getValues();
-    if (data.length < 2) return crearRespuestaJSON({ success: true, count: 0, subscriptions: [] });
-    var hdrs       = data[0].map(String);
-    var colUserId  = hdrs.indexOf('userId');
-    var colCreated = hdrs.indexOf('created_at');
-    var subs = data.slice(1).map(function(r) {
-      return {
-        endpoint: r[0].toString().substring(0,60)+'...',
-        userId:   colUserId  >= 0 ? String(r[colUserId]  || '') : '',
-        created:  colCreated >= 0 ? String(r[colCreated] || '') : ''
-      };
+    var rows = sheet.getDataRange().getValues();
+    var subs = rows.slice(1).map(function(r) {
+      return { endpoint: r[0].toString().substring(0,60)+'...', created: r[4] };
     });
     return crearRespuestaJSON({ success: true, count: subs.length, subscriptions: subs });
   } catch(err) { return crearRespuestaError(err); }
@@ -231,14 +172,11 @@ function listarSuscripciones() {
 
 // ============================================
 // ENVIO A TODOS  — rápido y sin cifrado pesado
-// targetUserId: si se pasa, solo envía a suscripciones de ese usuario.
-//               Si es vacío/null, envía a TODOS (broadcast para estado/admin).
 // ============================================
 function enviarNotificacionATodos(params) {
-  var title        = params.title        || 'Notificacion';
-  var body         = params.body         || 'Mensaje nuevo';
-  var icon         = params.icon         || '';
-  var targetUserId = String(params.targetUserId || '').trim(); // '' = broadcast
+  var title = params.title || 'Notificacion';
+  var body  = params.body  || 'Mensaje nuevo';
+  var icon  = params.icon  || '';
 
   try {
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -263,23 +201,17 @@ function enviarNotificacionATodos(params) {
     if (subsData.length < 2)
       return crearRespuestaJSON({ success: true, message: 'Sin suscriptores', sent: 0 });
 
-    // Detectar columna userId dinámicamente
-    var subsHdrs     = subsData[0].map(String);
-    var colSubUserId = subsHdrs.indexOf('userId');       // -1 si no existe
-    var colSubJson   = subsHdrs.indexOf('subscription_json');
-    if (colSubJson < 0) colSubJson = 3; // fallback posición fija
-
     // Payload JSON que el Service Worker leerá con event.data.json()
     // Incluir todos los campos extra que vengan en params (notifType, lote, planta, etc.)
     var payloadObj = {
-      id:        Utilities.getUuid() + '_' + Date.now(),
+      id:        Utilities.getUuid(),
       title:     title,
       body:      body,
       icon:      icon,
       timestamp: Date.now()
     };
     // Copiar campos extra (notifType, lote, planta, idNovedad, estadoActual, etc.)
-    var reservados = { action:1, title:1, body:1, icon:1, data:1, p256dh:1, auth:1, endpoint:1, targetUserId:1, userId:1 };
+    var reservados = { action:1, title:1, body:1, icon:1, data:1, p256dh:1, auth:1, endpoint:1 };
     for (var k in params) {
       if (!reservados[k] && params[k] !== undefined && params[k] !== '') {
         payloadObj[k] = params[k];
@@ -296,17 +228,8 @@ function enviarNotificacionATodos(params) {
     }
     var payloadJson = JSON.stringify(payloadObj);
 
-    // Guardar en cola para PULL (iOS) — acumula hasta 10, no sobreescribe
-    try {
-      var props = PropertiesService.getScriptProperties();
-      var queue = [];
-      try { queue = JSON.parse(props.getProperty('NOTIF_QUEUE') || '[]'); } catch(_) {}
-      queue.push(payloadObj);
-      if (queue.length > 10) queue = queue.slice(-10); // máximo 10
-      props.setProperty('NOTIF_QUEUE', JSON.stringify(queue));
-      // Mantener LAST_NOTIFICATION por compatibilidad con clientes viejos
-      props.setProperty('LAST_NOTIFICATION', payloadJson);
-    } catch(_) {}
+    // Guardar última notificación para PULL (iOS)
+    PropertiesService.getScriptProperties().setProperty('LAST_NOTIFICATION', payloadJson);
 
     // Pre-calcular el JWT una sola vez — sirve para todos los envíos
     // Nota: audience cambia por endpoint, así que calculamos por dominio
@@ -319,17 +242,11 @@ function enviarNotificacionATodos(params) {
 
     for (var i = 1; i < subsData.length; i++) {
       try {
-        var subJson = subsData[i][colSubJson];
+        var subJson = subsData[i][3];
         if (!subJson) continue;
         var sub;
         try { sub = JSON.parse(subJson); } catch(pe) { continue; }
         if (!sub || !sub.endpoint) continue;
-
-        // Filtrar por targetUserId si se especificó
-        if (targetUserId) {
-          var rowUserId = colSubUserId >= 0 ? String(subsData[i][colSubUserId] || '').trim() : '';
-          if (rowUserId !== targetUserId) continue;
-        }
 
         var endpoint = sub.endpoint;
         var audienceMatch = endpoint.match(/^(https?:\/\/[^\/]+)/);
@@ -350,18 +267,15 @@ function enviarNotificacionATodos(params) {
           muteHttpExceptions: true,
           headers: {
             'Authorization': 'vapid t=' + jwt + ', k=' + vapidPub,
-            'TTL':           '86400'
-          }
+            'TTL':           '86400',
+            'Content-Type':  'application/json',
+            'Urgency':       'high'
+          },
+          payload: payloadJson
         };
 
-        if (isApple) {
-           // iOS/Safari: Enviar payload VACÍO (tickle) para evitar error de encriptación.
-           // El SW hará fetch al servidor para obtener el contenido.
-        } else {
-           // Android/Chrome: Enviar payload JSON texto plano (legacy support)
-           request.headers['Content-Type'] = 'application/json';
-           request.payload = payloadJson;
-        }
+        // iOS/Safari también recibe el payload, pero el SW puede ignorarlo si no puede descifrarlo
+        // y hacer fetch al servidor como fallback
 
         requests.push(request);
         validRows.push(i); // guardar índice de fila para saber qué borrar si 410

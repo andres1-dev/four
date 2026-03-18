@@ -12,18 +12,18 @@ let secureConfigPromise = null;
 /**
  * Recupera las llaves de API desde Google Apps Script (GAS).
  * Singleton pattern — evita múltiples llamadas paralelas.
- * Cache en localStorage con TTL de 6h.
+ * Almacenamiento en localStorage con TTL de 6h.
  */
 async function fetchSecureConfig() {
     if (secureConfigPromise) return secureConfigPromise;
 
     secureConfigPromise = (async () => {
         try {
-            const cached = localStorage.getItem('app_secure_config');
+            const stored = localStorage.getItem('app_secure_config');
             const now = Date.now();
 
-            if (cached) {
-                const parsed = JSON.parse(cached);
+            if (stored) {
+                const parsed = JSON.parse(stored);
                 // TTL: 6 horas
                 if (now - parsed.timestamp < 6 * 3600 * 1000 && parsed.API_KEY) {
                     CONFIG.API_KEY   = parsed.API_KEY;
@@ -63,7 +63,7 @@ async function fetchSecureConfig() {
 /**
  * Obtiene los datos de una hoja específica del spreadsheet.
  * Reintenta hasta 3 veces con backoff exponencial.
- * Si falla por key inválida (401/403), limpia cache y refresca la key.
+ * Si falla por key inválida (401/403), limpia almacenamiento y refresca la key.
  */
 async function fetchSheetData(sheetName, indices, headers) {
     if (!CONFIG.API_KEY) await fetchSecureConfig();
@@ -77,7 +77,7 @@ async function fetchSheetData(sheetName, indices, headers) {
                 `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}` +
                 `/values/${sheetName}!A:AF?key=${CONFIG.API_KEY}&majorDimension=ROWS`;
 
-            const response = await fetch(url, { cache: 'no-store' });
+            const response = await fetch(url);
 
             // Key inválida o expirada — limpiar cache y refrescar antes del próximo intento
             if (response.status === 401 || response.status === 403) {

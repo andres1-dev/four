@@ -3,12 +3,12 @@
    ========================================================================== */
 
 /* ── Intervalos de polling adaptativos ── */
-const CHAT_POLL_ACTIVE  = 5_000;   // chat abierto: 5s
-const CHAT_POLL_IDLE    = 20_000;  // badges campana (pestaña visible): 20s
-const CHAT_POLL_HIDDEN  = 60_000;  // pestaña oculta: 60s
-const GUEST_POLL_ACTIVE = 5_000;
-const GUEST_POLL_IDLE   = 20_000;  // chat cerrado pero pestaña visible: 20s
-const GUEST_POLL_HIDDEN = 60_000;  // pestaña oculta: 60s
+const CHAT_POLL_ACTIVE  = 2_000;  // chat abierto: 2s
+const CHAT_POLL_IDLE    = 5_000;  // badges campana (pestaña visible): 5s
+const CHAT_POLL_HIDDEN  = 30_000; // pestaña oculta: 30s
+const GUEST_POLL_ACTIVE = 2_000;
+const GUEST_POLL_IDLE   = 5_000;  // chat cerrado pero pestaña visible: 5s
+const GUEST_POLL_HIDDEN = 30_000; // pestaña oculta: 30s
 
 let _chatTimer      = null;
 let _chatNovedadId  = null;
@@ -63,7 +63,7 @@ async function _chatFetch(body) {
 async function _readChatSheet() {
     if (!CONFIG.API_KEY) await fetchSecureConfig();
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/CHAT!A:G?key=${CONFIG.API_KEY}&majorDimension=ROWS`;
-    const res  = await fetch(url, { cache: 'no-store' });
+    const res  = await fetch(url);
     if (!res.ok) throw new Error(`Sheets API ${res.status}`);
     const { values = [] } = await res.json();
     return values.length > 1 ? values.slice(1) : [];
@@ -77,7 +77,7 @@ async function _readNovedadChatMeta(idNovedad) {
     if (!CONFIG.API_KEY) await fetchSecureConfig();
     // Leer columnas A (ID), R (CHAT col18), S (CHAT_READ col19)
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/NOVEDADES!A:S?key=${CONFIG.API_KEY}&majorDimension=ROWS`;
-    const res  = await fetch(url, { cache: 'no-store' });
+    const res  = await fetch(url);
     if (!res.ok) return { chatUrl: '', chatRead: {} };
     const { values = [] } = await res.json();
     if (values.length < 2) return { chatUrl: '', chatRead: {} };
@@ -443,8 +443,8 @@ async function _submitChatMsg() {
     const btn = document.getElementById('chat-send-btn');
     if (btn) btn.disabled = true;
 
-    const imagenData   = _chatPendingImageData;
-    const imageB64     = _chatPendingImageB64;
+    const imagenData   = _chatPendingImageData; // { base64, mimeType, fileName }
+    const imageB64     = _chatPendingImageB64;  // solo para preview local
 
     input.value = '';
     input.style.height = 'auto';
@@ -462,62 +462,13 @@ async function _submitChatMsg() {
 
     try {
         const res = await _sendMsg(texto, imagenData);
+        // Si GAS devuelve la URL de Drive, ya quedó guardada en el mensaje
         await _loadAndRender();
-
-        // Enviar push directamente desde el frontend — sin esperar a GAS
-        // Esto garantiza que el push salga inmediatamente con el contenido exacto
-        _sendChatPushDirect(texto, res?.id);
     } catch (e) {
         console.error('[CHAT] Error al enviar:', e);
     } finally {
         if (btn) btn.disabled = false;
         input.focus();
-    }
-}
-
-/**
- * Envía el push de chat directamente a codeNotifications desde el frontend.
- * No depende de GAS para el envío — sale inmediatamente.
- */
-async function _sendChatPushDirect(texto, msgId) {
-    try {
-        const isGuest  = currentUser?.ROL === 'GUEST';
-        const title    = isGuest
-            ? 'Mensaje - Lote ' + (_chatLote || 'S/N')
-            : 'Respuesta - Lote ' + (_chatLote || 'S/N');
-        const autor    = currentUser?.USUARIO || currentUser?.PLANTA || (isGuest ? 'Planta' : 'Equipo');
-        const body     = autor + ': ' + (texto || '').substring(0, 80);
-        const notifId  = (msgId || ('chat_' + Date.now())) + '_' + Date.now();
-
-        // Determinar a quién enviar:
-        // - GUEST envía → notificar a todos los operadores (sin targetUserId = broadcast)
-        // - OPERATOR envía → notificar solo a la planta (GUEST) dueña de la novedad
-        const targetUserId = isGuest ? '' : (_chatPlanta || '');
-
-        const form = new URLSearchParams();
-        form.append('action',    'send-notification');
-        form.append('title',     title);
-        form.append('body',      body);
-        form.append('notifType', 'chat');
-        form.append('idNovedad', _chatNovedadId || '');
-        form.append('lote',      _chatLote      || '');
-        form.append('planta',    _chatPlanta    || '');
-        form.append('msgId',     notifId);
-        if (targetUserId) form.append('targetUserId', targetUserId);
-
-        const NOTIF_URL = (typeof NOTIF_GAS_URL !== 'undefined')
-            ? NOTIF_GAS_URL
-            : 'https://script.google.com/macros/s/AKfycbzPkZzYLgMuqWzUZtcZ9MqEsliJFbjplxwB7wN98SDHF4mIHMFKYCkZUhFtMOIdTahh/exec';
-
-        const res = await fetch(NOTIF_URL, {
-            method: 'POST', mode: 'cors',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: form
-        });
-        const json = await res.json().catch(() => ({}));
-        console.log('[CHAT-PUSH] Enviado:', json?.message || json);
-    } catch (e) {
-        console.warn('[CHAT-PUSH] Error enviando push directo:', e.message);
     }
 }
 

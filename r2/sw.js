@@ -1,58 +1,30 @@
 ﻿/* ==========================================================================
-   sw.js — Service Worker SISPRO v3
+   sw.js — Service Worker SISPRO v2
    - Push real (Android/Chrome via VAPID)
    - Polling fallback para iOS (fetch periódico)
-   - SIN cache — siempre red, nunca archivos viejos
+   - SIN CACHE (eliminado completamente)
    - Anti-duplicados por ID de notificación
    ========================================================================== */
 
-const SW_VERSION = 'sispro-v10';
+const SW_VERSION = 'sispro-v5-no-cache';
 
-/* ── GAS endpoint para pull de última notificación ── */
+/* ── GAS endpoint para pull de última notificación (iOS tickle) ── */
+/* Se sobreescribe desde el cliente via mensaje SET_CONFIG */
 let GAS_NOTIF_URL = null;
 
-/* ── Anti-duplicados — lista de IDs recientes (TTL 10 min) ── */
-let _shownIds = null; // Map<id, timestamp_shown>
-const SHOWN_TTL_MS = 10 * 60 * 1000; // 10 minutos
-
-async function _loadShownIds() {
-  if (_shownIds) return _shownIds;
-  try {
-    const raw = await _idbGet('shownIds');
-    _shownIds = raw ? new Map(Object.entries(raw)) : new Map();
-  } catch(_) { _shownIds = new Map(); }
-  return _shownIds;
-}
-
-async function _saveShownIds() {
-  try {
-    // Limpiar entradas expiradas antes de guardar
-    const now = Date.now();
-    for (const [k, v] of _shownIds) {
-      if (now - v > SHOWN_TTL_MS) _shownIds.delete(k);
-    }
-    await _idbSet('shownIds', Object.fromEntries(_shownIds));
-  } catch(_) {}
-}
-
-async function _alreadyShown(id) {
-  const map = await _loadShownIds();
-  return map.has(id);
-}
-
-async function _markShown(id) {
-  const map = await _loadShownIds();
-  map.set(id, Date.now());
-  await _saveShownIds();
-}
-
-/* ── Lock de procesamiento ── */
-let _processing   = false;
-let _pollingActive = false;
-const POLL_INTERVAL_MS = 60_000;
+/* ── Anti-duplicados ── */
+let _lastNotifId = null;
+let _lastNotifTs = 0;
+let _processing = false;
 
 /* ── Polling background (iOS / fallback) ── */
-const IDB_NAME    = 'sispro_sw';
+let _pollingActive = false;
+const POLL_INTERVAL_MS = 60_000; // 1 min en background
+
+/* ══════════════════════════════════════════════════════════════════════════
+   IndexedDB — persistencia entre reinicios del SW
+   ══════════════════════════════════════════════════════════════════════════ */
+const IDB_NAME = 'sispro_sw';
 const IDB_VERSION = 1;
 
 function _getDB() {
@@ -63,78 +35,66 @@ function _getDB() {
         e.target.result.createObjectStore('kv');
     };
     req.onsuccess = e => resolve(e.target.result);
-    req.onerror   = e => reject(e.target.error);
+    req.onerror = e => reject(e.target.error);
   });
 }
+
 async function _idbSet(key, val) {
   const db = await _getDB();
   return new Promise((res, rej) => {
     const tx = db.transaction('kv', 'readwrite');
     tx.objectStore('kv').put(val, key);
     tx.oncomplete = () => res();
-    tx.onerror    = () => rej(tx.error);
+    tx.onerror = () => rej(tx.error);
   });
 }
+
 async function _idbGet(key) {
   const db = await _getDB();
   return new Promise((res, rej) => {
-    const tx  = db.transaction('kv', 'readonly');
+    const tx = db.transaction('kv', 'readonly');
     const req = tx.objectStore('kv').get(key);
     req.onsuccess = () => res(req.result);
-    req.onerror   = () => rej(req.error);
+    req.onerror = () => rej(req.error);
   });
 }
 
-/* ── Logger SW ── */
-function _swLog(level, step, msg, data) {
-  const ts = new Date().toISOString().slice(11, 23);
-  const prefix = `[SW][${ts}][${step}]`;
-  const out = data !== undefined ? [prefix, msg, data] : [prefix, msg];
-  if (level === 'error') console.error(...out);
-  else if (level === 'warn') console.warn(...out);
-  else console.log(...out);
-}
-
 /* ══════════════════════════════════════════════════════════════════════════
-   INSTALL — sin cache, solo activar inmediatamente
+   INSTALL — Sin caché
    ══════════════════════════════════════════════════════════════════════════ */
 self.addEventListener('install', event => {
-  _swLog('info', 'INSTALL', 'Instalando', SW_VERSION);
+  console.log('[SW] Instalando', SW_VERSION, '— SIN CACHE');
   event.waitUntil(self.skipWaiting());
 });
 
 /* ══════════════════════════════════════════════════════════════════════════
-   ACTIVATE — limpiar todos los caches existentes
+   ACTIVATE — Limpiar cachés antiguos y restaurar estado
    ══════════════════════════════════════════════════════════════════════════ */
 self.addEventListener('activate', event => {
-  _swLog('info', 'ACTIVATE', 'Activando', SW_VERSION);
+  console.log('[SW] Activando', SW_VERSION);
   event.waitUntil(
-    caches.keys()
-      .then(keys => {
-        _swLog('info', 'ACTIVATE', 'Caches encontrados a eliminar:', keys);
-        return Promise.all(keys.map(k => caches.delete(k)));
-      })
-      .then(() => self.clients.claim())
-      .then(async () => {
+    Promise.all([
+      // Eliminar TODOS los cachés existentes
+      caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))),
+      // Tomar control inmediato
+      self.clients.claim(),
+      // Restaurar estado persistido
+      (async () => {
         GAS_NOTIF_URL = await _idbGet('gasNotifUrl') || null;
-        _lastNotifTs  = (await _idbGet('lastNotifTs')) || 0;
-        _lastNotifId  = (await _idbGet('lastNotifId')) || null;
-        _swLog('info', 'ACTIVATE', 'Estado restaurado desde IDB:', { GAS_NOTIF_URL, _lastNotifTs, _lastNotifId });
-        if (GAS_NOTIF_URL) {
-          _swLog('info', 'ACTIVATE', 'URL GAS disponible → iniciando polling');
-          _startPolling();
-        } else {
-          _swLog('warn', 'ACTIVATE', 'Sin URL GAS — esperando config del cliente');
-        }
-      })
+        _lastNotifTs = (await _idbGet('lastNotifTs')) || 0;
+        _lastNotifId = (await _idbGet('lastNotifId')) || null;
+        console.log('[SW] Estado restaurado:', { GAS_NOTIF_URL, _lastNotifTs, _lastNotifId });
+        if (GAS_NOTIF_URL) _startPolling();
+      })()
+    ])
   );
 });
 
 /* ══════════════════════════════════════════════════════════════════════════
-   FETCH — siempre red, nunca cache
+   FETCH — Sin caché, solo red
    ══════════════════════════════════════════════════════════════════════════ */
 self.addEventListener('fetch', event => {
-  // Dejar pasar todo sin interceptar — el navegador maneja normalmente
+  // Sin caché, dejar que el navegador maneje todo normalmente
   return;
 });
 
@@ -143,303 +103,274 @@ self.addEventListener('fetch', event => {
    ══════════════════════════════════════════════════════════════════════════ */
 self.addEventListener('message', async event => {
   const { type, ...data } = event.data || {};
-  _swLog('info', 'MESSAGE', 'Mensaje recibido del cliente:', { type, ...data });
+  console.log('[SW] Mensaje recibido:', type, data);
 
   if (type === 'SKIP_WAITING') {
-    _swLog('info', 'MESSAGE', 'SKIP_WAITING → forzando activación');
     self.skipWaiting();
     return;
   }
 
+  /* El cliente envía la URL del GAS de notificaciones y el ts conocido */
   if (type === 'SET_CONFIG' || type === 'SET_POLLING_CONFIG') {
     GAS_NOTIF_URL = data.gasUrl || data.url;
     await _idbSet('gasNotifUrl', GAS_NOTIF_URL);
-    if (data.lastTs) {
+    
+    if (data.lastTs !== undefined) {
       _lastNotifTs = data.lastTs;
       await _idbSet('lastNotifTs', _lastNotifTs);
     }
-    _swLog('info', 'MESSAGE', 'Config guardada:', { GAS_NOTIF_URL, lastTs: _lastNotifTs });
+    
+    if (data.lastId !== undefined) {
+      _lastNotifId = data.lastId;
+      await _idbSet('lastNotifId', _lastNotifId);
+    }
+    
+    console.log('[SW] Config guardada:', { GAS_NOTIF_URL, _lastNotifTs, _lastNotifId });
     _startPolling();
+    
+    // Responder al cliente
+    if (event.ports && event.ports[0]) {
+      event.ports[0].postMessage({ success: true });
+    }
     return;
   }
 
+  /* Forzar check inmediato (al volver a la app) */
   if (type === 'CHECK_NOW') {
-    _swLog('info', 'MESSAGE', 'CHECK_NOW → verificando notificaciones inmediatamente');
+    console.log('[SW] Check forzado solicitado');
     _checkAndNotify();
     return;
   }
-
-  _swLog('warn', 'MESSAGE', 'Tipo de mensaje desconocido:', type);
 });
 
 /* ══════════════════════════════════════════════════════════════════════════
    PUSH REAL (Android / Chrome / Edge)
    ══════════════════════════════════════════════════════════════════════════ */
 self.addEventListener('push', event => {
-  _swLog('info', 'PUSH', 'Evento push recibido');
-  _swLog('info', 'PUSH', 'Tiene datos:', !!event.data);
+  console.log('[SW] ✅ Push recibido');
   event.waitUntil(_handlePushEvent(event));
 });
 
 async function _handlePushEvent(event) {
   if (_processing) {
-    _swLog('warn', 'PUSH', 'Ya procesando otro push, ignorando');
+    console.log('[SW] Ya procesando, ignorando push duplicado');
     return;
   }
+  
   _processing = true;
-  const timeout = setTimeout(() => {
-    _swLog('warn', 'PUSH', 'Timeout de 8s alcanzado, liberando lock');
-    _processing = false;
-  }, 8000);
+  const timeout = setTimeout(() => { _processing = false; }, 8000);
 
   try {
     let payload = null;
 
+    /* Intentar leer payload directo (Chrome/Android) */
     if (event.data) {
       try {
         payload = event.data.json();
-        _swLog('info', 'PUSH', 'Payload directo parseado:', payload);
+        console.log('[SW] Payload directo recibido:', payload);
       } catch (e) {
-        _swLog('warn', 'PUSH', 'No se pudo parsear payload directo:', e.message);
+        console.warn('[SW] Error parseando payload:', e);
+      }
+    }
+
+    /* Sin payload (iOS tickle) → fetch desde GAS */
+    if (!payload) {
+      console.log('[SW] Sin payload, consultando GAS...');
+      const url = GAS_NOTIF_URL || (await _idbGet('gasNotifUrl'));
+      if (!url) {
+        console.warn('[SW] No hay URL de GAS configurada');
+        return;
+      }
+      
+      const res = await fetch(`${url}?action=get-latest-notification&_t=${Date.now()}`);
+      const json = await res.json();
+      console.log('[SW] Respuesta GAS:', json);
+      
+      if (json.success && json.notification) {
+        payload = json.notification;
       }
     }
 
     if (!payload) {
-      _swLog('info', 'PUSH', 'Sin payload directo -> fetch desde GAS (iOS tickle)');
-      const url = GAS_NOTIF_URL || (await _idbGet('gasNotifUrl'));
-      if (!url) {
-        _swLog('error', 'PUSH', 'Sin URL GAS configurada');
-        return;
-      }
-      const fetchUrl = ${url}?action=get-latest-notification&_t=;
-      const res  = await fetch(fetchUrl);
-      const json = await res.json();
-      _swLog('info', 'PUSH', 'Respuesta GAS:', json);
-      const queue = json.notifications || (json.notification ? [json.notification] : []);
-      _swLog('info', 'PUSH', Cola:  item(s));
-      const chatItems  = queue.filter(n => n.notifType === 'chat' && n.idNovedad);
-      const otherItems = queue.filter(n => n.notifType !== 'chat' || !n.idNovedad);
-      for (const notif of otherItems) await _showIfNew(notif);
-      const novedadIds = [...new Set(chatItems.map(n => n.idNovedad))];
-      for (const idNovedad of novedadIds) {
-        const sample = chatItems.find(n => n.idNovedad === idNovedad);
-        await _fetchAndShowChatMsgs(idNovedad, sample);
-      }
+      console.warn('[SW] No hay payload para mostrar');
       return;
     }
+    
+    await _showIfNew(payload);
   } catch (e) {
-    _swLog('error', 'PUSH', 'Error procesando push:', e.message);
+    console.error('[SW] Error en push:', e);
   } finally {
     clearTimeout(timeout);
     _processing = false;
   }
 }
 
-async function _fetchAndShowChatMsgs(idNovedad, samplePayload) {
-  const sid = _sheetsId  || (await _idbGet('sheetsId'));
-  const key = _sheetsKey || (await _idbGet('sheetsKey'));
-  if (!sid || !key) {
-    if (samplePayload) await _showIfNew(samplePayload);
-    return;
-  }
-  try {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/CHAT!A:G?key=${key}&majorDimension=ROWS`;
-    const res  = await fetch(url);
-    if (!res.ok) { if (samplePayload) await _showIfNew(samplePayload); return; }
-    const { values = [] } = await res.json();
-    const rows = values.length > 1 ? values.slice(1) : [];
-    const msgs = rows.filter(r => String(r[1]||'').trim() === idNovedad);
-    if (!msgs.length) { if (samplePayload) await _showIfNew(samplePayload); return; }
-    for (const r of msgs) {
-      const ts      = r[6] || '';
-      const mid     = r[0] || (idNovedad + '_' + ts);
-      const rol     = String(r[3]||'').toUpperCase();
-      const autor   = r[4] || (rol === 'GUEST' ? 'Planta' : 'Equipo');
-      const lote    = (samplePayload && samplePayload.lote)   || '';
-      const planta  = (samplePayload && samplePayload.planta) || String(r[2]||'');
-      const isGuest = rol === 'GUEST';
-      const title   = isGuest ? ('Mensaje - Lote '   + (lote||'S/N'))
-                               : ('Respuesta - Lote ' + (lote||'S/N'));
-      const body    = autor + ': ' + String(r[5]||'').substring(0, 80);
-      const msgTs   = ts ? new Date(ts).getTime() : Date.now();
-      await _showIfNew({
-        id:        mid + '_' + msgTs,
-        title,
-        body,
-        notifType: 'chat',
-        idNovedad,
-        lote,
-        planta,
-        timestamp: msgTs
-      });
-    }
-    _swLog('info', 'CHAT-FETCH', 'Mensajes procesados para novedad: ' + idNovedad);
-  } catch(e) {
-    _swLog('warn', 'CHAT-FETCH', 'Error consultando Sheets:', e.message);
-    if (samplePayload) await _showIfNew(samplePayload);
-  }
-}
-
-
 /* ══════════════════════════════════════════════════════════════════════════
-   POLLING BACKGROUND
+   POLLING BACKGROUND (fallback iOS / pestaña cerrada)
    ══════════════════════════════════════════════════════════════════════════ */
 function _startPolling() {
   if (_pollingActive) {
-    _swLog('info', 'POLLING', 'Polling ya activo, ignorando');
+    console.log('[SW] Polling ya activo');
     return;
   }
+  
   _pollingActive = true;
-  _swLog('info', 'POLLING', `Iniciando polling cada ${POLL_INTERVAL_MS / 1000}s`);
+  console.log('[SW] ✅ Polling iniciado cada', POLL_INTERVAL_MS / 1000, 's');
   setInterval(_checkAndNotify, POLL_INTERVAL_MS);
-  _checkAndNotify();
+  _checkAndNotify(); // check inmediato
 }
 
 async function _checkAndNotify() {
-  if (_processing) {
-    _swLog('info', 'POLLING', 'Procesando, saltando este ciclo');
-    return;
-  }
+  if (_processing) return;
+  
   const url = GAS_NOTIF_URL || (await _idbGet('gasNotifUrl'));
   if (!url) {
-    _swLog('warn', 'POLLING', 'Sin URL GAS, no se puede hacer check');
+    console.log('[SW] No hay URL para polling');
     return;
   }
 
-  _swLog('info', 'POLLING', 'Consultando GAS...');
+  console.log('[SW] Polling check...');
+  
   try {
-    const fetchUrl = `${url}?action=get-latest-notification&_t=${Date.now()}`;
-    const res  = await fetch(fetchUrl);
+    const res = await fetch(`${url}?action=get-latest-notification&_t=${Date.now()}`);
     const json = await res.json();
-    _swLog('info', 'POLLING', 'Respuesta GAS:', json);
-    _swLog('info', 'POLLING', 'Estado anti-dup actual:', { _lastNotifId, _lastNotifTs });
-    if (json.success) {
-      const queue = json.notifications || (json.notification ? [json.notification] : []);
-      _swLog('info', 'POLLING', Cola:  item(s));
-      const chatItems  = queue.filter(n => n.notifType === 'chat' && n.idNovedad);
-      const otherItems = queue.filter(n => n.notifType !== 'chat' || !n.idNovedad);
-      for (const notif of otherItems) await _showIfNew(notif);
-      const novedadIds = [...new Set(chatItems.map(n => n.idNovedad))];
-      for (const idNovedad of novedadIds) {
-        const sample = chatItems.find(n => n.idNovedad === idNovedad);
-        await _fetchAndShowChatMsgs(idNovedad, sample);
-      }
+    
+    if (json.success && json.notification) {
+      console.log('[SW] Notificación encontrada en polling:', json.notification);
+      await _showIfNew(json.notification);
     } else {
-      _swLog('info', 'POLLING', 'Sin notificaciones nuevas');
+      console.log('[SW] Sin notificaciones nuevas');
     }
   } catch (e) {
-    _swLog('error', 'POLLING', 'Error en check:', e.message);
+    console.error('[SW] Error en polling:', e);
   }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   FORMATEAR NOTIFICACIÓN
+   FORMATEAR NOTIFICACIÓN según notifType
    ══════════════════════════════════════════════════════════════════════════ */
 function _formatNotif(payload) {
   const notifType = payload.notifType || 'estado';
-  const lote      = payload.lote      || '';
-  const planta    = payload.planta    || '';
-  const ref       = payload.referencia || '';
-  const area      = payload.area      || '';
+  const lote = payload.lote || '';
+  const planta = payload.planta || '';
+  const ref = payload.referencia || '';
+  const area = payload.area || '';
   const idNovedad = payload.idNovedad || '';
 
   let title, body, url;
 
   if (notifType === 'chat') {
+    // Mensaje de chat
     const autor = payload.autor || planta || 'Planta';
     title = '💬 Mensaje — Lote ' + (lote || 'S/N');
-    body  = autor + ': ' + (payload.body || '').substring(0, 80);
-    url   = './index.html';
+    body = autor + ': ' + (payload.body || '').substring(0, 80);
+    url = './index.html';
   } else {
+    // Cambio de estado
     const estado = (payload.estadoActual || '').toUpperCase();
-    const emoji  = estado === 'FINALIZADO' ? '✅' : '🔧';
-    const label  = estado === 'FINALIZADO' ? 'Solucionado' : 'En Elaboración';
+    const emoji = estado === 'FINALIZADO' ? '✅' : '🔧';
+    const label = estado === 'FINALIZADO' ? 'Solucionado' : 'En Elaboración';
     title = emoji + ' Lote ' + (lote || 'S/N') + ' — ' + label;
     const parts = [];
-    if (ref)    parts.push('Ref: ' + ref);
-    if (area)   parts.push(area);
+    if (ref) parts.push('Ref: ' + ref);
+    if (area) parts.push(area);
     if (planta) parts.push(planta);
     body = parts.join(' · ');
-    url  = idNovedad ? ('./seguimiento.html#' + idNovedad) : './seguimiento.html';
+    url = idNovedad ? ('./seguimiento.html#' + idNovedad) : './seguimiento.html';
   }
 
   return { title, body, url };
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   MOSTRAR NOTIFICACIÓN (anti-duplicados)
+   MOSTRAR NOTIFICACIÓN (anti-duplicados mejorado)
    ══════════════════════════════════════════════════════════════════════════ */
 async function _showIfNew(payload) {
-  const ts = parseInt(payload.timestamp) || 0;
-  // Para chat: incluir fragmento del body en el id para que mensajes distintos
-  // nunca colisionen aunque lleguen en el mismo milisegundo
-  const bodySnippet = (payload.body || '').trim().substring(0, 30).replace(/\s+/g, '_');
-  const id = payload.id
-    ? (payload.notifType === 'chat' ? `${payload.id}_${bodySnippet}` : payload.id)
-    : `${payload.title}_${ts}_${bodySnippet}`;
+  const ts = parseInt(payload.timestamp) || Date.now();
+  const id = payload.id || `${payload.lote || 'unknown'}_${ts}`;
+
+  console.log('[SW] Procesando notificación:', { id, ts, payload });
 
   const savedTs = _lastNotifTs || (await _idbGet('lastNotifTs')) || 0;
   const savedId = _lastNotifId || (await _idbGet('lastNotifId')) || null;
 
-  _swLog('info', 'SHOW', 'Evaluando notificación:', { id, ts, savedTs, savedId });
+  console.log('[SW] Estado guardado:', { savedId, savedTs });
 
-  // Bloquear solo si el ID es exactamente el mismo (misma notificación ya mostrada)
-  if (id && id === savedId) {
-    _swLog('info', 'SHOW', 'Mismo ID — notificación ya mostrada, ignorando');
+  // Verificar duplicados
+  if (id === savedId && ts <= savedTs) {
+    console.log('[SW] ⚠️ Notificación duplicada, ignorando');
     return;
   }
 
+  // Actualizar anti-duplicados ANTES de mostrar
   _lastNotifTs = ts;
   _lastNotifId = id;
   await _idbSet('lastNotifTs', ts);
   await _idbSet('lastNotifId', id);
-  _swLog('info', 'SHOW', 'Anti-duplicado actualizado');
+  console.log('[SW] Estado actualizado:', { id, ts });
 
+  // Verificar si la app está en primer plano
   const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
   const appVisible = allClients.some(c => c.visibilityState === 'visible');
-  _swLog('info', 'SHOW', `Clientes abiertos: ${allClients.length}, app visible: ${appVisible}`);
 
   if (appVisible) {
-    _swLog('info', 'SHOW', 'App en primer plano → enviando mensaje al cliente');
-    allClients.forEach(c => c.postMessage({ type: 'NEW_PUSH_NOTIF', payload }));
+    // App visible → enviar mensaje al cliente para actualizar campana
+    console.log('[SW] App visible, enviando mensaje al cliente');
+    allClients.forEach(c => {
+      c.postMessage({ type: 'NEW_PUSH_NOTIF', payload });
+    });
     return;
   }
 
-  _swLog('info', 'SHOW', 'App en background → mostrando notificación nativa del SO');
+  // App en background o cerrada → notificación nativa del SO
+  console.log('[SW] App en background, mostrando notificación nativa');
   const { title, body, url } = _formatNotif(payload);
-  _swLog('info', 'SHOW', 'Notificación formateada:', { title, body, url });
+  const icon = './icons/TDM_variable_colors.svg';
+  const badge = './icons/TDM_variable_colors.svg';
 
   await self.registration.showNotification(title, {
     body,
-    icon:     './icons/TDM_variable_colors.svg',
-    badge:    './icons/TDM_variable_colors.svg',
-    tag:      `sispro-${id}`,
+    icon,
+    badge,
+    tag: `sispro-${id}`,
     renotify: true,
-    vibrate:  [200, 100, 200],
-    data:     { url, id, ts, notifType: payload.notifType || 'estado' }
+    requireInteraction: false,
+    vibrate: [200, 100, 200],
+    data: { url, id, ts, notifType: payload.notifType || 'estado', payload }
   });
 
-  _swLog('info', 'SHOW', 'Notificación nativa mostrada:', title);
+  console.log('[SW] ✅ Notificación nativa mostrada:', title);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
    CLICK EN NOTIFICACIÓN
    ══════════════════════════════════════════════════════════════════════════ */
 self.addEventListener('notificationclick', event => {
-  _swLog('info', 'CLICK', 'Click en notificación:', event.notification.data);
+  console.log('[SW] Click en notificación');
   event.notification.close();
+  
   const target = (event.notification.data && event.notification.data.url) || './index.html';
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then(clients => {
+        // Buscar una ventana que ya tenga la URL destino abierta
         for (const c of clients) {
-          if (c.url.includes(target.replace('./', '')) && 'focus' in c) return c.focus();
+          if (c.url.includes(target.replace('./', '')) && 'focus' in c) {
+            console.log('[SW] Enfocando ventana existente');
+            return c.focus();
+          }
         }
+        // Si hay alguna ventana abierta, navegar a la URL correcta
         for (const c of clients) {
-          if ('navigate' in c) return c.navigate(target).then(wc => wc && wc.focus());
-          if ('focus' in c)    return c.focus();
+          if ('navigate' in c) {
+            console.log('[SW] Navegando en ventana existente');
+            return c.navigate(target).then(wc => wc && wc.focus());
+          }
+          if ('focus' in c) return c.focus();
         }
+        // Sin ventanas → abrir nueva
+        console.log('[SW] Abriendo nueva ventana');
         return self.clients.openWindow(target);
       })
   );
@@ -449,9 +380,10 @@ self.addEventListener('notificationclick', event => {
    PERIODIC SYNC (Chrome Android)
    ══════════════════════════════════════════════════════════════════════════ */
 self.addEventListener('periodicsync', event => {
+  console.log('[SW] Periodic sync:', event.tag);
   if (event.tag === 'sispro-check') {
     event.waitUntil(_checkAndNotify());
   }
 });
 
-console.log('[SW] Cargado —', SW_VERSION, '— Sin cache, solo push y polling');
+console.log('[SW] ✅ Cargado —', SW_VERSION, '— SIN CACHE');

@@ -16,42 +16,97 @@ function _sheet(name) {
   return _ss().getSheetByName(name);
 }
 
-/* ── Enviar push DIRECTO (sin trigger) — más confiable ── */
+/* ── Enviar push async via trigger de 1 segundo (no bloquea la respuesta) ── */
 function _pushNotif(title, body, extra) {
-  if (!NOTIF_GAS_URL) return;
+  if (!NOTIF_GAS_URL) {
+    console.warn('[PUSH] NOTIF_GAS_URL no configurada');
+    return;
+  }
   try {
-    console.log('[PUSH] Enviando notificación:', title, body, JSON.stringify(extra || {}));
-    var payload = 'action=send-notification'
-      + '&title=' + encodeURIComponent(title || 'SISPRO')
-      + '&body='  + encodeURIComponent(body  || '');
-
-    var ex = extra || {};
-    for (var k in ex) {
-      if (ex[k] !== undefined && ex[k] !== null) {
-        payload += '&' + k + '=' + encodeURIComponent(String(ex[k]));
-      }
-    }
-
-    var resp = UrlFetchApp.fetch(NOTIF_GAS_URL, {
-      method: 'post',
-      contentType: 'application/x-www-form-urlencoded',
-      payload: payload,
-      muteHttpExceptions: true
+    // Generar ID único para esta notificación
+    var notifId = 'push_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    var job = JSON.stringify({ 
+      id: notifId,
+      title: title || 'SISPRO', 
+      body: body || '', 
+      extra: extra || {}, 
+      ts: Date.now() 
     });
-    console.log('[PUSH] Respuesta HTTP:', resp.getResponseCode(), resp.getContentText().substring(0, 200));
+    PropertiesService.getScriptProperties().setProperty('PENDING_PUSH_' + notifId, job);
+    // Trigger de 1 segundo — se ejecuta casi inmediato pero fuera del request actual
+    ScriptApp.newTrigger('_runPendingPush').timeBased().after(1000).create();
+    console.log('[PUSH] Notificación encolada:', notifId);
   } catch(e) {
-    console.error('[PUSH] Error enviando notificación:', e.message);
+    console.error('[PUSH] Error encolando notificación:', e.message);
   }
 }
 
-/* ── _runPendingPush: mantenido por compatibilidad con triggers existentes ── */
+/* ── Ejecutado por el trigger — envía el push sin bloquear nada ── */
 function _runPendingPush() {
-  // Limpiar todos los triggers acumulados de este tipo
-  ScriptApp.getProjectTriggers().forEach(function(t) {
-    if (t.getHandlerFunction() === '_runPendingPush') ScriptApp.deleteTrigger(t);
-  });
-  // Ya no se usa — _pushNotif ahora envía directo
-  console.log('[PUSH] _runPendingPush llamado (modo legacy, sin acción)');
+  // Limpiar triggers anteriores de este tipo para no acumular
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === '_runPendingPush') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var allProps = props.getProperties();
+    var processed = 0;
+    
+    // Procesar todas las notificaciones pendientes
+    for (var key in allProps) {
+      if (key.indexOf('PENDING_PUSH_') === 0) {
+        try {
+          var job = allProps[key];
+          props.deleteProperty(key);
+          
+          var data = JSON.parse(job);
+          var payload = 'action=send-notification'
+            + '&title=' + encodeURIComponent(data.title)
+            + '&body='  + encodeURIComponent(data.body)
+            + '&timestamp=' + encodeURIComponent(data.ts);
+
+          var extra = data.extra || {};
+          for (var k in extra) {
+            if (extra[k] !== undefined && extra[k] !== null) {
+              payload += '&' + k + '=' + encodeURIComponent(String(extra[k]));
+            }
+          }
+
+          var resp = UrlFetchApp.fetch(NOTIF_GAS_URL, {
+            method: 'post',
+            contentType: 'application/x-www-form-urlencoded',
+            payload: payload,
+            muteHttpExceptions: true,
+            validateHttpsCertificates: true
+          });
+          
+          var code = resp.getResponseCode();
+          var text = resp.getContentText();
+          console.log('[PUSH] Enviado ' + data.id + ':', code, text.substring(0, 150));
+          
+          if (code >= 200 && code < 300) {
+            processed++;
+          } else {
+            console.error('[PUSH] Error HTTP ' + code + ' para ' + data.id + ':', text);
+          }
+        } catch(jobErr) {
+          console.error('[PUSH] Error procesando job ' + key + ':', jobErr.message);
+        }
+      }
+    }
+    
+    if (processed > 0) {
+      console.log('[PUSH] Total procesadas: ' + processed);
+    } else {
+      console.log('[PUSH] Sin notificaciones pendientes');
+    }
+  } catch(e) {
+    console.error('[PUSH] Error en _runPendingPush:', e.message);
+  }
 }
 
 function _json(obj) {
@@ -415,17 +470,20 @@ function _updateEstado(d) {
       var ref    = String(allRows[i][hdrs.indexOf('REFERENCIA')]  || '');
       var area   = String(allRows[i][hdrs.indexOf('AREA')]        || '');
 
-      var estadoLabel = d.nuevoEstado === 'FINALIZADO' ? 'Solucionado' : 'En Elaboracion';
-      var pushTitle  = 'Lote ' + lote + ' - ' + estadoLabel;
-      var pushBody   = (ref ? ref : '') + (area ? ' - ' + area : '') + (planta ? ' - ' + planta : '');
+      var estadoLabel = d.nuevoEstado === 'FINALIZADO' ? 'Solucionado' : 'En Elaboración';
+      var pushTitle  = 'Lote ' + lote + ' — ' + estadoLabel;
+      var pushBody   = (ref ? 'Ref: ' + ref : '') + (area ? ' · ' + area : '') + (planta ? ' · ' + planta : '');
 
+      console.log('[PUSH] Enviando notificación de estado:', pushTitle);
       _pushNotif(pushTitle, pushBody.trim(), {
         notifType:      'estado',
         idNovedad:      target,
         lote:           lote,
         planta:         planta,
+        referencia:     ref,
+        area:           area,
         estadoActual:   d.nuevoEstado,
-        targetUserId:   planta   // notificar solo a la planta dueña de la novedad
+        timestamp:      Date.now()
       });
 
       return ok('Estado actualizado exitosamente.');
@@ -780,18 +838,20 @@ function _sendChatMsg(d) {
     // Push notification cuando se envía un mensaje de chat
     var isGuest = String(d.rol||'').toUpperCase() === 'GUEST';
     var pushTitle = isGuest
-      ? 'Mensaje - Lote ' + String(d.lote||'S/N')
-      : 'Respuesta - Lote ' + String(d.lote||'S/N');
-    var pushBody = (isGuest ? String(d.planta||'Planta') : 'Equipo') + ': ' + String(d.mensaje||'').substring(0, 80);
-    // GUEST envía → broadcast a operadores (sin targetUserId)
-    // OPERATOR envía → solo a la planta (GUEST) dueña de la novedad
-    var chatTarget = isGuest ? '' : String(d.planta||'');
+      ? '💬 Mensaje — Lote ' + String(d.lote||'S/N')
+      : '💬 Respuesta — Lote ' + String(d.lote||'S/N');
+    var autor = isGuest ? String(d.planta||'Planta') : String(d.autor||'Equipo');
+    var pushBody = autor + ': ' + String(d.mensaje||'').substring(0, 80);
+    
+    console.log('[PUSH] Enviando notificación de chat:', pushTitle);
     _pushNotif(pushTitle, pushBody, {
-      notifType:    'chat',
-      idNovedad:    String(d.idNovedad||''),
-      lote:         String(d.lote||''),
-      planta:       String(d.planta||''),
-      targetUserId: chatTarget
+      notifType: 'chat',
+      idNovedad: String(d.idNovedad||''),
+      lote:      String(d.lote||''),
+      planta:    String(d.planta||''),
+      autor:     autor,
+      body:      String(d.mensaje||''),
+      timestamp: Date.now()
     });
 
     return ok('Mensaje enviado.', { id, ts });

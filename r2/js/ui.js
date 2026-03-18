@@ -2,7 +2,7 @@
    ui.js — Manipulación del DOM, utilidades de presentación
    ========================================================================== */
 
-/* ── Cache de elementos del DOM ── */
+/* ── Referencias de elementos del DOM ── */
 const DOM = {
     loader: () => document.getElementById('loader'),
     mainForm: () => document.getElementById('mainForm'),
@@ -350,8 +350,8 @@ function toggleGpsPermission() {
     }
 }
 
-// Clave de caché de coordenadas globales (compartida por sesión, no por usuario)
-const GPS_COORDS_CACHE_KEY = 'gps_coords_cache';
+// Clave de almacenamiento de coordenadas globales (compartida por sesión, no por usuario)
+const GPS_COORDS_STORAGE_KEY = 'gps_coords_storage';
 const GPS_COORDS_MAX_AGE_MS = 2 * 60 * 60 * 1000; // 2 horas
 
 /**
@@ -408,17 +408,17 @@ function requestCalidadLocation() {
     applyGpsToggleUI(true);
     if (submitBtn) submitBtn.disabled = false;
 
-    // ── ESTRATEGIA CACHE-FIRST ──
+    // ── ESTRATEGIA STORAGE-FIRST ──
     // Buscar coordenadas guardadas previamente en localStorage
     try {
-        const cached = JSON.parse(localStorage.getItem(GPS_COORDS_CACHE_KEY));
-        const age = Date.now() - (cached?.ts || 0);
-        if (cached && cached.lat && cached.lng && age < GPS_COORDS_MAX_AGE_MS) {
-            // Coords en caché vigentes → mostrar mapa directamente, sin tocar el navegador
-            _renderMapCard(cached.lat, cached.lng, locInput, mapaCard);
+        const stored = JSON.parse(localStorage.getItem(GPS_COORDS_STORAGE_KEY));
+        const age = Date.now() - (stored?.ts || 0);
+        if (stored && stored.lat && stored.lng && age < GPS_COORDS_MAX_AGE_MS) {
+            // Coords guardadas vigentes → mostrar mapa directamente, sin tocar el navegador
+            _renderMapCard(stored.lat, stored.lng, locInput, mapaCard);
             return;
         }
-    } catch (_) { /* caché corrupto, ignorar */ }
+    } catch (_) { /* almacenamiento corrupto, ignorar */ }
 
     // Sin caché vigente → mostrar botón para que el usuario active consciente
     if (!navigator.geolocation) {
@@ -467,8 +467,8 @@ function activarGpsManual() {
             const lat = position.coords.latitude.toFixed(6);
             const lng = position.coords.longitude.toFixed(6);
 
-            // Guardar en caché con timestamp para no volver a pedir permiso
-            localStorage.setItem(GPS_COORDS_CACHE_KEY, JSON.stringify({ lat, lng, ts: Date.now() }));
+            // Guardar en localStorage con timestamp para no volver a pedir permiso
+            localStorage.setItem(GPS_COORDS_STORAGE_KEY, JSON.stringify({ lat, lng, ts: Date.now() }));
             localStorage.setItem(key, 'enabled');
             applyGpsToggleUI(true);
 

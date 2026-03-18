@@ -5,13 +5,13 @@
 
 const NOTIF_STORAGE_KEY       = 'sispro_notif_seen';
 const NOTIF_LIST_KEY          = 'sispro_notif_list';   // persistencia de notificaciones
-const NOTIF_POLL_ACTIVE       = 15_000;  // pestaña visible
-const NOTIF_POLL_HIDDEN       = 60_000;  // pestaña oculta
+const NOTIF_POLL_ACTIVE       = 3_000;   // pestaña visible
+const NOTIF_POLL_HIDDEN       = 30_000;  // pestaña oculta
 let _notifPollTimer = null;
 let _lastKnownStates = {}; // { ID_NOVEDAD: ESTADO }
 let _initialLoadDone = false;
 let _notifications = []; // { id, nov, estadoAnterior, estadoActual, ts, read }
-let _cachedNovedades = [];
+let _storedNovedades = [];
 let _guestChatInitialized = false;
 
 /* ── Inicialización ── */
@@ -54,7 +54,7 @@ function initNotifications(preloadedNovedades) {
 
     // Si ya tenemos datos del primer fetch, procesarlos directamente sin re-fetch
     if (preloadedNovedades && preloadedNovedades.length) {
-        _cachedNovedades = preloadedNovedades;
+        _storedNovedades = preloadedNovedades;
         _processUpdates(preloadedNovedades);
         if (typeof initGuestChat === 'function') {
             _guestChatInitialized = true;
@@ -205,7 +205,7 @@ async function _pollNovedades() {
     try {
         if (!CONFIG.API_KEY) await fetchSecureConfig();
         const novedades = await fetchNovedadesData();
-        _cachedNovedades = novedades;
+        _storedNovedades = novedades;
         _processUpdates(novedades);
         // Pasar novedades al módulo de chat GUEST
         if (currentUser?.ROL === 'GUEST' && typeof initGuestChat === 'function') {
