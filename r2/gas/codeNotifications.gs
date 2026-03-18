@@ -132,34 +132,60 @@ function guardarSuscripcion(params, e) {
     if (!sub || !sub.endpoint)
       return crearRespuestaJSON({ success: false, message: 'Endpoint requerido' });
 
-    // userId identifica al dueño de esta suscripción (ID_PLANTA para GUEST, ID_USUARIO para operadores)
-    var userId = String(params.userId || '').trim();
+    var userId = String(params.userId || sub.userId || '').trim();
+    console.log('[SUB] endpoint:', sub.endpoint.substring(0, 50), '| userId:', userId);
 
     var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheet = ss.getSheetByName('suscripciones');
+
     if (!sheet) {
       sheet = ss.insertSheet('suscripciones');
       sheet.appendRow(['endpoint','p256dh','auth','subscription_json','userId','created_at']);
+      console.log('[SUB] Hoja creada con esquema nuevo');
     } else {
-      // Asegurar que la columna userId exista (migración de hoja vieja)
-      var hdrs = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+      // Migración: si no tiene columna userId, agregarla al final
+      var ncols = sheet.getLastColumn();
+      var hdrs  = sheet.getRange(1, 1, 1, ncols).getValues()[0].map(String);
       if (hdrs.indexOf('userId') === -1) {
-        sheet.getRange(1, hdrs.length + 1).setValue('userId');
+        sheet.getRange(1, ncols + 1).setValue('userId');
+        console.log('[SUB] Columna userId agregada en col', ncols + 1);
+        // Actualizar hdrs y ncols
+        ncols = ncols + 1;
+        hdrs.push('userId');
       }
     }
-    var p256dh = (sub.keys && sub.keys.p256dh) ? sub.keys.p256dh : '';
-    var auth   = (sub.keys && sub.keys.auth)   ? sub.keys.auth   : '';
-    var rows   = sheet.getDataRange().getValues();
+
+    var p256dh   = (sub.keys && sub.keys.p256dh) ? sub.keys.p256dh : '';
+    var auth     = (sub.keys && sub.keys.auth)   ? sub.keys.auth   : '';
+    var hdrs2    = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+    var colUserId = hdrs2.indexOf('userId') + 1; // 1-based, 0 si no existe
+
+    var rows = sheet.getDataRange().getValues();
     for (var i = 1; i < rows.length; i++) {
       if (rows[i][0] === sub.endpoint) {
-        // Actualizar: cols 1-4 + userId en col 5
-        sheet.getRange(i+1,1,1,5).setValues([[sub.endpoint, p256dh, auth, JSON.stringify(sub), userId]]);
+        // Actualizar campos base
+        sheet.getRange(i+1, 1, 1, 4).setValues([[sub.endpoint, p256dh, auth, JSON.stringify(sub)]]);
+        // Actualizar userId en su columna real
+        if (colUserId > 0) sheet.getRange(i+1, colUserId).setValue(userId);
+        console.log('[SUB] Actualizada fila', i+1);
         return crearRespuestaJSON({ success: true, message: 'Suscripcion actualizada' });
       }
     }
-    sheet.appendRow([sub.endpoint, p256dh, auth, JSON.stringify(sub), userId, getFormattedDateTime()]);
+
+    // Nueva fila — construir según headers actuales
+    var newRow = [];
+    var hdrs3  = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+    var map    = { endpoint: sub.endpoint, p256dh: p256dh, auth: auth, subscription_json: JSON.stringify(sub), userId: userId, created_at: getFormattedDateTime() };
+    for (var h = 0; h < hdrs3.length; h++) {
+      newRow.push(map[hdrs3[h]] !== undefined ? map[hdrs3[h]] : '');
+    }
+    sheet.appendRow(newRow);
+    console.log('[SUB] Nueva fila insertada, userId:', userId);
     return crearRespuestaJSON({ success: true, message: 'Suscripcion guardada' });
-  } catch(err) { return crearRespuestaError(err); }
+  } catch(err) {
+    console.error('[SUB] ERROR:', err.toString());
+    return crearRespuestaError(err);
+  }
 }
 
 // ============================================
@@ -187,9 +213,17 @@ function listarSuscripciones() {
   try {
     var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('suscripciones');
     if (!sheet) return crearRespuestaJSON({ success: true, count: 0, subscriptions: [] });
-    var rows = sheet.getDataRange().getValues();
-    var subs = rows.slice(1).map(function(r) {
-      return { endpoint: r[0].toString().substring(0,60)+'...', userId: r[4] || '', created: r[5] };
+    var data  = sheet.getDataRange().getValues();
+    if (data.length < 2) return crearRespuestaJSON({ success: true, count: 0, subscriptions: [] });
+    var hdrs       = data[0].map(String);
+    var colUserId  = hdrs.indexOf('userId');
+    var colCreated = hdrs.indexOf('created_at');
+    var subs = data.slice(1).map(function(r) {
+      return {
+        endpoint: r[0].toString().substring(0,60)+'...',
+        userId:   colUserId  >= 0 ? String(r[colUserId]  || '') : '',
+        created:  colCreated >= 0 ? String(r[colCreated] || '') : ''
+      };
     });
     return crearRespuestaJSON({ success: true, count: subs.length, subscriptions: subs });
   } catch(err) { return crearRespuestaError(err); }
@@ -229,6 +263,12 @@ function enviarNotificacionATodos(params) {
     if (subsData.length < 2)
       return crearRespuestaJSON({ success: true, message: 'Sin suscriptores', sent: 0 });
 
+    // Detectar columna userId dinámicamente
+    var subsHdrs     = subsData[0].map(String);
+    var colSubUserId = subsHdrs.indexOf('userId');       // -1 si no existe
+    var colSubJson   = subsHdrs.indexOf('subscription_json');
+    if (colSubJson < 0) colSubJson = 3; // fallback posición fija
+
     // Payload JSON que el Service Worker leerá con event.data.json()
     // Incluir todos los campos extra que vengan en params (notifType, lote, planta, etc.)
     var payloadObj = {
@@ -239,7 +279,7 @@ function enviarNotificacionATodos(params) {
       timestamp: Date.now()
     };
     // Copiar campos extra (notifType, lote, planta, idNovedad, estadoActual, etc.)
-    var reservados = { action:1, title:1, body:1, icon:1, data:1, p256dh:1, auth:1, endpoint:1 };
+    var reservados = { action:1, title:1, body:1, icon:1, data:1, p256dh:1, auth:1, endpoint:1, targetUserId:1, userId:1 };
     for (var k in params) {
       if (!reservados[k] && params[k] !== undefined && params[k] !== '') {
         payloadObj[k] = params[k];
@@ -279,7 +319,7 @@ function enviarNotificacionATodos(params) {
 
     for (var i = 1; i < subsData.length; i++) {
       try {
-        var subJson = subsData[i][3];
+        var subJson = subsData[i][colSubJson];
         if (!subJson) continue;
         var sub;
         try { sub = JSON.parse(subJson); } catch(pe) { continue; }
@@ -287,7 +327,7 @@ function enviarNotificacionATodos(params) {
 
         // Filtrar por targetUserId si se especificó
         if (targetUserId) {
-          var rowUserId = String(subsData[i][4] || '').trim();
+          var rowUserId = colSubUserId >= 0 ? String(subsData[i][colSubUserId] || '').trim() : '';
           if (rowUserId !== targetUserId) continue;
         }
 

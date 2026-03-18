@@ -49,6 +49,7 @@ async function _callNotifAPI(action, method = 'GET', data = null) {
       if (data.body)            form.append('body',     data.body);
       if (data.icon  != null)   form.append('icon',     data.icon);
       if (data.url)             form.append('url',      data.url);
+      if (data.userId)          form.append('userId',   data.userId);
     }
     _log('info', 'API', 'POST payload:', Object.fromEntries(form));
     const res  = await fetch(NOTIF_GAS_URL, {
@@ -344,29 +345,14 @@ async function _saveSubscriptionToGAS(subscription) {
     userId
   });
 
-  const form = new URLSearchParams();
-  form.append('action',   'subscribe');
-  form.append('data',     JSON.stringify(subJSON));
-  form.append('endpoint', subJSON.endpoint || '');
-  if (subJSON.keys?.p256dh) form.append('p256dh', subJSON.keys.p256dh);
-  if (subJSON.keys?.auth)   form.append('auth',   subJSON.keys.auth);
-  if (userId)               form.append('userId', userId);
+  // Reusar _callNotifAPI (que ya funciona) y agregar userId al objeto
+  const dataWithUserId = { ...subJSON, userId };
+  const result = await _callNotifAPI('subscribe', 'POST', dataWithUserId);
 
-  try {
-    const res  = await fetch(NOTIF_GAS_URL, {
-      method: 'POST', mode: 'cors', body: form,
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-    });
-    const text = await res.text();
-    let result;
-    try { result = JSON.parse(text); } catch(_) { result = text; }
-    if (result?.success) {
-      _log('info', 'SAVE-SUB', 'Suscripción guardada en GAS OK:', result.message);
-    } else {
-      _log('error', 'SAVE-SUB', 'Error guardando en GAS, respuesta:', result);
-    }
-  } catch(e) {
-    _log('error', 'SAVE-SUB', 'Error llamando GAS:', e.message);
+  if (result?.success) {
+    _log('info', 'SAVE-SUB', 'Suscripción guardada en GAS OK:', result.message);
+  } else {
+    _log('error', 'SAVE-SUB', 'Error guardando en GAS, respuesta:', result);
   }
 }
 
