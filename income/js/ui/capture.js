@@ -57,6 +57,17 @@ async function captureAndDownloadCards(silent = false) {
 
         await new Promise(resolve => setTimeout(resolve, 500));
 
+        // Asegurar que todas las fuentes estén cargadas antes de capturar
+        await document.fonts.ready;
+
+        // Forzar render de FontAwesome precargando un elemento invisible con cada ícono usado
+        const faPreload = document.createElement('div');
+        faPreload.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;font-size:1px;';
+        faPreload.innerHTML = '<i class="fas fa-calendar-day"></i><i class="fas fa-calendar-alt"></i><i class="fas fa-chart-line"></i><i class="fas fa-bullseye"></i><i class="fas fa-money-bill-wave"></i><i class="fas fa-percent"></i><i class="fas fa-chart-simple"></i><i class="fas fa-calculator"></i><i class="fas fa-crown"></i><i class="fas fa-weight-hanging"></i>';
+        document.body.appendChild(faPreload);
+        await new Promise(resolve => setTimeout(resolve, 200));
+        faPreload.remove();
+
         // 2. Configuración para captura
         const isMobile = window.matchMedia("(max-width: 768px)").matches;
         
