@@ -6,7 +6,7 @@
    - Anti-duplicados por ID de notificación
    ========================================================================== */
 
-const SW_VERSION = 'sispro-v8';
+const SW_VERSION = 'sispro-v9';
 
 /* ── GAS endpoint para pull de última notificación ── */
 let GAS_NOTIF_URL = null;
@@ -285,21 +285,21 @@ function _formatNotif(payload) {
    ══════════════════════════════════════════════════════════════════════════ */
 async function _showIfNew(payload) {
   const ts = parseInt(payload.timestamp) || 0;
-  const id = payload.id || `${payload.title}_${ts}`;
+  // Para chat: incluir fragmento del body en el id para que mensajes distintos
+  // nunca colisionen aunque lleguen en el mismo milisegundo
+  const bodySnippet = (payload.body || '').trim().substring(0, 30).replace(/\s+/g, '_');
+  const id = payload.id
+    ? (payload.notifType === 'chat' ? `${payload.id}_${bodySnippet}` : payload.id)
+    : `${payload.title}_${ts}_${bodySnippet}`;
 
   const savedTs = _lastNotifTs || (await _idbGet('lastNotifTs')) || 0;
   const savedId = _lastNotifId || (await _idbGet('lastNotifId')) || null;
 
   _swLog('info', 'SHOW', 'Evaluando notificación:', { id, ts, savedTs, savedId });
 
-  // Ignorar si es el mismo ID (ya mostrado antes)
+  // Bloquear solo si el ID es exactamente el mismo (misma notificación ya mostrada)
   if (id && id === savedId) {
     _swLog('info', 'SHOW', 'Mismo ID — notificación ya mostrada, ignorando');
-    return;
-  }
-  // Ignorar si el timestamp no es más nuevo (y hay timestamp válido)
-  if (ts > 0 && savedTs > 0 && ts <= savedTs) {
-    _swLog('info', 'SHOW', 'Timestamp no es más nuevo — ignorando', { ts, savedTs });
     return;
   }
 

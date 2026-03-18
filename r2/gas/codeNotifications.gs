@@ -204,7 +204,7 @@ function enviarNotificacionATodos(params) {
     // Payload JSON que el Service Worker leerá con event.data.json()
     // Incluir todos los campos extra que vengan en params (notifType, lote, planta, etc.)
     var payloadObj = {
-      id:        Utilities.getUuid(),
+      id:        Utilities.getUuid() + '_' + Date.now(),
       title:     title,
       body:      body,
       icon:      icon,

@@ -657,6 +657,15 @@ function createSidebar() {
                                 <span class="toggle-track ${notifChecked ? 'is-on' : ''} ${notifDenied ? 'is-disabled' : ''}"></span>
                             </label>
                         </div>
+                        <button onclick="testPushNow()" id="btn-test-push" style="
+                            width:100%; margin:4px 0 8px; padding:9px 12px;
+                            background:#3f51b5; color:white; border:none; border-radius:10px;
+                            font-size:0.82rem; font-weight:600; cursor:pointer;
+                            display:flex; align-items:center; justify-content:center; gap:8px;
+                            transition:background 0.2s;
+                        " onmouseover="this.style.background='#303f9f'" onmouseout="this.style.background='#3f51b5'">
+                            <i class="fas fa-bell"></i> Probar notificación
+                        </button>
 
                         <div class="settings-toggle-row">
                             <div class="settings-toggle-info">
@@ -845,6 +854,51 @@ function _syncNotifToggleUI(knownPerm = null) {
     }
 }
 
+/** Botón dedicado: activa permisos si hace falta y dispara notificación de prueba */
+async function testPushNow() {
+    const btn = document.getElementById('btn-test-push');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...'; }
+
+    const restore = () => {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bell"></i> Probar notificación'; }
+    };
+
+    try {
+        // 1. Pedir permiso si no está concedido
+        let perm = (typeof Notification !== 'undefined') ? Notification.permission : 'default';
+        if (perm === 'denied') {
+            Swal.fire({
+                icon: 'info',
+                title: 'Notificaciones bloqueadas',
+                text: 'Ve a Configuración del sitio y permite las notificaciones manualmente.',
+                confirmButtonColor: '#3f51b5'
+            });
+            restore(); return;
+        }
+        if (perm !== 'granted') {
+            perm = typeof _requestPushPermission === 'function'
+                ? await _requestPushPermission()
+                : await Notification.requestPermission();
+        }
+        if (perm !== 'granted') { restore(); return; }
+
+        // 2. Asegurar suscripción activa
+        if (typeof _subscribeToPush === 'function') {
+            await _subscribeToPush().catch(() => {});
+        }
+
+        // 3. Disparar notificación de prueba
+        _fireTestNotif();
+
+        // 4. Actualizar UI del toggle
+        localStorage.removeItem('sispro_notif_soft_off');
+        if (typeof _syncNotifToggleUI === 'function') _syncNotifToggleUI('granted');
+    } catch(e) {
+        console.warn('[TEST-PUSH]', e);
+    }
+    restore();
+}
+
 /** Toggle de notificaciones push desde el sidebar */
 async function togglePushNotifications(enable) {
     const permission = (typeof Notification !== 'undefined') ? Notification.permission : 'default';
@@ -857,31 +911,35 @@ async function togglePushNotifications(enable) {
                 text: 'El navegador bloqueó los permisos. Ve a Configuración del sitio y permite las notificaciones manualmente.',
                 confirmButtonColor: '#3f51b5'
             });
+            _syncNotifToggleUI();
             return;
         }
 
         localStorage.removeItem('sispro_notif_soft_off');
 
+        // Pedir permiso si aún no está concedido
         let finalPerm = permission;
-        if (permission === 'granted') {
+        if (permission !== 'granted') {
+            if (typeof _requestPushPermission === 'function') {
+                finalPerm = await _requestPushPermission();
+            } else if (typeof Notification !== 'undefined') {
+                finalPerm = await Notification.requestPermission();
+            }
+        } else {
+            // Ya tenía permiso — asegurar suscripción activa
             if (typeof _subscribeToPush === 'function') {
                 await _subscribeToPush().catch(e => console.warn('[PUSH] Error suscribiendo:', e));
             }
-        } else {
-            if (typeof _requestPushPermission === 'function') {
-                finalPerm = await _requestPushPermission();
-            }
-            if (finalPerm === 'granted' && typeof _showLocalTestNotif === 'function') {
-                _showLocalTestNotif();
-            }
-            if (finalPerm !== 'granted') {
-                localStorage.setItem('sispro_notif_soft_off', '1');
-            }
         }
 
-        // Sincronizar con el permiso real que obtuvimos (no Notification.permission que puede ser buggy)
+        if (finalPerm === 'granted') {
+            // Disparar notificación de prueba en cualquier dispositivo
+            _fireTestNotif();
+        } else {
+            localStorage.setItem('sispro_notif_soft_off', '1');
+        }
+
         _syncNotifToggleUI(finalPerm === 'granted' ? 'granted' : null);
-        // Re-sync tardío por si el navegador actualiza Notification.permission con delay
         setTimeout(() => _syncNotifToggleUI(), 800);
 
     } else {
@@ -895,6 +953,29 @@ async function togglePushNotifications(enable) {
         }
         localStorage.removeItem('sispro_push_subscribed');
         _syncNotifToggleUI();
+    }
+}
+
+/** Dispara una notificación de prueba — funciona en PC, Android e iOS */
+function _fireTestNotif() {
+    const title = '¡SISPRO activado!';
+    const opts  = {
+        body:    'Las notificaciones push están funcionando correctamente.',
+        icon:    './icons/TDM_variable_colors.svg',
+        badge:   './icons/TDM_variable_colors.svg',
+        tag:     'sispro-test',
+        vibrate: [100, 50, 100]
+    };
+
+    // Preferir SW (necesario en iOS y para vibración en Android)
+    if (typeof _showLocalTestNotif === 'function') {
+        _showLocalTestNotif();
+        return;
+    }
+
+    // Fallback: Notification API directa (PC / Chrome sin SW listo)
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        try { new Notification(title, opts); } catch(e) { console.warn('[TEST-NOTIF] Fallback falló:', e); }
     }
 }
 

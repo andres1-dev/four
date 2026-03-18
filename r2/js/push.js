@@ -191,22 +191,39 @@ async function _requestPushPermission() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Notificación local de prueba
+   Notificación local de prueba — funciona en PC, Android e iOS
    ══════════════════════════════════════════════════════════════════════════ */
 function _showLocalTestNotif() {
   _log('info', 'TEST-NOTIF', 'Mostrando notificación de prueba...');
-  if (!_swRegistration || Notification.permission !== 'granted') {
-    _log('warn', 'TEST-NOTIF', 'No se puede mostrar — SW o permiso no disponible');
-    return;
-  }
-  _swRegistration.showNotification('¡SISPRO activado!', {
+
+  const title = '¡SISPRO activado!';
+  const opts  = {
     body:    'Las notificaciones push están funcionando correctamente.',
     icon:    './icons/TDM_variable_colors.svg',
     badge:   './icons/TDM_variable_colors.svg',
     vibrate: [100, 50, 100],
     tag:     'sispro-test'
-  });
-  _log('info', 'TEST-NOTIF', 'Notificación de prueba enviada');
+  };
+
+  if (Notification.permission !== 'granted') {
+    _log('warn', 'TEST-NOTIF', 'Permiso no concedido, no se puede mostrar');
+    return;
+  }
+
+  // Preferir SW (requerido en iOS Safari y para vibración en Android)
+  if (_swRegistration) {
+    _swRegistration.showNotification(title, opts);
+    _log('info', 'TEST-NOTIF', 'Notificación enviada via SW');
+    return;
+  }
+
+  // Fallback: Notification API directa (PC / Chrome sin SW listo aún)
+  try {
+    new Notification(title, opts);
+    _log('info', 'TEST-NOTIF', 'Notificación enviada via Notification API directa');
+  } catch(e) {
+    _log('warn', 'TEST-NOTIF', 'Fallback Notification API falló:', e.message);
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
