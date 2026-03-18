@@ -98,8 +98,10 @@
                 <input type="date" id="datePicker" class="date-picker">
             </div>
             <div class="proveedor-filter-wrap">
-                <i class="fas fa-house proveedor-filter-icon"></i>
-                <select id="proveedorFilter" class="proveedor-filter">
+                <button id="proveedorBtn" class="theme-toggle-btn" title="Filtrar proveedor" aria-label="Filtrar proveedor">
+                    <i class="fas fa-house" id="proveedorIcon"></i>
+                </button>
+                <select id="proveedorFilter" class="proveedor-filter" style="display:none;">
                     <option value="todos">TODOS</option>
                     <option value="universo">UNIVERSO</option>
                     <option value="angeles">ÁNGELES</option>

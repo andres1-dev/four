@@ -126,8 +126,114 @@ function fitInputWidth(el) {
 
 function initProveedorFilter() {
     const select = document.getElementById('proveedorFilter');
+    const btn    = document.getElementById('proveedorBtn');
     if (!select) return;
 
+    // ── Panel de proveedor ────────────────────────────────────────────────────
+    if (btn) {
+        const panel = document.createElement('div');
+        panel.id = 'proveedorPanel';
+        panel.className = 'settings-panel';
+        panel.setAttribute('role', 'menu');
+        panel.setAttribute('aria-hidden', 'true');
+
+        const options = [
+            { value: 'todos',    icon: 'fa-house',      label: 'Todos' },
+            { value: 'universo', icon: 'fa-globe',       label: 'Universo' },
+            { value: 'angeles',  icon: 'fa-star',        label: 'Ángeles' },
+        ];
+
+        panel.innerHTML = options.map(o => `
+            <button class="settings-item proveedor-option" data-value="${o.value}">
+                <i class="fas ${o.icon}"></i><span>${o.label}</span>
+            </button>`).join('<div class="settings-divider"></div>');
+
+        document.body.appendChild(panel);
+
+        function positionProveedorPanel() {
+            const rect = btn.getBoundingClientRect();
+            const pw = panel.offsetWidth || 160;
+            const ph = panel.offsetHeight || 130;
+            const margin = 8;
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+
+            let left = rect.left - pw - margin;
+            let top  = rect.top;
+            if (left < margin) left = rect.right + margin;
+            if (left + pw > vw - margin) left = vw - pw - margin;
+            if (top + ph > vh - margin) top = vh - ph - margin;
+            if (top < margin) top = margin;
+
+            panel.style.left = left + 'px';
+            panel.style.top  = top  + 'px';
+        }
+
+        function closeProveedorPanel() {
+            panel.classList.remove('open');
+            panel.setAttribute('aria-hidden', 'true');
+        }
+
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const opening = !panel.classList.contains('open');
+            if (opening) {
+                panel.style.visibility = 'hidden';
+                panel.classList.add('open');
+                positionProveedorPanel();
+                panel.style.visibility = '';
+            } else {
+                closeProveedorPanel();
+            }
+            panel.setAttribute('aria-hidden', String(!opening));
+        });
+
+        document.addEventListener('click', e => {
+            if (!panel.contains(e.target) && e.target !== btn) closeProveedorPanel();
+        });
+
+        window.addEventListener('resize', () => {
+            if (panel.classList.contains('open')) positionProveedorPanel();
+        });
+
+        // Marcar opción activa y actualizar ícono del botón
+        function applyProveedor(value) {
+            selectedProveedor = value;
+            select.value = value;
+            const opt = options.find(o => o.value === value);
+            const icon = document.getElementById('proveedorIcon');
+            if (icon && opt) icon.className = `fas ${opt.icon}`;
+            panel.querySelectorAll('.proveedor-option').forEach(el => {
+                el.classList.toggle('active', el.dataset.value === value);
+            });
+        }
+
+        applyProveedor(select.value || 'todos');
+
+        panel.querySelectorAll('.proveedor-option').forEach(el => {
+            el.addEventListener('click', async () => {
+                closeProveedorPanel();
+                applyProveedor(el.dataset.value);
+                if (allIncomeData.length === 0) return;
+
+                reconsolidateWithFilter();
+                const datePicker = document.getElementById('datePicker');
+                const selectedDate = datePicker ? (datePicker.valueAsDate || new Date()) : new Date();
+                try {
+                    const reporte = await generarReporteCompleto(selectedDate);
+                    currentReportData = reporte;
+                    cargarDatosDia();
+                    cargarDatosMes();
+                    cargarDatosAño();
+                    cargarDatosTendencia();
+                } catch (error) {
+                    console.error("Provider filter error:", error);
+                }
+            });
+        });
+    }
+
+    // El select oculto sigue siendo la fuente de verdad para el resto del código
     fitInputWidth(select);
 
     select.addEventListener('change', async () => {
