@@ -225,19 +225,52 @@ async function _checkAndNotify() {
   
   const url = GAS_NOTIF_URL || (await _idbGet('gasNotifUrl'));
   if (!url) {
-    console.log('[SW] No hay URL para polling');
+    console.log('[SW Polling] No hay URL para polling');
     return;
   }
 
-  console.log('[SW] Polling check...');
+  console.log('[SW Polling] Consultando servidor...');
   
   try {
     const res = await fetch(`${url}?action=get-latest-notification&_t=${Date.now()}`);
     const json = await res.json();
     
+    console.log('[SW Polling] Consultando servidor...');
+    
     if (json.success && json.notification) {
-      console.log('[SW] Notificación encontrada en polling:', json.notification);
-      await _showIfNew(json.notification);
+      const notif = json.notification;
+      const currentTs = parseInt(notif.timestamp) || 0;
+      const currentId = notif.id || '';
+      
+      const lastTs = _lastNotifTs || (await _idbGet('lastNotifTs')) || 0;
+      const lastId = _lastNotifId || (await _idbGet('lastNotifId')) || null;
+      
+      // Verificar si es nueva (timestamp mayor O id diferente)
+      const tsMayor = currentTs > lastTs;
+      const idDistinto = currentId !== lastId;
+      
+      console.log('[SW Polling] Consultando servidor...', {
+        tsMayor,
+        idDistinto,
+        lastTs,
+        currentTs,
+        lastId,
+        currentId
+      });
+      
+      if (tsMayor || (idDistinto && currentTs >= lastTs)) {
+        console.log('[SW Polling] ✅ Nueva notificación detectada');
+        await _showIfNew(notif);
+      } else {
+        console.log('[SW Polling] Sin cambios o notificación ya mostrada', {
+          tsMayor,
+          idDistinto,
+          lastTs,
+          currentTs,
+          lastId,
+          currentId
+        });
+      }
     } else {
       console.log('[SW] Sin notificaciones nuevas');
     }
