@@ -315,29 +315,6 @@ async function generarReporteCompleto(targetDate) {
 
 
 
-// ── Theme Toggle ─────────────────────────────────────────────────────────────
-(function initThemeToggle() {
-    const btn = document.getElementById('themeToggleBtn');
-    const icon = document.getElementById('themeIcon');
-    if (!btn || !icon) return;
-
-    function applyTheme(theme) {
-        document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('theme', theme);
-        icon.className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
-        btn.title = theme === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro';
-    }
-
-    // Sincronizar ícono con el tema actual al cargar
-    const current = document.documentElement.getAttribute('data-theme') || 'dark';
-    applyTheme(current);
-
-    btn.addEventListener('click', () => {
-        const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-        applyTheme(next);
-    });
-})();
-
 // ── Loading Stream ────────────────────────────────────────────────────────────
 (function () {
     const LINES = [

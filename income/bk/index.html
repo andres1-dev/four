@@ -38,11 +38,7 @@
 
     <!-- Tema inline: se ejecuta ANTES de pintar nada -->
     <script>
-        (function() {
-            var saved = localStorage.getItem('theme');
-            var theme = saved || 'dark';
-            document.documentElement.setAttribute('data-theme', theme);
-        })();
+        document.documentElement.setAttribute('data-theme', 'dark');
     </script>
 </head>
 
@@ -91,9 +87,6 @@
             <div class="social-links">
                 <a href="#" id="whatsappBtn" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
                 <a href="#" id="emailBtn" aria-label="Email"><i class="fas fa-envelope"></i></a>
-                <button id="themeToggleBtn" class="theme-toggle-btn" title="Cambiar tema" aria-label="Cambiar tema">
-                    <i class="fas fa-sun" id="themeIcon"></i>
-                </button>
             </div>
             <div class="date-picker-wrap">
                 <i class="fas fa-calendar-day date-picker-icon"></i>
