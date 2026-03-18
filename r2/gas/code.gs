@@ -424,7 +424,8 @@ function _updateEstado(d) {
         idNovedad:      target,
         lote:           lote,
         planta:         planta,
-        estadoActual:   d.nuevoEstado
+        estadoActual:   d.nuevoEstado,
+        targetUserId:   planta   // notificar solo a la planta dueña de la novedad
       });
 
       return ok('Estado actualizado exitosamente.');
@@ -782,11 +783,15 @@ function _sendChatMsg(d) {
       ? 'Mensaje - Lote ' + String(d.lote||'S/N')
       : 'Respuesta - Lote ' + String(d.lote||'S/N');
     var pushBody = (isGuest ? String(d.planta||'Planta') : 'Equipo') + ': ' + String(d.mensaje||'').substring(0, 80);
+    // GUEST envía → broadcast a operadores (sin targetUserId)
+    // OPERATOR envía → solo a la planta (GUEST) dueña de la novedad
+    var chatTarget = isGuest ? '' : String(d.planta||'');
     _pushNotif(pushTitle, pushBody, {
-      notifType: 'chat',
-      idNovedad: String(d.idNovedad||''),
-      lote:      String(d.lote||''),
-      planta:    String(d.planta||'')
+      notifType:    'chat',
+      idNovedad:    String(d.idNovedad||''),
+      lote:         String(d.lote||''),
+      planta:       String(d.planta||''),
+      targetUserId: chatTarget
     });
 
     return ok('Mensaje enviado.', { id, ts });

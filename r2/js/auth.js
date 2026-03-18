@@ -284,6 +284,15 @@ function handleLogin(userId, password, isLoginPage = false, tipoAcceso = 'intern
         currentUser = userFound;
         localStorage.setItem('sispro_user', JSON.stringify(currentUser));
 
+        // Re-guardar suscripción push con el userId del usuario recién autenticado
+        if (Notification.permission === 'granted' && typeof _swRegistration !== 'undefined' && _swRegistration) {
+            _swRegistration.pushManager.getSubscription().then(sub => {
+                if (sub && typeof _saveSubscriptionToGAS === 'function') {
+                    _saveSubscriptionToGAS(sub);
+                }
+            }).catch(() => {});
+        }
+
         if (isLoginPage) {
             window.location.href = 'index.html';
         } else {

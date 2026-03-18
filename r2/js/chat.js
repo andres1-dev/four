@@ -489,6 +489,11 @@ async function _sendChatPushDirect(texto, msgId) {
         const body     = autor + ': ' + (texto || '').substring(0, 80);
         const notifId  = (msgId || ('chat_' + Date.now())) + '_' + Date.now();
 
+        // Determinar a quién enviar:
+        // - GUEST envía → notificar a todos los operadores (sin targetUserId = broadcast)
+        // - OPERATOR envía → notificar solo a la planta (GUEST) dueña de la novedad
+        const targetUserId = isGuest ? '' : (_chatPlanta || '');
+
         const form = new URLSearchParams();
         form.append('action',    'send-notification');
         form.append('title',     title);
@@ -498,6 +503,7 @@ async function _sendChatPushDirect(texto, msgId) {
         form.append('lote',      _chatLote      || '');
         form.append('planta',    _chatPlanta    || '');
         form.append('msgId',     notifId);
+        if (targetUserId) form.append('targetUserId', targetUserId);
 
         const NOTIF_URL = (typeof NOTIF_GAS_URL !== 'undefined')
             ? NOTIF_GAS_URL

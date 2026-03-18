@@ -331,16 +331,42 @@ async function _subscribeToPush() {
 async function _saveSubscriptionToGAS(subscription) {
   _log('info', 'SAVE-SUB', 'Guardando suscripción en GAS...');
   const subJSON = subscription.toJSON();
+
+  // Identificar al usuario dueño de esta suscripción
+  const userId = (typeof currentUser !== 'undefined')
+    ? (currentUser?.ID_PLANTA || currentUser?.ID_USUARIO || '')
+    : '';
+
   _log('info', 'SAVE-SUB', 'Datos a enviar:', {
     endpoint: subJSON.endpoint?.substring(0, 60) + '...',
     p256dh:   subJSON.keys?.p256dh?.substring(0, 20) + '...',
-    auth:     subJSON.keys?.auth
+    auth:     subJSON.keys?.auth,
+    userId
   });
-  const result = await _callNotifAPI('subscribe', 'POST', subJSON);
-  if (result?.success) {
-    _log('info', 'SAVE-SUB', 'Suscripción guardada en GAS OK:', result.message);
-  } else {
-    _log('error', 'SAVE-SUB', 'Error guardando en GAS, respuesta:', result);
+
+  const form = new URLSearchParams();
+  form.append('action',   'subscribe');
+  form.append('data',     JSON.stringify(subJSON));
+  form.append('endpoint', subJSON.endpoint || '');
+  if (subJSON.keys?.p256dh) form.append('p256dh', subJSON.keys.p256dh);
+  if (subJSON.keys?.auth)   form.append('auth',   subJSON.keys.auth);
+  if (userId)               form.append('userId', userId);
+
+  try {
+    const res  = await fetch(NOTIF_GAS_URL, {
+      method: 'POST', mode: 'cors', body: form,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    });
+    const text = await res.text();
+    let result;
+    try { result = JSON.parse(text); } catch(_) { result = text; }
+    if (result?.success) {
+      _log('info', 'SAVE-SUB', 'Suscripción guardada en GAS OK:', result.message);
+    } else {
+      _log('error', 'SAVE-SUB', 'Error guardando en GAS, respuesta:', result);
+    }
+  } catch(e) {
+    _log('error', 'SAVE-SUB', 'Error llamando GAS:', e.message);
   }
 }
 

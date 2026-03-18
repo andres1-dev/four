@@ -132,22 +132,32 @@ function guardarSuscripcion(params, e) {
     if (!sub || !sub.endpoint)
       return crearRespuestaJSON({ success: false, message: 'Endpoint requerido' });
 
+    // userId identifica al dueño de esta suscripción (ID_PLANTA para GUEST, ID_USUARIO para operadores)
+    var userId = String(params.userId || '').trim();
+
     var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheet = ss.getSheetByName('suscripciones');
     if (!sheet) {
       sheet = ss.insertSheet('suscripciones');
-      sheet.appendRow(['endpoint','p256dh','auth','subscription_json','created_at']);
+      sheet.appendRow(['endpoint','p256dh','auth','subscription_json','userId','created_at']);
+    } else {
+      // Asegurar que la columna userId exista (migración de hoja vieja)
+      var hdrs = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+      if (hdrs.indexOf('userId') === -1) {
+        sheet.getRange(1, hdrs.length + 1).setValue('userId');
+      }
     }
     var p256dh = (sub.keys && sub.keys.p256dh) ? sub.keys.p256dh : '';
     var auth   = (sub.keys && sub.keys.auth)   ? sub.keys.auth   : '';
     var rows   = sheet.getDataRange().getValues();
     for (var i = 1; i < rows.length; i++) {
       if (rows[i][0] === sub.endpoint) {
-        sheet.getRange(i+1,1,1,4).setValues([[sub.endpoint, p256dh, auth, JSON.stringify(sub)]]);
+        // Actualizar: cols 1-4 + userId en col 5
+        sheet.getRange(i+1,1,1,5).setValues([[sub.endpoint, p256dh, auth, JSON.stringify(sub), userId]]);
         return crearRespuestaJSON({ success: true, message: 'Suscripcion actualizada' });
       }
     }
-    sheet.appendRow([sub.endpoint, p256dh, auth, JSON.stringify(sub), getFormattedDateTime()]);
+    sheet.appendRow([sub.endpoint, p256dh, auth, JSON.stringify(sub), userId, getFormattedDateTime()]);
     return crearRespuestaJSON({ success: true, message: 'Suscripcion guardada' });
   } catch(err) { return crearRespuestaError(err); }
 }
@@ -179,7 +189,7 @@ function listarSuscripciones() {
     if (!sheet) return crearRespuestaJSON({ success: true, count: 0, subscriptions: [] });
     var rows = sheet.getDataRange().getValues();
     var subs = rows.slice(1).map(function(r) {
-      return { endpoint: r[0].toString().substring(0,60)+'...', created: r[4] };
+      return { endpoint: r[0].toString().substring(0,60)+'...', userId: r[4] || '', created: r[5] };
     });
     return crearRespuestaJSON({ success: true, count: subs.length, subscriptions: subs });
   } catch(err) { return crearRespuestaError(err); }
@@ -187,11 +197,14 @@ function listarSuscripciones() {
 
 // ============================================
 // ENVIO A TODOS  — rápido y sin cifrado pesado
+// targetUserId: si se pasa, solo envía a suscripciones de ese usuario.
+//               Si es vacío/null, envía a TODOS (broadcast para estado/admin).
 // ============================================
 function enviarNotificacionATodos(params) {
-  var title = params.title || 'Notificacion';
-  var body  = params.body  || 'Mensaje nuevo';
-  var icon  = params.icon  || '';
+  var title        = params.title        || 'Notificacion';
+  var body         = params.body         || 'Mensaje nuevo';
+  var icon         = params.icon         || '';
+  var targetUserId = String(params.targetUserId || '').trim(); // '' = broadcast
 
   try {
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -271,6 +284,12 @@ function enviarNotificacionATodos(params) {
         var sub;
         try { sub = JSON.parse(subJson); } catch(pe) { continue; }
         if (!sub || !sub.endpoint) continue;
+
+        // Filtrar por targetUserId si se especificó
+        if (targetUserId) {
+          var rowUserId = String(subsData[i][4] || '').trim();
+          if (rowUserId !== targetUserId) continue;
+        }
 
         var endpoint = sub.endpoint;
         var audienceMatch = endpoint.match(/^(https?:\/\/[^\/]+)/);
