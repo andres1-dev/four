@@ -75,28 +75,52 @@ function analizarPatronesSemanales(datos) {
 
 function calcularProyeccionDiaria(datos) {
     if (!datos || datos.length < 5) return null;
+
     const ultimaFecha = parseDate(datos[datos.length - 1].Fecha);
-    const diasEnMes = new Date(ultimaFecha.getFullYear(), ultimaFecha.getMonth() + 1, 0).getDate();
-    const diasTranscurridos = datos.length;
-    const diasRestantes = diasEnMes - diasTranscurridos;
-    if (diasRestantes <= 0) return null;
+    const año = ultimaFecha.getFullYear();
+    const mes = ultimaFecha.getMonth();
+
+    // ── Días hábiles reales transcurridos ────────────────────────────────────
+    const diasHabilesTranscurridos = datos.length;
+
+    // ── Días hábiles restantes en el mes ────────────────────────────────────
+    const diasEnMes = new Date(año, mes + 1, 0).getDate();
+    // Usar hora Colombia (UTC-5) para evitar desfase de zona horaria
+    const offset = ultimaFecha.getTimezoneOffset() + 300;
+    const ultimaFechaCol = new Date(ultimaFecha.getTime() + offset * 60000);
+    const ultimoDia = ultimaFechaCol.getDate();
+    let diasHabilesRestantes = 0;
+    for (let d = ultimoDia + 1; d <= diasEnMes; d++) {
+        const dow = new Date(año, mes, d).getDay();
+        if (dow !== 0 && dow !== 6) diasHabilesRestantes++;
+    }
+
+    const diasHabilesTotales = diasHabilesTranscurridos + diasHabilesRestantes;
+
+    if (diasHabilesRestantes <= 0) return null;
 
     const ingresosAcumulados = datos.reduce((sum, d) => sum + d.Ingreso, 0);
-    const promedioSimple = Math.round(ingresosAcumulados / diasTranscurridos);
+    const promedioSimple = Math.round(ingresosAcumulados / diasHabilesTranscurridos);
 
+    // Regresión lineal sobre días con datos
     const tendencia = calcularTendenciaLineal(datos);
     const ultimaTendencia = tendencia[tendencia.length - 1];
-    const proyeccionTendencia = ultimaTendencia * diasEnMes;
+    const proyeccionTendencia = Math.round(ultimaTendencia * diasHabilesTotales);
 
-    const ultimos7Dias = datos.slice(-7);
-    const promedioMovil = ultimos7Dias.reduce((sum, d) => sum + d.Ingreso, 0) / ultimos7Dias.length;
-    const proyeccionMovil = Math.round(promedioMovil * diasEnMes);
+    // Promedio móvil últimos 7 días hábiles
+    const ultimos7 = datos.slice(-7);
+    const promedioMovil = Math.round(ultimos7.reduce((sum, d) => sum + d.Ingreso, 0) / ultimos7.length);
+    const proyeccionMovil = Math.round(promedioMovil * diasHabilesTotales);
 
     return {
-        diasTranscurridos,
-        diasRestantes,
+        diasTranscurridos: diasHabilesTranscurridos,
+        diasRestantes: diasHabilesRestantes,
+        diasHabilesTotales,
         ingresosAcumulados,
-        proyeccionConservadora: Math.round((proyeccionTendencia + proyeccionMovil) / 2)
+        promedioSimple,
+        proyeccionConservadora: Math.round((proyeccionTendencia + proyeccionMovil) / 2),
+        proyeccionTendencia,
+        proyeccionMovil
     };
 }
 

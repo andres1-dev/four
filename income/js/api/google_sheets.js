@@ -88,10 +88,13 @@ function _parseRecRows(rows, ano) {
     return rows.map(row => {
         if (!row[0] && !row[1]) return null;
         const linea = (row[3] || '').toUpperCase();
+        // Extraer año real de la fecha si está disponible, sino usar el parámetro
+        const fechaNorm = normalizeDate(row[1] || '');
+        const anoReal = fechaNorm ? fechaNorm.substring(0, 4) : ano;
         return {
-            FECHA: normalizeDate(row[1] || ''),
+            FECHA: fechaNorm,
             CANTIDAD: Number(row[18]) || 0,
-            ANO: ano,
+            ANO: anoReal,
             PROVEEDOR: linea.includes('ANGELES') ? 'ANGELES' : 'UNIVERSO'
         };
     }).filter(Boolean);
@@ -190,7 +193,7 @@ async function getAllIncomeData() {
 
     return [
         ..._parseMainRows(mainRows),
-        ..._parseRecRows(recRows, '2025'),
+        ..._parseRecRows(recRows, '2026'),
         ..._parseRecRows(rec2024Rows, '2024')
     ];
 }
@@ -222,7 +225,7 @@ async function datosCargarEndpoint() {
 
         datosRegistros = [
             ..._parseDbData2(mainRows),
-            ..._parseDbRec(recRows, 2025),
+            ..._parseDbRec(recRows, 2026),
             ..._parseDbRec(rec2024Rows, 2024)
         ];
 

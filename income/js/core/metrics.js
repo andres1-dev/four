@@ -65,27 +65,7 @@ function generatePeriodMetrics(type, date, fullYearData, isFromPreviousYear = fa
     const diferencia = totalIngreso - totalMeta;
     const porcentaje = totalMeta > 0 ? ((totalIngreso / totalMeta) * 100).toFixed(2) + '%' : '0%';
 
-    // Calulate business days (hábiles)
-    let habiles_totales = 0;
-    if (type === 'mes') {
-        const budgetForMonth = budgetData.find(b => b.MES.toUpperCase() === monthName.toUpperCase() && b.ANO === String(year));
-        if (budgetForMonth) {
-            if (selectedProveedor === 'todos') {
-                habiles_totales = budgetForMonth.HABILES;
-            } else {
-                // If specific provider, total hábiles is usually the same unless it's a weighted calculation
-                // For meta calculation, HABILES is global per month in this system
-                habiles_totales = budgetForMonth.HABILES;
-            }
-        }
-    } else {
-        // Year
-        const budgetForYear = budgetData.filter(b => b.ANO === String(year));
-        habiles_totales = budgetForYear.reduce((sum, b) => sum + b.HABILES, 0);
-    }
-
     // Calculate business days passed (cursados) globally
-    // A day is "passed" if ANY provider had data (present in globalConsolidatedData)
     let globalPeriodData = type === 'mes'
         ? globalConsolidatedData.filter(d => d.Mes === monthName && d.Año === year)
         : globalConsolidatedData.filter(d => d.Año === year);
@@ -104,6 +84,31 @@ function generatePeriodMetrics(type, date, fullYearData, isFromPreviousYear = fa
             const dDate = parseDate(d.Fecha);
             return dDate && dDate <= parseDate(selectedDateStr);
         });
+    }
+
+    // Calcular días hábiles totales dinámicamente
+    let habiles_totales = 0;
+    if (type === 'mes') {
+        const offset = date.getTimezoneOffset() + 300;
+        const dateCol = new Date(date.getTime() + offset * 60000);
+        const diasEnMes = new Date(year, dateCol.getMonth() + 1, 0).getDate();
+
+        // Último día con datos en Colombia
+        const sortedGlobal = globalPeriodData.slice().sort((a, b) => parseDate(b.Fecha) - parseDate(a.Fecha));
+        const ultimoDatoFecha = sortedGlobal.length > 0 ? parseDate(sortedGlobal[0].Fecha) : date;
+        const ultimoDatoCol = new Date(ultimoDatoFecha.getTime() + (ultimoDatoFecha.getTimezoneOffset() + 300) * 60000);
+        const ultimoDia = ultimoDatoCol.getDate();
+
+        // Días hábiles restantes: solo lunes-viernes futuros
+        let habilesRestantes = 0;
+        for (let d = ultimoDia + 1; d <= diasEnMes; d++) {
+            const dow = new Date(year, dateCol.getMonth(), d).getDay();
+            if (dow !== 0 && dow !== 6) habilesRestantes++;
+        }
+        habiles_totales = globalPeriodData.length + habilesRestantes;
+    } else {
+        const budgetForYear = budgetData.filter(b => b.ANO === String(year));
+        habiles_totales = budgetForYear.reduce((sum, b) => sum + b.HABILES, 0);
     }
 
     return {

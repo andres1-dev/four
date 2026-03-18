@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Debug — Proyección Mensual</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f1117;
+    color: #94a3b8;
+    font-size: 13px;
+    padding: 32px;
+    min-height: 100vh;
+  }
+  h1 { color: #e2e8f0; font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: #475569; font-size: 12px; margin-bottom: 32px; }
+  .section { margin-bottom: 32px; }
+  .section-title {
+    color: #6366f1;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  th {
+    background: #16181f;
+    color: #475569;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 10px;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  td {
+    padding: 7px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: #94a3b8;
+  }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pos { color: #10b981; }
+  .neg { color: #f87171; }
+  .hi  { color: #e2e8f0; font-weight: 600; }
+  .accent { color: #6366f1; font-weight: 700; }
+  .warn { color: #fbbf24; }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .card {
+    background: #16181f;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .card-label { font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
+  .card-value { font-size: 22px; font-weight: 800; color: #e2e8f0; letter-spacing: -0.03em; }
+  .card-sub { font-size: 11px; color: #475569; margin-top: 4px; }
+
+  .formula-box {
+    background: #16181f;
+    border: 1px solid rgba(99,102,241,0.2);
+    border-left: 3px solid #6366f1;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .formula-box .label { color: #6366f1; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .formula-box code { color: #a78bfa; font-family: 'Consolas', monospace; font-size: 12px; }
+
+  .controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  select, input[type=date] {
+    background: #16181f;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #94a3b8;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  button {
+    background: #6366f1;
+    color: #fff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button:hover { background: #4f46e5; }
+  #status { color: #fbbf24; font-size: 12px; }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .tag-up   { background: rgba(16,185,129,0.15); color: #10b981; }
+  .tag-down { background: rgba(248,113,113,0.15); color: #f87171; }
+  .tag-neu  { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+
+  .trend-row td:first-child { color: #475569; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<h1>Debug — Proyección Mensual</h1>
+<p class="subtitle">Muestra exactamente qué datos usa y cómo se calcula cada resultado</p>
+
+<div class="controls">
+  <input type="date" id="fechaInput">
+  <select id="proveedorInput">
+    <option value="todos">Todos</option>
+    <option value="universo">Universo</option>
+    <option value="angeles">Ángeles</option>
+  </select>
+  <button onclick="cargar()">Calcular</button>
+  <span id="status">Cargando datos...</span>
+</div>
+
+<div id="output"></div>
+
+<!-- Reutilizar los mismos scripts del proyecto -->
+<script src="js/config/constants.js"></script>
+<script src="js/utils/date_utils.js"></script>
+<script src="js/utils/formatters.js"></script>
+<script src="js/api/google_sheets.js"></script>
+<script src="js/core/metrics.js"></script>
+<script src="js/core/trends_logic.js"></script>
+
+<script>
+// ── Bootstrap mínimo ──────────────────────────────────────────────────────────
+async function bootstrap() {
+  const status = document.getElementById('status');
+  try {
+    const [income, budget] = await Promise.all([getAllIncomeData(), getBudgetData()]);
+    allIncomeData  = income;
+    budgetData     = budget;
+    selectedProveedor = 'todos';
+    reconsolidar();
+    const hoy = new Date();
+    const yyyy = hoy.getFullYear();
+    const mm = String(hoy.getMonth()+1).padStart(2,'0');
+    const dd = String(hoy.getDate()).padStart(2,'0');
+    document.getElementById('fechaInput').value = `${yyyy}-${mm}-${dd}`;
+    status.textContent = `${allIncomeData.length.toLocaleString()} registros cargados`;
+    status.style.color = '#10b981';
+    cargar();
+  } catch(e) {
+    status.textContent = 'Error al cargar: ' + e.message;
+    status.style.color = '#f87171';
+  }
+}
+
+function reconsolidar() {
+  let filteredData = allIncomeData;
+  let filteredBudget = budgetData;
+  if (selectedProveedor === 'universo') {
+    filteredData = allIncomeData.filter(d => d.PROVEEDOR === 'UNIVERSO');
+    filteredBudget = budgetData.map(b => {
+      const lineas = b.LINEAS || {};
+      let total = 0;
+      for (const [l, v] of Object.entries(lineas)) if (!l.toUpperCase().includes('ANGELES')) total += v;
+      return { ...b, TOTAL: total };
+    });
+  } else if (selectedProveedor === 'angeles') {
+    filteredData = allIncomeData.filter(d => d.PROVEEDOR === 'ANGELES');
+    filteredBudget = budgetData.map(b => {
+      const lineas = b.LINEAS || {};
+      let total = 0;
+      for (const [l, v] of Object.entries(lineas)) if (l.toUpperCase().includes('ANGELES')) total += v;
+      return { ...b, TOTAL: total };
+    });
+  }
+  globalConsolidatedData = procesarDatosConsolidados(allIncomeData, budgetData);
+  const globalDates = globalConsolidatedData.map(d => d.Fecha);
+  consolidatedData = procesarDatosConsolidados(filteredData, filteredBudget, globalDates);
+}
+
+function fmt(n) { return Math.round(n).toLocaleString('es-CO'); }
+function pct(n) { return (typeof n === 'string' ? n : n.toFixed(2) + '%'); }
+function colorPct(v) {
+  const n = parseFloat(v);
+  if (n >= 100) return 'pos';
+  if (n >= 85)  return 'warn';
+  return 'neg';
+}
+
+function cargar() {
+  selectedProveedor = document.getElementById('proveedorInput').value;
+  reconsolidar();
+
+  const fechaVal = document.getElementById('fechaInput').value;
+  const [fy, fm, fd] = fechaVal ? fechaVal.split('-').map(Number) : [new Date().getFullYear(), new Date().getMonth()+1, new Date().getDate()];
+  const fecha = new Date(fy, fm - 1, fd, 23, 59, 59); // fin del día local, incluye todos los registros del día
+  const mes   = getNombreMes(formatDate(fecha)).toUpperCase();
+  const año   = fecha.getFullYear();
+
+  // Datos del mes hasta la fecha
+  const datosMes = consolidatedData.filter(d => {
+    const dd = parseDate(d.Fecha);
+    return d.Mes === mes && d.Año === año && dd && dd <= fecha;
+  }).sort((a,b) => parseDate(a.Fecha) - parseDate(b.Fecha));
+
+  if (datosMes.length === 0) {
+    document.getElementById('output').innerHTML = '<p style="color:#f87171">Sin datos para el período seleccionado.</p>';
+    return;
+  }
+
+  // ── Cálculos ──────────────────────────────────────────────────────────────
+  const n = datosMes.length;
+  const ingresosAcumulados = datosMes.reduce((s, d) => s + d.Ingreso, 0);
+  const metaAcumulada      = datosMes.reduce((s, d) => s + d.Meta, 0);
+  const promedioSimple     = ingresosAcumulados / n;
+
+  // Regresión lineal
+  let sumX=0, sumY=0, sumXY=0, sumXX=0;
+  datosMes.forEach((d,i) => { sumX+=i; sumY+=d.Ingreso; sumXY+=i*d.Ingreso; sumXX+=i*i; });
+  const pendiente   = (n*sumXY - sumX*sumY) / (n*sumXX - sumX*sumX);
+  const intercepto  = (sumY - pendiente*sumX) / n;
+  const lineaTendencia = datosMes.map((_,i) => Math.round(intercepto + pendiente*i));
+  const ultimaTendencia = lineaTendencia[lineaTendencia.length - 1];
+
+  // ── Días hábiles ──────────────────────────────────────────────────────────
+  // Transcurridos: todos los días con datos (si hay dato en sáb/dom, cuenta como hábil)
+  const diasHabilesTranscurridos = n;
+
+  // Identificar cuáles días transcurridos son sáb/dom (extras trabajados)
+  const sabDomTrabajados = datosMes.filter(d => {
+    const dow = parseDate(d.Fecha).getDay();
+    return dow === 0 || dow === 6;
+  });
+
+  // Restantes: solo lunes-viernes futuros desde el día siguiente al último dato
+  const diasEnMes = new Date(año, fecha.getMonth()+1, 0).getDate();
+  // Extraer día en hora Colombia (UTC-5) para evitar desfase de zona horaria
+  const ultimaFechaObj = parseDate(datosMes[datosMes.length-1].Fecha);
+  const offset = ultimaFechaObj.getTimezoneOffset() + 300;
+  const ultimaFechaCol = new Date(ultimaFechaObj.getTime() + offset * 60000);
+  const ultimoDiaConDatos = ultimaFechaCol.getDate();
+  const ultimaFechaConDatos = datosMes[datosMes.length-1].Fecha;
+  const ultimoDow = ultimaFechaCol.getDay();
+  const dowNames = ['dom','lun','mar','mié','jue','vie','sáb'];
+  console.log(`Último dato: ${ultimaFechaConDatos} (${dowNames[ultimoDow]}, día ${ultimoDiaConDatos})`);
+  let diasHabilesRestantes = 0;
+  const diasRestantesList = [];
+  for (let d = ultimoDiaConDatos + 1; d <= diasEnMes; d++) {
+    const dow = new Date(año, fecha.getMonth(), d).getDay();
+    const esHabil = dow !== 0 && dow !== 6;
+    diasRestantesList.push({ dia: d, dow: dowNames[dow], esHabil });
+    if (esHabil) diasHabilesRestantes++;
+  }
+  console.table(diasRestantesList);
+  const diasHabilesTotales = diasHabilesTranscurridos + diasHabilesRestantes;
+
+  // Promedio móvil últimos 7
+  const ultimos7       = datosMes.slice(-7);
+  const promedioMovil  = ultimos7.reduce((s,d) => s+d.Ingreso, 0) / ultimos7.length;
+
+  // Proyecciones sobre días hábiles totales
+  const proyTendencia    = Math.round(ultimaTendencia * diasHabilesTotales);
+  const proyMovil        = Math.round(promedioMovil   * diasHabilesTotales);
+  const proyConservadora = Math.round((proyTendencia + proyMovil) / 2);
+
+  // Meta total del mes
+  const budgetMes = budgetData.find(b => b.MES.toUpperCase() === mes && b.ANO === String(año));
+  const metaTotal = budgetMes ? budgetMes.TOTAL : 0;
+  const habiles   = budgetMes ? budgetMes.HABILES : 0;
+  const pctProyVsMeta = metaTotal > 0 ? ((proyConservadora / metaTotal)*100).toFixed(1) : '—';
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  const html = `
+  <div class="cards">
+    <div class="card">
+      <div class="card-label">Días hábiles transcurridos</div>
+      <div class="card-value">${diasHabilesTranscurridos}</div>
+      <div class="card-sub">${sabDomTrabajados.length > 0 ? `Incluye ${sabDomTrabajados.length} sáb/dom trabajado${sabDomTrabajados.length>1?'s':''}` : 'Solo lunes-viernes'}</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Días hábiles restantes</div>
+      <div class="card-value">${diasHabilesRestantes}</div>
+      <div class="card-sub">Solo lun-vie futuros · ${diasEnMes - ultimoDiaConDatos - 1} días calendario restantes<br><span style="color:#475569">Último dato: ${ultimaFechaConDatos} (${dowNames[ultimoDow]})</span></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Total días hábiles del mes</div>
+      <div class="card-value accent" style="color:#6366f1">${diasHabilesTotales}</div>
+      <div class="card-sub">Presupuesto: ${habiles} hábiles${sabDomTrabajados.length>0?' (+'+sabDomTrabajados.length+' extras)':''}</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Ingreso acumulado</div>
+      <div class="card-value">${fmt(ingresosAcumulados)}</div>
+      <div class="card-sub">Meta acumulada: ${fmt(metaAcumulada)}</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Promedio simple</div>
+      <div class="card-value">${fmt(promedioSimple)}</div>
+      <div class="card-sub">Acumulado ÷ ${n} días hábiles</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Promedio móvil (7d)</div>
+      <div class="card-value">${fmt(promedioMovil)}</div>
+      <div class="card-sub">Últimos ${ultimos7.length} días hábiles</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Proyección conservadora</div>
+      <div class="card-value" style="color:#6366f1">${fmt(proyConservadora)}</div>
+      <div class="card-sub">${pctProyVsMeta}% de la meta mensual (${fmt(metaTotal)})</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Pendiente tendencia</div>
+      <div class="card-value" style="color:${pendiente>=0?'#10b981':'#f87171'}">${pendiente>=0?'+':''}${pendiente.toFixed(1)}</div>
+      <div class="card-sub">Unidades/día hábil · ${pendiente>0?'alza':'baja'}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Fórmulas aplicadas</div>
+    <div class="formula-box">
+      <div class="label">1 · Días hábiles totales del mes</div>
+      <code>transcurridos</code> = días con datos reales (sáb/dom trabajados cuentan) = <strong style="color:#e2e8f0">${diasHabilesTranscurridos}</strong><br>
+      <code>restantes</code> = lunes-viernes futuros únicamente = <strong style="color:#e2e8f0">${diasHabilesRestantes}</strong><br>
+      <code>total = ${diasHabilesTranscurridos} + ${diasHabilesRestantes} = <strong style="color:#e2e8f0">${diasHabilesTotales}</strong></code>
+      ${sabDomTrabajados.length > 0 ? `<br><span style="color:#fbbf24">⚠ Sáb/dom trabajados detectados: ${sabDomTrabajados.map(d=>d.Fecha).join(', ')}</span>` : ''}
+    </div>
+    <div class="formula-box">
+      <div class="label">2 · Regresión lineal (tendencia)</div>
+      <code>pendiente = (n·ΣXY − ΣX·ΣY) / (n·ΣX² − (ΣX)²)</code><br>
+      <code>intercepto = (ΣY − pendiente·ΣX) / n</code><br>
+      <code>valor[i] = intercepto + pendiente × i</code><br>
+      Resultado: pendiente = <strong style="color:#e2e8f0">${pendiente.toFixed(4)}</strong> · último valor línea = <strong style="color:#e2e8f0">${fmt(ultimaTendencia)}</strong>
+    </div>
+    <div class="formula-box">
+      <div class="label">3 · Proyección por tendencia</div>
+      <code>proyTendencia = ultimaTendencia × diasHabilesTotales</code><br>
+      = ${fmt(ultimaTendencia)} × ${diasHabilesTotales} = <strong style="color:#e2e8f0">${fmt(proyTendencia)}</strong>
+    </div>
+    <div class="formula-box">
+      <div class="label">4 · Proyección por promedio móvil (últimos 7 días hábiles)</div>
+      <code>promedioMovil = Σ(últimos 7 ingresos) / 7</code><br>
+      <code>proyMovil = promedioMovil × diasHabilesTotales</code><br>
+      = ${fmt(promedioMovil)} × ${diasHabilesTotales} = <strong style="color:#e2e8f0">${fmt(proyMovil)}</strong>
+    </div>
+    <div class="formula-box">
+      <div class="label">5 · Proyección conservadora (resultado final)</div>
+      <code>proyConservadora = (proyTendencia + proyMovil) / 2</code><br>
+      = (${fmt(proyTendencia)} + ${fmt(proyMovil)}) / 2 = <strong style="color:#6366f1;font-size:14px">${fmt(proyConservadora)}</strong>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Datos diarios del mes (${mes} ${año}) — ${n} registros</div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Fecha</th>
+          <th>Día</th>
+          <th class="num">Ingreso</th>
+          <th class="num">Meta diaria</th>
+          <th class="num">Diferencia</th>
+          <th class="num">Cumplimiento</th>
+          <th class="num">Línea tendencia</th>
+          <th class="num">Δ vs tendencia</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${datosMes.map((d,i) => {
+          const diff = d.Ingreso - d.Meta;
+          const deltaTend = d.Ingreso - lineaTendencia[i];
+          return `<tr>
+            <td style="color:#475569">${i+1}</td>
+            <td class="hi">${d.Fecha}</td>
+            <td style="color:#64748b;text-transform:capitalize">${d.Dia}</td>
+            <td class="num hi">${fmt(d.Ingreso)}</td>
+            <td class="num">${fmt(d.Meta)}</td>
+            <td class="num ${diff>=0?'pos':'neg'}">${diff>=0?'+':''}${fmt(diff)}</td>
+            <td class="num"><span class="tag tag-${parseFloat(d.Cumplimiento)>=100?'up':parseFloat(d.Cumplimiento)>=85?'neu':'down'}">${d.Cumplimiento}</span></td>
+            <td class="num" style="color:#6366f1">${fmt(lineaTendencia[i])}</td>
+            <td class="num ${deltaTend>=0?'pos':'neg'}">${deltaTend>=0?'+':''}${fmt(deltaTend)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+      <tfoot>
+        <tr style="border-top:1px solid rgba(255,255,255,0.1)">
+          <td colspan="3" style="color:#475569;padding-top:10px">TOTAL / PROMEDIO</td>
+          <td class="num hi" style="padding-top:10px">${fmt(ingresosAcumulados)}</td>
+          <td class="num" style="padding-top:10px">${fmt(metaAcumulada)}</td>
+          <td class="num ${ingresosAcumulados-metaAcumulada>=0?'pos':'neg'}" style="padding-top:10px">${ingresosAcumulados-metaAcumulada>=0?'+':''}${fmt(ingresosAcumulados-metaAcumulada)}</td>
+          <td class="num" style="padding-top:10px"><span class="tag tag-${parseFloat((ingresosAcumulados/metaAcumulada*100).toFixed(1))>=100?'up':parseFloat((ingresosAcumulados/metaAcumulada*100).toFixed(1))>=85?'neu':'down'}">${(ingresosAcumulados/metaAcumulada*100).toFixed(2)}%</span></td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Últimos 7 días (base del promedio móvil)</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th><th>Día</th><th class="num">Ingreso</th><th class="num">% del promedio móvil</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${ultimos7.map(d => `<tr>
+          <td class="hi">${d.Fecha}</td>
+          <td style="color:#64748b;text-transform:capitalize">${d.Dia}</td>
+          <td class="num hi">${fmt(d.Ingreso)}</td>
+          <td class="num ${d.Ingreso>=promedioMovil?'pos':'neg'}">${((d.Ingreso/promedioMovil)*100).toFixed(1)}%</td>
+        </tr>`).join('')}
+        <tr style="border-top:1px solid rgba(255,255,255,0.08)">
+          <td colspan="2" style="color:#475569">Promedio móvil</td>
+          <td class="num accent">${fmt(promedioMovil)}</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Resumen presupuestal del mes</div>
+    <table>
+      <thead><tr><th>Concepto</th><th class="num">Valor</th></tr></thead>
+      <tbody>
+        <tr><td>Meta total del mes</td><td class="num hi">${fmt(metaTotal)}</td></tr>
+        <tr><td>Días hábiles en presupuesto</td><td class="num">${habiles}</td></tr>
+        <tr><td>Días hábiles reales (transcurridos)</td><td class="num">${diasHabilesTranscurridos}${sabDomTrabajados.length>0?' <span style="color:#fbbf24">(+'+sabDomTrabajados.length+' extras)</span>':''}</td></tr>
+        <tr><td>Días hábiles restantes (lun-vie)</td><td class="num">${diasHabilesRestantes}</td></tr>
+        <tr><td>Total días hábiles del mes</td><td class="num accent">${diasHabilesTotales}</td></tr>
+        <tr><td>Meta diaria implícita</td><td class="num">${habiles>0?fmt(metaTotal/habiles):'—'}</td></tr>
+        <tr style="border-top:1px solid rgba(255,255,255,0.08)">
+          <td>Proyección conservadora</td>
+          <td class="num accent">${fmt(proyConservadora)}</td>
+        </tr>
+        <tr>
+          <td>Proyección vs meta</td>
+          <td class="num ${parseFloat(pctProyVsMeta)>=100?'pos':parseFloat(pctProyVsMeta)>=85?'warn':'neg'}">${pctProyVsMeta}%</td>
+        </tr>
+        <tr>
+          <td>Faltante / Excedente proyectado</td>
+          <td class="num ${proyConservadora-metaTotal>=0?'pos':'neg'}">${proyConservadora-metaTotal>=0?'+':''}${fmt(proyConservadora-metaTotal)}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>`;
+
+  document.getElementById('output').innerHTML = html;
+}
+
+bootstrap();
+</script>
+</body>
+</html>

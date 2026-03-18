@@ -193,79 +193,99 @@ function determinarTendenciaGlobal() {
 function generarGraficoTendenciaDiaria(analisisDiario, año, mesActual) {
     const { datosDiarios, tendencia, promedioMovil } = analisisDiario;
 
+    // Labels con fecha Colombia (solo datos reales)
     const labels = datosDiarios.map(d => {
         const fecha = parseDate(d.Fecha);
-        return `${fecha.getDate()}/${fecha.getMonth() + 1}`;
+        const offset = fecha.getTimezoneOffset() + 300;
+        const col = new Date(fecha.getTime() + offset * 60000);
+        return `${col.getDate()}/${col.getMonth() + 1}`;
     });
 
-    const dataActual = datosDiarios.map(d => d.Ingreso);
+    const dataActual    = datosDiarios.map(d => d.Ingreso);
+    const dataMeta      = datosDiarios.map(d => d.Meta);
+
     const canvas = document.getElementById('tendenciaChart');
     if (!canvas) return;
-
     if (tendenciaChart) tendenciaChart.destroy();
 
-    // Colores para puntos destacados (viernes en rojo)
     const pointBackgroundColors = datosDiarios.map(d => {
         const fecha = parseDate(d.Fecha);
-        return fecha.getDay() === 5 ? '#e74c3c' : '#9b59b6';
+        const offset = fecha.getTimezoneOffset() + 300;
+        const col = new Date(fecha.getTime() + offset * 60000);
+        return col.getDay() === 5 ? '#f87171' : '#6366f1';
     });
+
+    const isMobile = window.innerWidth < 768;
 
     tendenciaChart = new Chart(canvas.getContext('2d'), {
         type: 'line',
         data: {
-            labels: labels,
+            labels,
             datasets: [
                 {
                     label: 'Ingresos diarios',
                     data: dataActual,
-                    borderColor: '#4361ee',
-                    backgroundColor: 'rgba(255,255,255,0.03)',
-                    borderWidth: window.innerWidth < 768 ? 2 : 1,
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99,102,241,0.06)',
+                    borderWidth: isMobile ? 2 : 1.5,
                     tension: 0.1,
                     pointBackgroundColor: pointBackgroundColors,
-                    pointRadius: window.innerWidth < 480 ? 5 : window.innerWidth < 768 ? 4 : 4,
-                    pointHoverRadius: 8,
-                    fill: true
+                    pointRadius: isMobile ? 4 : 3,
+                    pointHoverRadius: 7,
+                    fill: true,
+                    order: 1
                 },
                 {
-                    label: 'Promedio móvil (7 días)',
+                    label: 'Meta diaria',
+                    data: dataMeta,
+                    borderColor: 'rgba(251,191,36,0.6)',
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.5,
+                    tension: 0,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    borderDash: [4, 4],
+                    fill: false,
+                    order: 3
+                },
+                {
+                    label: 'Promedio móvil (7d)',
                     data: promedioMovil,
-                    borderColor: '#f39c12',
+                    borderColor: '#f59e0b',
                     backgroundColor: 'transparent',
                     borderWidth: 2,
                     tension: 0.4,
                     pointRadius: 0,
                     pointHoverRadius: 5,
-                    borderDash: [5, 5],
-                    fill: false
+                    borderDash: [6, 3],
+                    fill: false,
+                    order: 2
                 },
                 {
                     label: 'Tendencia lineal',
                     data: tendencia,
-                    borderColor: '#2ecc71',
+                    borderColor: '#10b981',
                     backgroundColor: 'transparent',
-                    borderWidth: 2,
+                    borderWidth: 1.5,
                     tension: 0,
                     pointRadius: 0,
                     pointHoverRadius: 5,
-                    fill: false
+                    fill: false,
+                    order: 4
                 }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
+            interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: {
                     position: 'bottom',
                     labels: {
                         usePointStyle: true,
                         padding: 12,
-                        font: { size: window.innerWidth < 480 ? 10 : 12 },
+                        font: { size: isMobile ? 10 : 11 },
                         color: '#64748b',
                         boxWidth: 8
                     }
@@ -273,24 +293,23 @@ function generarGraficoTendenciaDiaria(analisisDiario, año, mesActual) {
                 tooltip: {
                     mode: 'index',
                     intersect: false,
-                    backgroundColor: 'rgba(0,0,0,0.95)',
+                    backgroundColor: 'rgba(15,17,23,0.97)',
                     titleColor: '#94a3b8',
                     bodyColor: '#64748b',
                     borderColor: 'rgba(255,255,255,0.08)',
                     borderWidth: 1,
                     padding: 12,
                     callbacks: {
-                        label: function (context) {
+                        label: function(context) {
+                            if (context.parsed.y === null) return null;
                             let label = context.dataset.label || '';
                             if (label) label += ': ';
-                            if (context.parsed.y !== null) label += formatoCantidad(context.parsed.y);
+                            label += formatoCantidad(context.parsed.y);
                             return label;
                         },
-                        afterLabel: function (context) {
-                            if (context.datasetIndex === 0) {
-                                const index = context.dataIndex;
-                                const dia = datosDiarios[index].Dia;
-                                return `Día: ${dia}`;
+                        afterLabel: function(context) {
+                            if (context.datasetIndex === 0 && context.dataIndex < datosDiarios.length) {
+                                return `Día: ${datosDiarios[context.dataIndex].Dia}`;
                             }
                         }
                     }
@@ -300,10 +319,10 @@ function generarGraficoTendenciaDiaria(analisisDiario, año, mesActual) {
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        callback: (v) => formatoCantidad(v),
+                        callback: v => formatoCantidad(v),
                         color: '#64748b',
                         maxTicksLimit: 6,
-                        font: { size: window.innerWidth < 480 ? 10 : 11 }
+                        font: { size: isMobile ? 10 : 11 }
                     },
                     grid: { color: 'rgba(255,255,255,0.04)' }
                 },
@@ -313,14 +332,15 @@ function generarGraficoTendenciaDiaria(analisisDiario, año, mesActual) {
                         color: '#64748b',
                         maxRotation: 0,
                         autoSkip: true,
-                        maxTicksLimit: window.innerWidth < 480 ? 6 : window.innerWidth < 768 ? 8 : 12,
-                        font: { size: window.innerWidth < 480 ? 10 : 11 }
+                        maxTicksLimit: isMobile ? 6 : 12,
+                        font: { size: isMobile ? 10 : 11 }
                     }
                 }
             }
         }
     });
 }
+
 
 // Exportar gráfico como imagen
 function exportChartAsImage(chartId, filename) {
