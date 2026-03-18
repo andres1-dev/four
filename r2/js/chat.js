@@ -3,12 +3,12 @@
    ========================================================================== */
 
 /* ── Intervalos de polling adaptativos ── */
-const CHAT_POLL_ACTIVE  = 2_000;  // chat abierto: 2s
-const CHAT_POLL_IDLE    = 5_000;  // badges campana (pestaña visible): 5s
-const CHAT_POLL_HIDDEN  = 30_000; // pestaña oculta: 30s
-const GUEST_POLL_ACTIVE = 2_000;
-const GUEST_POLL_IDLE   = 5_000;  // chat cerrado pero pestaña visible: 5s
-const GUEST_POLL_HIDDEN = 30_000; // pestaña oculta: 30s
+const CHAT_POLL_ACTIVE  = 5_000;   // chat abierto: 5s
+const CHAT_POLL_IDLE    = 20_000;  // badges campana (pestaña visible): 20s
+const CHAT_POLL_HIDDEN  = 60_000;  // pestaña oculta: 60s
+const GUEST_POLL_ACTIVE = 5_000;
+const GUEST_POLL_IDLE   = 20_000;  // chat cerrado pero pestaña visible: 20s
+const GUEST_POLL_HIDDEN = 60_000;  // pestaña oculta: 60s
 
 let _chatTimer      = null;
 let _chatNovedadId  = null;

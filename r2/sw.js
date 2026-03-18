@@ -6,7 +6,7 @@
    - Anti-duplicados por ID de notificación
    ========================================================================== */
 
-const SW_VERSION = 'sispro-v7';
+const SW_VERSION = 'sispro-v8';
 
 /* ── GAS endpoint para pull de última notificación ── */
 let GAS_NOTIF_URL = null;
@@ -235,6 +235,7 @@ async function _checkAndNotify() {
     const res  = await fetch(fetchUrl);
     const json = await res.json();
     _swLog('info', 'POLLING', 'Respuesta GAS:', json);
+    _swLog('info', 'POLLING', 'Estado anti-dup actual:', { _lastNotifId, _lastNotifTs });
     if (json.success && json.notification) {
       await _showIfNew(json.notification);
     } else {
@@ -291,8 +292,14 @@ async function _showIfNew(payload) {
 
   _swLog('info', 'SHOW', 'Evaluando notificación:', { id, ts, savedTs, savedId });
 
-  if (ts > 0 && ts <= savedTs && id === savedId) {
-    _swLog('info', 'SHOW', 'Notificación ya mostrada, ignorando');
+  // Ignorar si es el mismo ID (ya mostrado antes)
+  if (id && id === savedId) {
+    _swLog('info', 'SHOW', 'Mismo ID — notificación ya mostrada, ignorando');
+    return;
+  }
+  // Ignorar si el timestamp no es más nuevo (y hay timestamp válido)
+  if (ts > 0 && savedTs > 0 && ts <= savedTs) {
+    _swLog('info', 'SHOW', 'Timestamp no es más nuevo — ignorando', { ts, savedTs });
     return;
   }
 

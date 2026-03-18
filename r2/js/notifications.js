@@ -5,8 +5,8 @@
 
 const NOTIF_STORAGE_KEY       = 'sispro_notif_seen';
 const NOTIF_LIST_KEY          = 'sispro_notif_list';   // persistencia de notificaciones
-const NOTIF_POLL_ACTIVE       = 3_000;   // pestaña visible
-const NOTIF_POLL_HIDDEN       = 30_000;  // pestaña oculta
+const NOTIF_POLL_ACTIVE       = 15_000;  // pestaña visible
+const NOTIF_POLL_HIDDEN       = 60_000;  // pestaña oculta
 let _notifPollTimer = null;
 let _lastKnownStates = {}; // { ID_NOVEDAD: ESTADO }
 let _initialLoadDone = false;

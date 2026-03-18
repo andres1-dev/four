@@ -16,41 +16,19 @@ function _sheet(name) {
   return _ss().getSheetByName(name);
 }
 
-/* ── Enviar push async via trigger de 1 minuto (no bloquea la respuesta) ── */
+/* ── Enviar push DIRECTO (sin trigger) — más confiable ── */
 function _pushNotif(title, body, extra) {
   if (!NOTIF_GAS_URL) return;
   try {
-    // Guardar en PropertiesService para que el trigger lo lea
-    var job = JSON.stringify({ title: title || 'SISPRO', body: body || '', extra: extra || {}, ts: Date.now() });
-    PropertiesService.getScriptProperties().setProperty('PENDING_PUSH', job);
-    // Trigger de 1 minuto — se ejecuta fuera del request actual
-    ScriptApp.newTrigger('_runPendingPush').timeBased().after(1000).create();
-  } catch(e) {
-    console.error('[PUSH] Error encolando notificación:', e.message);
-  }
-}
-
-/* ── Ejecutado por el trigger — envía el push sin bloquear nada ── */
-function _runPendingPush() {
-  // Limpiar triggers anteriores de este tipo para no acumular
-  ScriptApp.getProjectTriggers().forEach(function(t) {
-    if (t.getHandlerFunction() === '_runPendingPush') ScriptApp.deleteTrigger(t);
-  });
-
-  try {
-    var job = PropertiesService.getScriptProperties().getProperty('PENDING_PUSH');
-    if (!job) return;
-    PropertiesService.getScriptProperties().deleteProperty('PENDING_PUSH');
-
-    var data = JSON.parse(job);
+    console.log('[PUSH] Enviando notificación:', title, body, JSON.stringify(extra || {}));
     var payload = 'action=send-notification'
-      + '&title=' + encodeURIComponent(data.title)
-      + '&body='  + encodeURIComponent(data.body);
+      + '&title=' + encodeURIComponent(title || 'SISPRO')
+      + '&body='  + encodeURIComponent(body  || '');
 
-    var extra = data.extra || {};
-    for (var k in extra) {
-      if (extra[k] !== undefined && extra[k] !== null) {
-        payload += '&' + k + '=' + encodeURIComponent(String(extra[k]));
+    var ex = extra || {};
+    for (var k in ex) {
+      if (ex[k] !== undefined && ex[k] !== null) {
+        payload += '&' + k + '=' + encodeURIComponent(String(ex[k]));
       }
     }
 
@@ -60,10 +38,20 @@ function _runPendingPush() {
       payload: payload,
       muteHttpExceptions: true
     });
-    console.log('[PUSH] Enviado:', resp.getResponseCode(), resp.getContentText().substring(0, 150));
+    console.log('[PUSH] Respuesta HTTP:', resp.getResponseCode(), resp.getContentText().substring(0, 200));
   } catch(e) {
-    console.error('[PUSH] Error en _runPendingPush:', e.message);
+    console.error('[PUSH] Error enviando notificación:', e.message);
   }
+}
+
+/* ── _runPendingPush: mantenido por compatibilidad con triggers existentes ── */
+function _runPendingPush() {
+  // Limpiar todos los triggers acumulados de este tipo
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === '_runPendingPush') ScriptApp.deleteTrigger(t);
+  });
+  // Ya no se usa — _pushNotif ahora envía directo
+  console.log('[PUSH] _runPendingPush llamado (modo legacy, sin acción)');
 }
 
 function _json(obj) {
