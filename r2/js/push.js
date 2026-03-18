@@ -95,6 +95,7 @@ async function registerServiceWorker() {
     _log('info', 'SW-REGISTER', 'SW activo y listo');
 
     _sendPollingConfigToSW();
+    _resendConfigWhenReady(); // reenviar cuando API key esté disponible
 
     navigator.serviceWorker.addEventListener('message', _onSwMessage);
     _log('info', 'SW-REGISTER', 'Listener de mensajes SW registrado');
@@ -124,14 +125,44 @@ function _sendPollingConfigToSW() {
     ? (currentUser?.ID_PLANTA || currentUser?.ID_USUARIO || 'anonimo')
     : 'anonimo';
 
-  _log('info', 'SW-CONFIG', 'Enviando config al SW:', { url: NOTIF_GAS_URL, userId, lastTs });
+  // Incluir config de Sheets para que el SW pueda consultar chat directamente
+  const sheetsId  = (typeof CONFIG !== 'undefined') ? CONFIG.SPREADSHEET_ID : null;
+  const sheetsKey = (typeof CONFIG !== 'undefined') ? CONFIG.API_KEY : null;
+
+  _log('info', 'SW-CONFIG', 'Enviando config al SW:', { url: NOTIF_GAS_URL, userId, lastTs, sheetsId: !!sheetsId, sheetsKey: !!sheetsKey });
   _swRegistration.active.postMessage({
-    type:   'SET_POLLING_CONFIG',
-    url:    NOTIF_GAS_URL,
+    type:      'SET_POLLING_CONFIG',
+    url:       NOTIF_GAS_URL,
     userId,
-    lastTs
+    lastTs,
+    sheetsId:  sheetsId  || null,
+    sheetsKey: sheetsKey || null
   });
   _log('info', 'SW-CONFIG', 'Config enviada OK');
+}
+
+/* Reenviar config al SW cuando la API key esté disponible (carga async) */
+function _resendConfigWhenReady() {
+  if (!_swRegistration) return;
+  const sheetsKey = (typeof CONFIG !== 'undefined') ? CONFIG.API_KEY : null;
+  if (sheetsKey) {
+    _log('info', 'SW-CONFIG', 'API key disponible → reenviando config al SW');
+    _sendPollingConfigToSW();
+    return;
+  }
+  // Reintentar hasta 10s
+  let attempts = 0;
+  const interval = setInterval(() => {
+    attempts++;
+    const key = (typeof CONFIG !== 'undefined') ? CONFIG.API_KEY : null;
+    if (key || attempts >= 20) {
+      clearInterval(interval);
+      if (key) {
+        _log('info', 'SW-CONFIG', 'API key lista tras espera → reenviando config');
+        _sendPollingConfigToSW();
+      }
+    }
+  }, 500);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

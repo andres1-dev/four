@@ -6,7 +6,7 @@
    - Anti-duplicados por ID de notificación
    ========================================================================== */
 
-const SW_VERSION = 'sispro-v9';
+const SW_VERSION = 'sispro-v10';
 
 /* ── GAS endpoint para pull de última notificación ── */
 let GAS_NOTIF_URL = null;
@@ -205,26 +205,28 @@ async function _handlePushEvent(event) {
     }
 
     if (!payload) {
-      _swLog('info', 'PUSH', 'Sin payload directo → fetch desde GAS (iOS tickle)');
+      _swLog('info', 'PUSH', 'Sin payload directo -> fetch desde GAS (iOS tickle)');
       const url = GAS_NOTIF_URL || (await _idbGet('gasNotifUrl'));
       if (!url) {
-        _swLog('error', 'PUSH', 'Sin URL GAS configurada, no se puede obtener notificación');
+        _swLog('error', 'PUSH', 'Sin URL GAS configurada');
         return;
       }
-      const fetchUrl = `${url}?action=get-latest-notification&_t=${Date.now()}`;
-      _swLog('info', 'PUSH', 'Fetching:', fetchUrl);
+      const fetchUrl = ${url}?action=get-latest-notification&_t=;
       const res  = await fetch(fetchUrl);
-      _swLog('info', 'PUSH', 'Fetch status:', res.status);
       const json = await res.json();
       _swLog('info', 'PUSH', 'Respuesta GAS:', json);
-      if (json.success && json.notification) payload = json.notification;
-    }
-
-    if (!payload) {
-      _swLog('warn', 'PUSH', 'Sin payload disponible, nada que mostrar');
+      const queue = json.notifications || (json.notification ? [json.notification] : []);
+      _swLog('info', 'PUSH', Cola:  item(s));
+      const chatItems  = queue.filter(n => n.notifType === 'chat' && n.idNovedad);
+      const otherItems = queue.filter(n => n.notifType !== 'chat' || !n.idNovedad);
+      for (const notif of otherItems) await _showIfNew(notif);
+      const novedadIds = [...new Set(chatItems.map(n => n.idNovedad))];
+      for (const idNovedad of novedadIds) {
+        const sample = chatItems.find(n => n.idNovedad === idNovedad);
+        await _fetchAndShowChatMsgs(idNovedad, sample);
+      }
       return;
     }
-    await _showIfNew(payload);
   } catch (e) {
     _swLog('error', 'PUSH', 'Error procesando push:', e.message);
   } finally {
@@ -232,6 +234,52 @@ async function _handlePushEvent(event) {
     _processing = false;
   }
 }
+
+async function _fetchAndShowChatMsgs(idNovedad, samplePayload) {
+  const sid = _sheetsId  || (await _idbGet('sheetsId'));
+  const key = _sheetsKey || (await _idbGet('sheetsKey'));
+  if (!sid || !key) {
+    if (samplePayload) await _showIfNew(samplePayload);
+    return;
+  }
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/CHAT!A:G?key=${key}&majorDimension=ROWS`;
+    const res  = await fetch(url);
+    if (!res.ok) { if (samplePayload) await _showIfNew(samplePayload); return; }
+    const { values = [] } = await res.json();
+    const rows = values.length > 1 ? values.slice(1) : [];
+    const msgs = rows.filter(r => String(r[1]||'').trim() === idNovedad);
+    if (!msgs.length) { if (samplePayload) await _showIfNew(samplePayload); return; }
+    for (const r of msgs) {
+      const ts      = r[6] || '';
+      const mid     = r[0] || (idNovedad + '_' + ts);
+      const rol     = String(r[3]||'').toUpperCase();
+      const autor   = r[4] || (rol === 'GUEST' ? 'Planta' : 'Equipo');
+      const lote    = (samplePayload && samplePayload.lote)   || '';
+      const planta  = (samplePayload && samplePayload.planta) || String(r[2]||'');
+      const isGuest = rol === 'GUEST';
+      const title   = isGuest ? ('Mensaje - Lote '   + (lote||'S/N'))
+                               : ('Respuesta - Lote ' + (lote||'S/N'));
+      const body    = autor + ': ' + String(r[5]||'').substring(0, 80);
+      const msgTs   = ts ? new Date(ts).getTime() : Date.now();
+      await _showIfNew({
+        id:        mid + '_' + msgTs,
+        title,
+        body,
+        notifType: 'chat',
+        idNovedad,
+        lote,
+        planta,
+        timestamp: msgTs
+      });
+    }
+    _swLog('info', 'CHAT-FETCH', 'Mensajes procesados para novedad: ' + idNovedad);
+  } catch(e) {
+    _swLog('warn', 'CHAT-FETCH', 'Error consultando Sheets:', e.message);
+    if (samplePayload) await _showIfNew(samplePayload);
+  }
+}
+
 
 /* ══════════════════════════════════════════════════════════════════════════
    POLLING BACKGROUND
@@ -265,8 +313,17 @@ async function _checkAndNotify() {
     const json = await res.json();
     _swLog('info', 'POLLING', 'Respuesta GAS:', json);
     _swLog('info', 'POLLING', 'Estado anti-dup actual:', { _lastNotifId, _lastNotifTs });
-    if (json.success && json.notification) {
-      await _showIfNew(json.notification);
+    if (json.success) {
+      const queue = json.notifications || (json.notification ? [json.notification] : []);
+      _swLog('info', 'POLLING', Cola:  item(s));
+      const chatItems  = queue.filter(n => n.notifType === 'chat' && n.idNovedad);
+      const otherItems = queue.filter(n => n.notifType !== 'chat' || !n.idNovedad);
+      for (const notif of otherItems) await _showIfNew(notif);
+      const novedadIds = [...new Set(chatItems.map(n => n.idNovedad))];
+      for (const idNovedad of novedadIds) {
+        const sample = chatItems.find(n => n.idNovedad === idNovedad);
+        await _fetchAndShowChatMsgs(idNovedad, sample);
+      }
     } else {
       _swLog('info', 'POLLING', 'Sin notificaciones nuevas');
     }
