@@ -281,7 +281,8 @@ function enviarNotificacionATodos(params) {
     // Pre-calcular el JWT una sola vez — sirve para todos los envíos
     // Nota: audience cambia por endpoint, así que calculamos por dominio
     var sent = 0, failed = 0, expired = 0, errors = [];
-    var jwtCache = {}; // cache de JWT por audience para no recalcular
+    var jwtCache = {}; // cache de JWT por audience para no recalcular (en memoria)
+    var persistentCache = CacheService.getScriptCache(); // cache persistente entre ejecuciones
 
     // Enviar en paralelo con UrlFetchApp.fetchAll (mucho más rápido)
     var requests  = [];
@@ -299,9 +300,19 @@ function enviarNotificacionATodos(params) {
         var audienceMatch = endpoint.match(/^(https?:\/\/[^\/]+)/);
         var audience = audienceMatch ? audienceMatch[1] : '';
 
-        // Reusar JWT si mismo audience
+        // Reusar JWT si mismo audience (primero de caché persistente, luego calcular)
         if (!jwtCache[audience]) {
-          jwtCache[audience] = crearJWT(audience, vapidPub, vapidPriv);
+          var cacheKey = 'jwt_' + Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, Utilities.newBlob(audience)).slice(0, 8).map(function(b){return(b<0?b+256:b).toString(16).padStart(2,'0');}).join('');
+          var cachedJwt = persistentCache.get(cacheKey);
+          
+          if (cachedJwt) {
+            jwtCache[audience] = cachedJwt;
+            console.log('JWT recuperado de caché para:', audience.substring(0, 30));
+          } else {
+            jwtCache[audience] = crearJWT(audience, vapidPub, vapidPriv);
+            persistentCache.put(cacheKey, jwtCache[audience], 3600); // 1 hora
+            console.log('JWT creado y cacheado para:', audience.substring(0, 30));
+          }
         }
         var jwt = jwtCache[audience];
         
@@ -314,6 +325,7 @@ function enviarNotificacionATodos(params) {
           url: endpoint,
           method: 'post',
           muteHttpExceptions: true,
+          timeout: 5, // 5 segundos máximo por endpoint
           headers: {
             'Authorization': 'vapid t=' + jwt + ', k=' + vapidPub,
             'TTL':           '86400',

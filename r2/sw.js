@@ -19,7 +19,7 @@ let _processing = false;
 
 /* ── Polling background (iOS / fallback) ── */
 let _pollingActive = false;
-const POLL_INTERVAL_MS = 60_000; // 1 min en background
+const POLL_INTERVAL_MS = 10_000; // 10 segundos (optimizado para respuesta rápida)
 
 /* ══════════════════════════════════════════════════════════════════════════
    IndexedDB — persistencia entre reinicios del SW
