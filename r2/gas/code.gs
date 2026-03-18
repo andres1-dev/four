@@ -1,4 +1,4 @@
-const SPREADSHEET_ID     = '1ZLGG8wfszE6D8vGwCECWguWGUiDXGUGfN87ZukyaCpo';
+const SPREADSHEET_ID     = '1jZh1Na1Jsb52LvIZlRYjHNUtX2enOSXGxVqeHIVhxVA';
 const CARPETA_RAIZ_ID    = '1jeZrMgwwhBHA5G4oUqRHNDGhAEx2LMGQ';
 const DRIVE_IMAGE_PREFIX = 'https://lh3.googleusercontent.com/d/';
 const CHAT_FOLDER_NAME   = 'CHATS';
@@ -32,10 +32,20 @@ function _pushNotif(title, body, extra) {
       extra: extra || {}, 
       ts: Date.now() 
     });
+    
+    // Guardar en PropertiesService
     PropertiesService.getScriptProperties().setProperty('PENDING_PUSH_' + notifId, job);
-    // Trigger de 1 segundo — se ejecuta casi inmediato pero fuera del request actual
-    ScriptApp.newTrigger('_runPendingPush').timeBased().after(1000).create();
-    console.log('[PUSH] Notificación encolada:', notifId);
+    console.log('[PUSH] Notificación encolada:', notifId, 'Title:', title);
+    
+    // Crear trigger para ejecutar en 1 segundo
+    try {
+      ScriptApp.newTrigger('_runPendingPush').timeBased().after(1000).create();
+      console.log('[PUSH] Trigger creado para _runPendingPush');
+    } catch(triggerErr) {
+      console.error('[PUSH] Error creando trigger:', triggerErr.message);
+      // Fallback: ejecutar inmediatamente de forma síncrona (bloquea pero funciona)
+      _runPendingPush();
+    }
   } catch(e) {
     console.error('[PUSH] Error encolando notificación:', e.message);
   }
@@ -43,18 +53,24 @@ function _pushNotif(title, body, extra) {
 
 /* ── Ejecutado por el trigger — envía el push sin bloquear nada ── */
 function _runPendingPush() {
+  console.log('[PUSH] _runPendingPush ejecutándose...');
+  
   // Limpiar triggers anteriores de este tipo para no acumular
   var triggers = ScriptApp.getProjectTriggers();
+  var cleaned = 0;
   for (var i = 0; i < triggers.length; i++) {
     if (triggers[i].getHandlerFunction() === '_runPendingPush') {
       ScriptApp.deleteTrigger(triggers[i]);
+      cleaned++;
     }
   }
+  console.log('[PUSH] Triggers limpiados:', cleaned);
 
   try {
     var props = PropertiesService.getScriptProperties();
     var allProps = props.getProperties();
     var processed = 0;
+    var lastNotification = null;
     
     // Procesar todas las notificaciones pendientes
     for (var key in allProps) {
@@ -64,6 +80,8 @@ function _runPendingPush() {
           props.deleteProperty(key);
           
           var data = JSON.parse(job);
+          console.log('[PUSH] Procesando:', data.id, 'Title:', data.title);
+          
           var payload = 'action=send-notification'
             + '&title=' + encodeURIComponent(data.title)
             + '&body='  + encodeURIComponent(data.body)
@@ -90,6 +108,21 @@ function _runPendingPush() {
           
           if (code >= 200 && code < 300) {
             processed++;
+            // Guardar como última notificación para polling
+            lastNotification = {
+              id: data.id,
+              title: data.title,
+              body: data.body,
+              timestamp: data.ts,
+              notifType: extra.notifType || 'estado',
+              idNovedad: extra.idNovedad || '',
+              lote: extra.lote || '',
+              planta: extra.planta || '',
+              estadoActual: extra.estadoActual || '',
+              autor: extra.autor || '',
+              referencia: extra.referencia || '',
+              area: extra.area || ''
+            };
           } else {
             console.error('[PUSH] Error HTTP ' + code + ' para ' + data.id + ':', text);
           }
@@ -99,8 +132,14 @@ function _runPendingPush() {
       }
     }
     
+    // Guardar la última notificación procesada para el polling
+    if (lastNotification) {
+      props.setProperty('LAST_NOTIFICATION', JSON.stringify(lastNotification));
+      console.log('[PUSH] Última notificación guardada para polling:', lastNotification.id);
+    }
+    
     if (processed > 0) {
-      console.log('[PUSH] Total procesadas: ' + processed);
+      console.log('[PUSH] ✅ Total procesadas:', processed);
     } else {
       console.log('[PUSH] Sin notificaciones pendientes');
     }

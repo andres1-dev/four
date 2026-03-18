@@ -6,7 +6,7 @@
 // - Sin BigInt, compatible Google Apps Script
 // ============================================
 
-var SPREADSHEET_ID = '1yjd3DfnSKvOAgXDH0gM9SzHTuAqxng-pEvGafCRL2SI';
+var SPREADSHEET_ID = '1jZh1Na1Jsb52LvIZlRYjHNUtX2enOSXGxVqeHIVhxVA';
 
 function getFormattedDateTime(date) {
   date = date || new Date();
@@ -101,40 +101,75 @@ function obtenerClaveVapid() {
 function guardarSuscripcion(params, e) {
   try {
     var sub = null;
+    
+    // Método 1: Leer desde params.data (form-urlencoded con JSON stringificado)
     if (params.data) {
-      try { sub = JSON.parse(params.data); } catch(err) {}
+      try { 
+        sub = JSON.parse(params.data);
+        console.log('[SUBSCRIBE] Método 1 - params.data:', sub.endpoint ? sub.endpoint.substring(0, 60) : 'sin endpoint');
+      } catch(err) {
+        console.error('[SUBSCRIBE] Error parseando params.data:', err.toString());
+      }
     }
+    
+    // Método 2: Leer desde e.postData.contents (JSON directo en body)
     if (!sub && e && e.postData && e.postData.contents) {
       try {
         var body = JSON.parse(e.postData.contents);
         if (body.endpoint) sub = body;
         else if (body.subscription) sub = body.subscription;
-      } catch(err) {}
+        console.log('[SUBSCRIBE] Método 2 - postData.contents:', sub ? sub.endpoint.substring(0, 60) : 'sin endpoint');
+      } catch(err) {
+        console.error('[SUBSCRIBE] Error parseando postData.contents:', err.toString());
+      }
     }
+    
+    // Método 3: Construir desde params individuales (form-urlencoded expandido)
     if (!sub && params.endpoint) {
-      sub = { endpoint: params.endpoint, keys: { p256dh: params.p256dh || '', auth: params.auth || '' } };
+      sub = { 
+        endpoint: params.endpoint, 
+        keys: { 
+          p256dh: params.p256dh || '', 
+          auth: params.auth || '' 
+        } 
+      };
+      console.log('[SUBSCRIBE] Método 3 - params individuales:', sub.endpoint.substring(0, 60));
     }
-    if (!sub || !sub.endpoint)
+    
+    if (!sub || !sub.endpoint) {
+      console.error('[SUBSCRIBE] No se pudo extraer suscripción de la petición');
       return crearRespuestaJSON({ success: false, message: 'Endpoint requerido' });
+    }
 
     var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheet = ss.getSheetByName('suscripciones');
     if (!sheet) {
       sheet = ss.insertSheet('suscripciones');
       sheet.appendRow(['endpoint','p256dh','auth','subscription_json','created_at']);
+      console.log('[SUBSCRIBE] Hoja suscripciones creada');
     }
+    
     var p256dh = (sub.keys && sub.keys.p256dh) ? sub.keys.p256dh : '';
     var auth   = (sub.keys && sub.keys.auth)   ? sub.keys.auth   : '';
     var rows   = sheet.getDataRange().getValues();
+    
+    // Buscar si ya existe
     for (var i = 1; i < rows.length; i++) {
       if (rows[i][0] === sub.endpoint) {
         sheet.getRange(i+1,1,1,4).setValues([[sub.endpoint, p256dh, auth, JSON.stringify(sub)]]);
+        console.log('[SUBSCRIBE] Suscripción actualizada en fila', i+1);
         return crearRespuestaJSON({ success: true, message: 'Suscripcion actualizada' });
       }
     }
+    
+    // No existe, agregar nueva
     sheet.appendRow([sub.endpoint, p256dh, auth, JSON.stringify(sub), getFormattedDateTime()]);
+    console.log('[SUBSCRIBE] Nueva suscripción guardada');
     return crearRespuestaJSON({ success: true, message: 'Suscripcion guardada' });
-  } catch(err) { return crearRespuestaError(err); }
+  } catch(err) { 
+    console.error('[SUBSCRIBE] Error:', err.toString());
+    return crearRespuestaError(err); 
+  }
 }
 
 // ============================================
@@ -227,6 +262,18 @@ function enviarNotificacionATodos(params) {
       } catch(_) {}
     }
     var payloadJson = JSON.stringify(payloadObj);
+    
+    // Verificar tamaño del payload (límite típico: 4KB)
+    if (payloadJson.length > 4000) {
+      console.warn('[PUSH] Payload muy grande (' + payloadJson.length + ' bytes), truncando...');
+      // Truncar body si es muy largo
+      if (payloadObj.body && payloadObj.body.length > 100) {
+        payloadObj.body = payloadObj.body.substring(0, 100) + '...';
+        payloadJson = JSON.stringify(payloadObj);
+      }
+    }
+    
+    console.log('[PUSH] Payload size:', payloadJson.length, 'bytes');
 
     // Guardar última notificación para PULL (iOS)
     PropertiesService.getScriptProperties().setProperty('LAST_NOTIFICATION', payloadJson);
@@ -258,8 +305,10 @@ function enviarNotificacionATodos(params) {
         }
         var jwt = jwtCache[audience];
         
-        // Detectar si es endpoint de Apple
-        var isApple = endpoint.indexOf('apple.com') >= 0;
+        // Detectar si es endpoint de Apple o Mozilla
+        var isApple = endpoint.indexOf('apple.com') >= 0 || endpoint.indexOf('web.push.apple.com') >= 0;
+        var isMozilla = endpoint.indexOf('mozilla.com') >= 0 || endpoint.indexOf('firefox') >= 0 || endpoint.indexOf('updates.push.services.mozilla.com') >= 0;
+        var isChrome = endpoint.indexOf('fcm.googleapis.com') >= 0 || endpoint.indexOf('android.googleapis.com') >= 0;
 
         var request = {
           url: endpoint,
@@ -268,14 +317,18 @@ function enviarNotificacionATodos(params) {
           headers: {
             'Authorization': 'vapid t=' + jwt + ', k=' + vapidPub,
             'TTL':           '86400',
-            'Content-Type':  'application/json',
             'Urgency':       'high'
-          },
-          payload: payloadJson
+          }
         };
 
-        // iOS/Safari también recibe el payload, pero el SW puede ignorarlo si no puede descifrarlo
-        // y hacer fetch al servidor como fallback
+        // ESTRATEGIA: Enviar tickle vacío a TODOS los endpoints
+        // El SW hará polling para obtener el contenido real
+        // Esto evita problemas de encriptación y formato
+        // NO establecer Content-Length manualmente (GAS lo maneja automáticamente)
+        request.payload = '';
+        
+        var endpointType = isApple ? 'iOS/Safari' : (isMozilla ? 'Firefox' : (isChrome ? 'Chrome/Android' : 'Desconocido'));
+        console.log('Enviando tickle a ' + endpointType + ' | Endpoint:', endpoint.substring(0, 60));
 
         requests.push(request);
         validRows.push(i); // guardar índice de fila para saber qué borrar si 410
@@ -297,20 +350,38 @@ function enviarNotificacionATodos(params) {
     for (var j = 0; j < responses.length; j++) {
       var code = responses[j].getResponseCode();
       var rowIdx = validRows[j];
-      console.log('HTTP ' + code + ' fila ' + rowIdx + ' | ' +
-        subsData[rowIdx][0].toString().substring(0, 50));
+      var endpoint = subsData[rowIdx][0].toString();
+      var endpointPreview = endpoint.substring(0, 80);
+      
+      // Detectar tipo de endpoint para logging
+      var isAppleEndpoint = endpoint.indexOf('apple.com') >= 0 || endpoint.indexOf('web.push.apple.com') >= 0;
+      var isMozillaEndpoint = endpoint.indexOf('mozilla.com') >= 0 || endpoint.indexOf('firefox') >= 0 || endpoint.indexOf('updates.push.services.mozilla.com') >= 0;
+      var endpointType = isAppleEndpoint ? 'iOS/Safari' : (isMozillaEndpoint ? 'Firefox' : 'Chrome/Android');
+      
+      console.log('Fila ' + rowIdx + ' | ' + endpointType + ' | HTTP ' + code + ' | ' + endpointPreview);
 
       if (code === 200 || code === 201 || code === 202) {
         sent++;
+        console.log('  ✅ Enviado exitosamente');
       } else if (code === 410) {
         // 410 = Gone: endpoint expirado confirmado → marcar para borrar
         expired++;
         toDelete.push(rowIdx);
+        console.log('  ⚠️ Endpoint expirado (410), será eliminado');
+      } else if (code === 400) {
+        // 400 = Bad Request: puede ser formato inválido o suscripción corrupta
+        failed++;
+        var errorText = responses[j].getContentText().substring(0, 200);
+        errors.push('HTTP 400 (' + endpointType + ') en fila ' + rowIdx + ': ' + errorText);
+        console.log('  ❌ Error 400 (' + endpointType + '): ' + errorText);
+        console.log('  💡 SOLUCIÓN: Eliminar esta suscripción y volver a suscribirse desde ese dispositivo');
+        // NO borrar automáticamente, dejar que el usuario lo haga manualmente
       } else {
         // Cualquier otro error → NO borrar, solo registrar
         failed++;
-        errors.push('HTTP ' + code + ' en fila ' + rowIdx + ': ' +
-          responses[j].getContentText().substring(0, 100));
+        var errorText = responses[j].getContentText().substring(0, 200);
+        errors.push('HTTP ' + code + ' (' + endpointType + ') en fila ' + rowIdx + ': ' + errorText);
+        console.log('  ❌ Error (' + endpointType + '): ' + errorText);
       }
     }
 
@@ -446,18 +517,77 @@ function testEnviar() {
   console.log(r.getContent ? r.getContent() : JSON.stringify(r));
 }
 
+// Test manual mejorado con diagnóstico completo
+function testPushManual() {
+  console.log('=== INICIANDO TEST DE PUSH NOTIFICATIONS ===');
+  
+  // 1. Verificar hoja de suscripciones
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('suscripciones');
+  if (!sheet) {
+    console.error('❌ No existe la hoja suscripciones');
+    return;
+  }
+  
+  var rows = sheet.getDataRange().getValues();
+  console.log('📊 Total suscripciones:', rows.length - 1);
+  
+  // 2. Analizar cada suscripción
+  for (var i = 1; i < rows.length; i++) {
+    var endpoint = rows[i][0].toString();
+    var isApple = endpoint.indexOf('apple.com') >= 0 || endpoint.indexOf('web.push.apple.com') >= 0;
+    var isMozilla = endpoint.indexOf('mozilla.com') >= 0 || endpoint.indexOf('firefox') >= 0 || endpoint.indexOf('updates.push.services.mozilla.com') >= 0;
+    var tipo = isApple ? '🍎 iOS/Safari' : (isMozilla ? '🦊 Firefox' : '🤖 Chrome/Android');
+    
+    console.log('\nSuscripción ' + i + ' ' + tipo);
+    console.log('  Endpoint:', endpoint.substring(0, 70) + '...');
+    console.log('  p256dh:', rows[i][1] ? '✅ Presente' : '❌ FALTA');
+    console.log('  auth:', rows[i][2] ? '✅ Presente' : '❌ FALTA');
+  }
+  
+  // 3. Enviar notificación de prueba
+  console.log('\n=== ENVIANDO NOTIFICACIÓN DE PRUEBA ===');
+  var result = enviarNotificacionATodos({
+    title: '🧪 Test Manual',
+    body: 'Prueba de notificaciones push',
+    icon: ''
+  });
+  
+  console.log('\n=== RESULTADO ===');
+  console.log(result.getContent ? result.getContent() : JSON.stringify(result));
+}
+
 // Test para ver qué codigo HTTP devuelve cada endpoint
 function testDiagnostico() {
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   var sheet = ss.getSheetByName('suscripciones');
   if (!sheet) { console.log('No hay hoja suscripciones'); return; }
   var rows = sheet.getDataRange().getValues();
+  console.log('=== DIAGNÓSTICO DE SUSCRIPCIONES ===');
   console.log('Total suscripciones: ' + (rows.length - 1));
+  console.log('');
+  
   for (var i = 1; i < rows.length; i++) {
-    console.log('Fila ' + i + ': endpoint=' + rows[i][0].toString().substring(0,60));
-    console.log('         p256dh=' + (rows[i][1] ? rows[i][1].toString().substring(0,20)+'...' : 'VACIO'));
-    console.log('         auth='   + (rows[i][2] ? rows[i][2].toString().substring(0,15)+'...' : 'VACIO'));
+    var endpoint = rows[i][0].toString();
+    var p256dh = rows[i][1];
+    var auth = rows[i][2];
+    
+    var isApple = endpoint.indexOf('apple.com') >= 0 || endpoint.indexOf('web.push.apple.com') >= 0;
+    var isMozilla = endpoint.indexOf('mozilla.com') >= 0 || endpoint.indexOf('firefox') >= 0 || endpoint.indexOf('updates.push.services.mozilla.com') >= 0;
+    var isChrome = endpoint.indexOf('fcm.googleapis.com') >= 0 || endpoint.indexOf('android.googleapis.com') >= 0;
+    var tipo = isApple ? '🍎 iOS/Safari' : (isMozilla ? '🦊 Firefox' : (isChrome ? '🤖 Chrome/Android' : '❓ Desconocido'));
+    
+    console.log('Fila ' + i + ' - ' + tipo);
+    console.log('  Endpoint: ' + endpoint.substring(0,70) + '...');
+    console.log('  p256dh: ' + (p256dh ? '✅ ' + p256dh.toString().substring(0,20)+'...' : '❌ VACIO'));
+    console.log('  auth: ' + (auth ? '✅ ' + auth.toString().substring(0,15)+'...' : '❌ VACIO'));
+    console.log('');
   }
+  
+  console.log('=== RECOMENDACIÓN ===');
+  console.log('Si alguna fila tiene p256dh o auth VACIO, eliminar esa fila y volver a suscribirse desde ese dispositivo.');
+  console.log('');
+  console.log('Para probar el envío, ejecuta: testPushManual()');
 }
 
 
