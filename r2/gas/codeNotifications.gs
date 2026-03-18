@@ -63,14 +63,29 @@ function crearRespuestaError(err) {
 }
 
 // ============================================
-// Obtener última notificación (PULL para iOS)
+// Cola de notificaciones pendientes (PULL para iOS)
+// Guarda hasta 10 notificaciones sin sobreescribir.
+// El SW las consume y vacía la cola al recibirlas.
 // ============================================
 function getLatestNotification() {
   try {
     var props = PropertiesService.getScriptProperties();
+
+    // Cola nueva (array)
+    var queueJson = props.getProperty('NOTIF_QUEUE');
+    if (queueJson) {
+      var queue = [];
+      try { queue = JSON.parse(queueJson); } catch(_) {}
+      if (queue.length > 0) {
+        props.deleteProperty('NOTIF_QUEUE');
+        return crearRespuestaJSON({ success: true, notifications: queue, notification: queue[0] });
+      }
+    }
+
+    // Fallback: propiedad legacy LAST_NOTIFICATION
     var json = props.getProperty('LAST_NOTIFICATION');
     if (!json) return crearRespuestaJSON({ success: false, message: 'No hay notificaciones' });
-    return crearRespuestaJSON({ success: true, notification: JSON.parse(json) });
+    return crearRespuestaJSON({ success: true, notifications: [JSON.parse(json)], notification: JSON.parse(json) });
   } catch(err) { return crearRespuestaError(err); }
 }
 
@@ -228,8 +243,17 @@ function enviarNotificacionATodos(params) {
     }
     var payloadJson = JSON.stringify(payloadObj);
 
-    // Guardar última notificación para PULL (iOS)
-    PropertiesService.getScriptProperties().setProperty('LAST_NOTIFICATION', payloadJson);
+    // Guardar en cola para PULL (iOS) — acumula hasta 10, no sobreescribe
+    try {
+      var props = PropertiesService.getScriptProperties();
+      var queue = [];
+      try { queue = JSON.parse(props.getProperty('NOTIF_QUEUE') || '[]'); } catch(_) {}
+      queue.push(payloadObj);
+      if (queue.length > 10) queue = queue.slice(-10); // máximo 10
+      props.setProperty('NOTIF_QUEUE', JSON.stringify(queue));
+      // Mantener LAST_NOTIFICATION por compatibilidad con clientes viejos
+      props.setProperty('LAST_NOTIFICATION', payloadJson);
+    } catch(_) {}
 
     // Pre-calcular el JWT una sola vez — sirve para todos los envíos
     // Nota: audience cambia por endpoint, así que calculamos por dominio

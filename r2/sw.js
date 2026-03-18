@@ -11,18 +11,47 @@ const SW_VERSION = 'sispro-v9';
 /* ── GAS endpoint para pull de última notificación ── */
 let GAS_NOTIF_URL = null;
 
-/* ── Anti-duplicados ── */
-let _lastNotifId  = null;
-let _lastNotifTs  = 0;
-let _processing   = false;
+/* ── Anti-duplicados — lista de IDs recientes (TTL 10 min) ── */
+let _shownIds = null; // Map<id, timestamp_shown>
+const SHOWN_TTL_MS = 10 * 60 * 1000; // 10 minutos
 
-/* ── Polling background (iOS / fallback) ── */
+async function _loadShownIds() {
+  if (_shownIds) return _shownIds;
+  try {
+    const raw = await _idbGet('shownIds');
+    _shownIds = raw ? new Map(Object.entries(raw)) : new Map();
+  } catch(_) { _shownIds = new Map(); }
+  return _shownIds;
+}
+
+async function _saveShownIds() {
+  try {
+    // Limpiar entradas expiradas antes de guardar
+    const now = Date.now();
+    for (const [k, v] of _shownIds) {
+      if (now - v > SHOWN_TTL_MS) _shownIds.delete(k);
+    }
+    await _idbSet('shownIds', Object.fromEntries(_shownIds));
+  } catch(_) {}
+}
+
+async function _alreadyShown(id) {
+  const map = await _loadShownIds();
+  return map.has(id);
+}
+
+async function _markShown(id) {
+  const map = await _loadShownIds();
+  map.set(id, Date.now());
+  await _saveShownIds();
+}
+
+/* ── Lock de procesamiento ── */
+let _processing   = false;
 let _pollingActive = false;
 const POLL_INTERVAL_MS = 60_000;
 
-/* ══════════════════════════════════════════════════════════════════════════
-   IndexedDB — persistencia entre reinicios del SW
-   ══════════════════════════════════════════════════════════════════════════ */
+/* ── Polling background (iOS / fallback) ── */
 const IDB_NAME    = 'sispro_sw';
 const IDB_VERSION = 1;
 
