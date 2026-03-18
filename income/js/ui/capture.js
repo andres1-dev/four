@@ -11,24 +11,23 @@ async function captureAndDownloadCards(silent = false) {
 
     // Toast de progreso para modo silencioso
     let toastEl = null;
-    function updateToast(msg) {
+    function updateToast(msg, state = 'loading') {
         if (!toastEl) {
             toastEl = document.createElement('div');
-            toastEl.style.cssText = `
-                position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
-                background:rgba(99,102,241,0.95); color:#fff;
-                padding:10px 20px; border-radius:10px;
-                font-size:13px; font-weight:600; font-family:inherit;
-                box-shadow:0 4px 16px rgba(0,0,0,0.3);
-                z-index:999999; white-space:nowrap;
-                transition:opacity 0.3s ease; opacity:1;
-            `;
+            toastEl.className = 'silent-toast';
             document.body.appendChild(toastEl);
+            requestAnimationFrame(() => toastEl.classList.add('visible'));
         }
-        toastEl.textContent = msg;
+        const indicator = state === 'loading'
+            ? `<div class="silent-toast-spinner"></div>`
+            : `<div class="silent-toast-dot${state === 'error' ? ' error' : ''}"></div>`;
+        toastEl.innerHTML = `${indicator}<span>${msg}</span>`;
     }
     function removeToast() {
-        if (toastEl) { toastEl.style.opacity = '0'; setTimeout(() => toastEl?.remove(), 300); toastEl = null; }
+        if (toastEl) {
+            toastEl.classList.remove('visible');
+            setTimeout(() => { toastEl?.remove(); toastEl = null; }, 200);
+        }
     }
 
     try {
@@ -36,7 +35,7 @@ async function captureAndDownloadCards(silent = false) {
             if (loadingOverlay) loadingOverlay.classList.add('active');
             if (loadingText) loadingText.textContent = "Procesando informe visual...";
         } else {
-            updateToast('📸 Generando imagen...');
+            updateToast('Generando imagen...');
         }
         if (captureBtn) captureBtn.classList.add('hidden');
 
@@ -146,7 +145,7 @@ async function captureAndDownloadCards(silent = false) {
 
         // 5. Convertir canvas a Blob
         if (!silent && loadingText) loadingText.textContent = "Generando imagen...";
-        else updateToast('🖼️ Procesando imagen...');
+        else updateToast('Procesando imagen...');
         
         const blob = await new Promise(resolve => {
             canvas.toBlob(resolve, 'image/jpeg', 0.85);
@@ -163,7 +162,7 @@ async function captureAndDownloadCards(silent = false) {
         
         // 8. Generar mensaje y abrir WhatsApp
         if (!silent && loadingText) loadingText.textContent = "Abriendo WhatsApp...";
-        else updateToast('💬 Abriendo WhatsApp...');
+        else updateToast('Abriendo WhatsApp...');
         const whatsappText = generateWhatsAppMessage();
         openWhatsAppWithText(whatsappText);
 

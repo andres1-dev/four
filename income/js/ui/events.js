@@ -221,24 +221,23 @@ async function updateReportWithDate(newDate, forceReload = false, silent = false
 
     // Toast para modo silencioso
     let toastEl = null;
-    function showSilentToast(msg) {
+    function showSilentToast(msg, state = 'loading') {
         if (!toastEl) {
             toastEl = document.createElement('div');
-            toastEl.style.cssText = `
-                position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
-                background:rgba(99,102,241,0.95); color:#fff;
-                padding:10px 20px; border-radius:10px;
-                font-size:13px; font-weight:600; font-family:inherit;
-                box-shadow:0 4px 16px rgba(0,0,0,0.3);
-                z-index:999999; white-space:nowrap;
-                transition:opacity 0.3s ease; opacity:1;
-            `;
+            toastEl.className = 'silent-toast';
             document.body.appendChild(toastEl);
+            requestAnimationFrame(() => toastEl.classList.add('visible'));
         }
-        toastEl.textContent = msg;
+        const indicator = state === 'loading'
+            ? `<div class="silent-toast-spinner"></div>`
+            : `<div class="silent-toast-dot${state === 'error' ? ' error' : ''}"></div>`;
+        toastEl.innerHTML = `${indicator}<span>${msg}</span>`;
     }
     function removeSilentToast() {
-        if (toastEl) { toastEl.style.opacity = '0'; setTimeout(() => toastEl?.remove(), 300); toastEl = null; }
+        if (toastEl) {
+            toastEl.classList.remove('visible');
+            setTimeout(() => { toastEl?.remove(); toastEl = null; }, 200);
+        }
     }
 
     try {
@@ -247,7 +246,7 @@ async function updateReportWithDate(newDate, forceReload = false, silent = false
             if (loadingText) loadingText.textContent = "Actualizando datos...";
             if (loadingProgress) loadingProgress.style.width = '10%';
         } else {
-            showSilentToast('🔄 Actualizando datos...');
+            showSilentToast('Actualizando datos...');
         }
 
         if (forceReload || consolidatedData.length === 0) {
@@ -266,12 +265,12 @@ async function updateReportWithDate(newDate, forceReload = false, silent = false
             if (loadingProgress) loadingProgress.style.width = '100%';
             await new Promise(r => setTimeout(r, 300));
         } else {
-            showSilentToast('✅ Datos actualizados');
+            showSilentToast('Datos actualizados', 'done');
             setTimeout(removeSilentToast, 1500);
         }
     } catch (error) {
         console.error("Update error:", error);
-        if (silent) { showSilentToast('❌ Error al actualizar'); setTimeout(removeSilentToast, 2000); }
+        if (silent) { showSilentToast('Error al actualizar', 'error'); setTimeout(removeSilentToast, 2000); }
     } finally {
         if (!silent && loadingOverlay) {
             loadingOverlay.classList.add('closing');

@@ -8,24 +8,23 @@ async function sendEmailReport(silent = false) {
     const emailBtn = document.getElementById('emailBtn');
 
     let toastEl = null;
-    function showSilentToast(msg) {
+    function showSilentToast(msg, state = 'loading') {
         if (!toastEl) {
             toastEl = document.createElement('div');
-            toastEl.style.cssText = `
-                position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
-                background:rgba(99,102,241,0.95); color:#fff;
-                padding:10px 20px; border-radius:10px;
-                font-size:13px; font-weight:600; font-family:inherit;
-                box-shadow:0 4px 16px rgba(0,0,0,0.3);
-                z-index:999999; white-space:nowrap;
-                transition:opacity 0.3s ease; opacity:1;
-            `;
+            toastEl.className = 'silent-toast';
             document.body.appendChild(toastEl);
+            requestAnimationFrame(() => toastEl.classList.add('visible'));
         }
-        toastEl.textContent = msg;
+        const indicator = state === 'loading'
+            ? `<div class="silent-toast-spinner"></div>`
+            : `<div class="silent-toast-dot${state === 'error' ? ' error' : ''}"></div>`;
+        toastEl.innerHTML = `${indicator}<span>${msg}</span>`;
     }
     function removeSilentToast() {
-        if (toastEl) { toastEl.style.opacity = '0'; setTimeout(() => toastEl?.remove(), 300); toastEl = null; }
+        if (toastEl) {
+            toastEl.classList.remove('visible');
+            setTimeout(() => { toastEl?.remove(); toastEl = null; }, 200);
+        }
     }
 
     try {
@@ -33,28 +32,28 @@ async function sendEmailReport(silent = false) {
             if (loadingOverlay) loadingOverlay.classList.add('active');
             if (loadingText) loadingText.textContent = "Preparando correo...";
         } else {
-            showSilentToast('📧 Preparando correo...');
+            showSilentToast('Preparando correo...');
         }
         if (emailBtn) emailBtn.style.pointerEvents = 'none';
 
         const emailContent = generateEmailContent();
         
         if (!silent && loadingText) loadingText.textContent = "Enviando correo...";
-        else showSilentToast('📤 Enviando correo...');
+        else showSilentToast('Enviando correo...');
         
         const result = await sendEmail(emailContent);
         
         if (result.success) {
-            if (silent) { showSilentToast('✅ Correo enviado'); setTimeout(removeSilentToast, 2000); }
+            if (silent) { showSilentToast('Correo enviado', 'done'); setTimeout(removeSilentToast, 2000); }
             else alert('Correo enviado exitosamente');
         } else {
-            if (silent) { showSilentToast('❌ Error al enviar'); setTimeout(removeSilentToast, 2000); }
+            if (silent) { showSilentToast('Error al enviar', 'error'); setTimeout(removeSilentToast, 2000); }
             else alert('Error al enviar el correo: ' + (result.message || 'Error desconocido'));
         }
 
     } catch (e) {
         console.error("Error al enviar email:", e);
-        if (silent) { showSilentToast('❌ Error al enviar'); setTimeout(removeSilentToast, 2000); }
+        if (silent) { showSilentToast('Error al enviar', 'error'); setTimeout(removeSilentToast, 2000); }
         else alert("Error al enviar el correo electrónico.");
     } finally {
         if (emailBtn) emailBtn.style.pointerEvents = 'auto';
