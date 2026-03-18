@@ -386,7 +386,7 @@
 
 .comparison-header:hover {
     background: transparent;
-    border-top-color: rgba(255,255,255,0.1);
+    border-top-color: rgba(255,255,255,0.06);
 }
 
 .comparison-header:hover .comparison-title {
@@ -424,7 +424,7 @@
 }
 
 .comparison-item {
-    background: rgba(255,255,255,0.02);
+    background: transparent;
     padding: 14px 16px;
     border-radius: var(--border-radius-sm);
     font-size: 14px;
@@ -434,9 +434,9 @@
 }
 
 .comparison-item:hover {
-    background: rgba(255,255,255,0.04);
+    background: transparent;
     border-left-color: var(--primary-color);
-    transform: translateX(2px);
+    transform: none;
 }
 
 .comparison-label {

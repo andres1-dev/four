@@ -54,7 +54,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     initDatePicker();
     initProveedorFilter();
     initCaptureButton();
-    initWhatsAppButton();
 
     try {
         const today = new Date();
@@ -213,17 +212,43 @@ function initWhatsAppButton() {
     }
 }
 
-async function updateReportWithDate(newDate, forceReload = false) {
+async function updateReportWithDate(newDate, forceReload = false, silent = false) {
     if (isLoading) return;
     isLoading = true;
     const loadingOverlay = document.getElementById('loadingOverlay');
     const loadingText = document.getElementById('loadingText');
     const loadingProgress = document.getElementById('loadingProgress');
 
+    // Toast para modo silencioso
+    let toastEl = null;
+    function showSilentToast(msg) {
+        if (!toastEl) {
+            toastEl = document.createElement('div');
+            toastEl.style.cssText = `
+                position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+                background:rgba(99,102,241,0.95); color:#fff;
+                padding:10px 20px; border-radius:10px;
+                font-size:13px; font-weight:600; font-family:inherit;
+                box-shadow:0 4px 16px rgba(0,0,0,0.3);
+                z-index:999999; white-space:nowrap;
+                transition:opacity 0.3s ease; opacity:1;
+            `;
+            document.body.appendChild(toastEl);
+        }
+        toastEl.textContent = msg;
+    }
+    function removeSilentToast() {
+        if (toastEl) { toastEl.style.opacity = '0'; setTimeout(() => toastEl?.remove(), 300); toastEl = null; }
+    }
+
     try {
-        if (loadingOverlay) loadingOverlay.classList.add('active');
-        if (loadingText) loadingText.textContent = "Actualizando datos...";
-        if (loadingProgress) loadingProgress.style.width = '10%';
+        if (!silent) {
+            if (loadingOverlay) loadingOverlay.classList.add('active');
+            if (loadingText) loadingText.textContent = "Actualizando datos...";
+            if (loadingProgress) loadingProgress.style.width = '10%';
+        } else {
+            showSilentToast('🔄 Actualizando datos...');
+        }
 
         if (forceReload || consolidatedData.length === 0) {
             await cargarDatosIniciales();
@@ -236,12 +261,19 @@ async function updateReportWithDate(newDate, forceReload = false) {
         cargarDatosMes();
         cargarDatosAño();
         cargarDatosTendencia();
-        if (loadingProgress) loadingProgress.style.width = '100%';
-        await new Promise(r => setTimeout(r, 300));
+
+        if (!silent) {
+            if (loadingProgress) loadingProgress.style.width = '100%';
+            await new Promise(r => setTimeout(r, 300));
+        } else {
+            showSilentToast('✅ Datos actualizados');
+            setTimeout(removeSilentToast, 1500);
+        }
     } catch (error) {
         console.error("Update error:", error);
+        if (silent) { showSilentToast('❌ Error al actualizar'); setTimeout(removeSilentToast, 2000); }
     } finally {
-        if (loadingOverlay) {
+        if (!silent && loadingOverlay) {
             loadingOverlay.classList.add('closing');
             setTimeout(() => {
                 loadingOverlay.classList.remove('active', 'closing');
@@ -315,28 +347,215 @@ async function generarReporteCompleto(targetDate) {
 
 
 
-// ── Theme Toggle ─────────────────────────────────────────────────────────────
-(function initThemeToggle() {
-    const btn = document.getElementById('themeToggleBtn');
-    const icon = document.getElementById('themeIcon');
-    if (!btn || !icon) return;
+// ── Settings Panel ────────────────────────────────────────────────────────────
+(function initSettingsPanel() {
+    const btn = document.getElementById('settingsBtn');
+    if (!btn) return;
 
+    // ── Crear panel directo en body (escapa cualquier stacking context) ────────
+    const panel = document.createElement('div');
+    panel.id = 'settingsPanel';
+    panel.className = 'settings-panel';
+    panel.setAttribute('role', 'menu');
+    panel.setAttribute('aria-hidden', 'true');
+    panel.innerHTML = `
+        <button class="settings-item" id="settingsUpdateBtn">
+            <i class="fas fa-sync-alt"></i><span>Actualizar datos</span>
+        </button>
+        <div class="settings-divider"></div>
+        <button class="settings-item" id="settingsParticlesBtn">
+            <i class="fas fa-star" id="particlesIcon"></i><span id="particlesLabel">Desactivar partículas</span>
+        </button>
+        <div class="settings-divider"></div>
+        <button class="settings-item" id="settingsThemeBtn">
+            <i class="fas fa-sun" id="themeIcon"></i><span id="themeLabel">Modo claro</span>
+        </button>
+        <div class="settings-divider"></div>
+        <button class="settings-item" id="settingsSolidBtn">
+            <i class="fas fa-droplet" id="solidIcon"></i><span id="solidLabel">Modo sólido</span>
+        </button>
+        <div class="settings-divider"></div>
+        <button class="settings-item" id="whatsappBtn">
+            <i class="fab fa-whatsapp"></i><span>Enviar WhatsApp</span>
+        </button>
+        <button class="settings-item" id="emailBtn">
+            <i class="fas fa-envelope"></i><span>Enviar Email</span>
+        </button>`;
+    document.body.appendChild(panel);
+
+    const updateBtn  = panel.querySelector('#settingsUpdateBtn');
+    const partBtn    = panel.querySelector('#settingsParticlesBtn');
+    const partIcon   = panel.querySelector('#particlesIcon');
+    const partLabel  = panel.querySelector('#particlesLabel');
+    const themeBtn   = panel.querySelector('#settingsThemeBtn');
+    const themeIcon  = panel.querySelector('#themeIcon');
+    const themeLabel = panel.querySelector('#themeLabel');
+    const solidBtn   = panel.querySelector('#settingsSolidBtn');
+    const solidIcon  = panel.querySelector('#solidIcon');
+    const solidLabel = panel.querySelector('#solidLabel');
+    const waBtn      = panel.querySelector('#whatsappBtn');
+
+    // ── Posicionar saliendo del botón, ajustando si se sale de pantalla ──────
+    function positionPanel() {
+        const rect   = btn.getBoundingClientRect();
+        const pw     = panel.offsetWidth  || 210;
+        const ph     = panel.offsetHeight || 200;
+        const margin = 8;
+        const vw     = window.innerWidth;
+        const vh     = window.innerHeight;
+
+        // Preferir a la izquierda del botón
+        let left = rect.left - pw - margin;
+        let top  = rect.top;
+
+        // Si se sale por la izquierda → a la derecha del botón
+        if (left < margin) left = rect.right + margin;
+
+        // Si aún se sale por la derecha → pegarlo al margen derecho
+        if (left + pw > vw - margin) left = vw - pw - margin;
+
+        // Ajuste vertical
+        if (top + ph > vh - margin) top = vh - ph - margin;
+        if (top < margin) top = margin;
+
+        panel.style.left = left + 'px';
+        panel.style.top  = top  + 'px';
+    }
+
+    // ── Abrir / cerrar ────────────────────────────────────────────────────────
+    function closePanel() {
+        panel.classList.remove('open');
+        panel.setAttribute('aria-hidden', 'true');
+    }
+
+    btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const opening = !panel.classList.contains('open');
+        if (opening) {
+            // Mostrar brevemente para medir ancho antes de posicionar
+            panel.style.visibility = 'hidden';
+            panel.classList.add('open');
+            positionPanel();
+            panel.style.visibility = '';
+        } else {
+            closePanel();
+        }
+        panel.setAttribute('aria-hidden', String(!opening));
+    });
+
+    document.addEventListener('click', e => {
+        if (!panel.contains(e.target) && e.target !== btn) closePanel();
+    });
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closePanel();
+    });
+
+    window.addEventListener('resize', () => {
+        if (panel.classList.contains('open')) positionPanel();
+    });
+
+    const emBtn      = panel.querySelector('#emailBtn');
+    updateBtn.addEventListener('click', () => {
+        closePanel();
+        const icon = updateBtn.querySelector('i');
+        icon.classList.add('fa-spin');
+        const datePicker = document.getElementById('datePicker');
+        const date = datePicker ? (datePicker.valueAsDate || new Date()) : new Date();
+        updateReportWithDate(date, true, true).finally(() => icon.classList.remove('fa-spin'));
+    });
+
+    // ── Partículas ────────────────────────────────────────────────────────────
+    let particlesOff = localStorage.getItem('particlesOff') === 'true';
+
+    function applyParticles() {
+        const container = document.querySelector('.particles-container');
+        if (!container) return;
+        if (particlesOff) {
+            container.style.display = 'none';
+            partIcon.className    = 'fas fa-star-half-stroke';
+            partLabel.textContent = 'Activar partículas';
+            partBtn.classList.add('active');
+        } else {
+            container.style.display = '';
+            partIcon.className    = 'fas fa-star';
+            partLabel.textContent = 'Desactivar partículas';
+            partBtn.classList.remove('active');
+        }
+    }
+
+    applyParticles();
+
+    partBtn.addEventListener('click', () => {
+        particlesOff = !particlesOff;
+        localStorage.setItem('particlesOff', particlesOff);
+        applyParticles();
+        closePanel();
+    });
+
+    // ── Tema ──────────────────────────────────────────────────────────────────
     function applyTheme(theme) {
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('theme', theme);
-        icon.className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
-        btn.title = theme === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro';
+        themeIcon.className   = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+        themeLabel.textContent = theme === 'light' ? 'Modo oscuro' : 'Modo claro';
+        if (typeof particlesReinit === 'function') particlesReinit();
     }
 
-    // Sincronizar ícono con el tema actual al cargar
-    const current = document.documentElement.getAttribute('data-theme') || 'dark';
-    applyTheme(current);
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    applyTheme(savedTheme);
 
-    btn.addEventListener('click', () => {
+    themeBtn.addEventListener('click', () => {
         const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
         applyTheme(next);
+        closePanel();
+    });
+
+    // ── Modo sólido ───────────────────────────────────────────────────────────
+    let solidMode = localStorage.getItem('solidMode') === 'true';
+
+    function applySolid() {
+        document.documentElement.classList.toggle('solid', solidMode);
+        localStorage.setItem('solidMode', solidMode);
+        solidIcon.className   = solidMode ? 'fas fa-droplet-slash' : 'fas fa-droplet';
+        solidLabel.textContent = solidMode ? 'Modo transparente' : 'Modo sólido';
+        solidBtn.classList.toggle('active', solidMode);
+    }
+
+    applySolid();
+
+    solidBtn.addEventListener('click', () => {
+        solidMode = !solidMode;
+        applySolid();
+        closePanel();
+    });
+
+    // ── WhatsApp ──────────────────────────────────────────────────────────────
+    waBtn.addEventListener('click', e => {
+        e.preventDefault();
+        closePanel();
+        if (checkPassword()) {
+            const icon = waBtn.querySelector('i');
+            const orig = icon.className;
+            icon.className = 'fas fa-spinner fa-spin';
+            captureAndDownloadCards(true).finally(() => { icon.className = orig; });
+        }
+    });
+
+    // ── Email ─────────────────────────────────────────────────────────────────
+    emBtn.addEventListener('click', e => {
+        e.preventDefault();
+        closePanel();
+        if (checkPassword()) {
+            const icon = emBtn.querySelector('i');
+            const orig = icon.className;
+            icon.className = 'fas fa-spinner fa-spin';
+            sendEmailReport(true).finally(() => { icon.className = orig; });
+        }
     });
 })();
+
+// ── Loading Stream ────────────────────────────────────────────────────────────
 
 // ── Loading Stream ────────────────────────────────────────────────────────────
 (function () {

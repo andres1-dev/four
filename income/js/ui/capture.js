@@ -3,15 +3,41 @@
  * Matching backup.html exactly
  */
 
-async function captureAndDownloadCards() {
+async function captureAndDownloadCards(silent = false) {
     const cardsContainer = document.querySelector('.cards-container');
     const captureBtn = document.getElementById('captureBtn');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const loadingText = document.getElementById('loadingText');
 
+    // Toast de progreso para modo silencioso
+    let toastEl = null;
+    function updateToast(msg) {
+        if (!toastEl) {
+            toastEl = document.createElement('div');
+            toastEl.style.cssText = `
+                position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+                background:rgba(99,102,241,0.95); color:#fff;
+                padding:10px 20px; border-radius:10px;
+                font-size:13px; font-weight:600; font-family:inherit;
+                box-shadow:0 4px 16px rgba(0,0,0,0.3);
+                z-index:999999; white-space:nowrap;
+                transition:opacity 0.3s ease; opacity:1;
+            `;
+            document.body.appendChild(toastEl);
+        }
+        toastEl.textContent = msg;
+    }
+    function removeToast() {
+        if (toastEl) { toastEl.style.opacity = '0'; setTimeout(() => toastEl?.remove(), 300); toastEl = null; }
+    }
+
     try {
-        if (loadingOverlay) loadingOverlay.classList.add('active');
-        if (loadingText) loadingText.textContent = "Procesando informe visual...";
+        if (!silent) {
+            if (loadingOverlay) loadingOverlay.classList.add('active');
+            if (loadingText) loadingText.textContent = "Procesando informe visual...";
+        } else {
+            updateToast('📸 Generando imagen...');
+        }
         if (captureBtn) captureBtn.classList.add('hidden');
 
         // 1. Abrir todas las tarjetas y guardar estado original
@@ -119,7 +145,8 @@ async function captureAndDownloadCards() {
         void cardsContainer.offsetHeight;
 
         // 5. Convertir canvas a Blob
-        if (loadingText) loadingText.textContent = "Generando imagen...";
+        if (!silent && loadingText) loadingText.textContent = "Generando imagen...";
+        else updateToast('🖼️ Procesando imagen...');
         
         const blob = await new Promise(resolve => {
             canvas.toBlob(resolve, 'image/jpeg', 0.85);
@@ -135,7 +162,8 @@ async function captureAndDownloadCards() {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         // 8. Generar mensaje y abrir WhatsApp
-        if (loadingText) loadingText.textContent = "Abriendo WhatsApp...";
+        if (!silent && loadingText) loadingText.textContent = "Abriendo WhatsApp...";
+        else updateToast('💬 Abriendo WhatsApp...');
         const whatsappText = generateWhatsAppMessage();
         openWhatsAppWithText(whatsappText);
 
@@ -144,9 +172,13 @@ async function captureAndDownloadCards() {
         alert("Error al generar el informe visual.");
     } finally {
         if (captureBtn) captureBtn.classList.remove('hidden');
-        if (loadingOverlay) {
-            loadingOverlay.classList.add('closing');
-            setTimeout(() => loadingOverlay.classList.remove('active', 'closing'), 400);
+        if (!silent) {
+            if (loadingOverlay) {
+                loadingOverlay.classList.add('closing');
+                setTimeout(() => loadingOverlay.classList.remove('active', 'closing'), 400);
+            }
+        } else {
+            removeToast();
         }
     }
 }

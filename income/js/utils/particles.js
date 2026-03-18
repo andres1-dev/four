@@ -3,8 +3,8 @@
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    // ── Paleta dark permanente ────────────────────────────────────────────────
-    const PALETTE = [
+    // ── Paleta dark ───────────────────────────────────────────────────────────
+    const PALETTE_DARK = [
         { r: 96,  g: 165, b: 250 },  // azul
         { r: 52,  g: 211, b: 153 },  // verde
         { r: 167, g: 139, b: 250 },  // violeta
@@ -12,6 +12,21 @@
         { r: 56,  g: 189, b: 248 },  // sky
         { r: 248, g: 113, b: 113 },  // rojo suave
     ];
+
+    // ── Paleta light — más saturada para contrastar sobre fondo claro ─────────
+    const PALETTE_LIGHT = [
+        { r: 37,  g: 99,  b: 235 },  // azul intenso
+        { r: 5,   g: 150, b: 105 },  // verde esmeralda
+        { r: 124, g: 58,  b: 237 },  // violeta
+        { r: 217, g: 119, b: 6   },  // ámbar oscuro
+        { r: 2,   g: 132, b: 199 },  // sky oscuro
+        { r: 220, g: 38,  b: 38  },  // rojo
+    ];
+
+    function getPalette() {
+        return document.documentElement.getAttribute('data-theme') === 'light'
+            ? PALETTE_LIGHT : PALETTE_DARK;
+    }
 
     let W, H;
     function resize() {
@@ -50,6 +65,7 @@
     let constellations = []; // array de arrays de índices
 
     function makeStar(isAnchor = false) {
+        const PALETTE = getPalette();
         const c = PALETTE[Math.floor(Math.random() * PALETTE.length)];
         const giant = isAnchor || Math.random() < 0.1;
         return {
@@ -101,6 +117,9 @@
         }
     }
     init();
+
+    // Exponer reinit para cambio de tema
+    window.particlesReinit = function() { resize(); init(); };
 
     let frame = 0;
 

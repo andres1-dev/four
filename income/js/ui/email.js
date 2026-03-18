@@ -2,34 +2,64 @@
  * Email Sending Logic - Outlook Compatible
  */
 
-async function sendEmailReport() {
+async function sendEmailReport(silent = false) {
     const loadingOverlay = document.getElementById('loadingOverlay');
     const loadingText = document.getElementById('loadingText');
     const emailBtn = document.getElementById('emailBtn');
 
+    let toastEl = null;
+    function showSilentToast(msg) {
+        if (!toastEl) {
+            toastEl = document.createElement('div');
+            toastEl.style.cssText = `
+                position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+                background:rgba(99,102,241,0.95); color:#fff;
+                padding:10px 20px; border-radius:10px;
+                font-size:13px; font-weight:600; font-family:inherit;
+                box-shadow:0 4px 16px rgba(0,0,0,0.3);
+                z-index:999999; white-space:nowrap;
+                transition:opacity 0.3s ease; opacity:1;
+            `;
+            document.body.appendChild(toastEl);
+        }
+        toastEl.textContent = msg;
+    }
+    function removeSilentToast() {
+        if (toastEl) { toastEl.style.opacity = '0'; setTimeout(() => toastEl?.remove(), 300); toastEl = null; }
+    }
+
     try {
-        if (loadingOverlay) loadingOverlay.classList.add('active');
-        if (loadingText) loadingText.textContent = "Preparando correo...";
+        if (!silent) {
+            if (loadingOverlay) loadingOverlay.classList.add('active');
+            if (loadingText) loadingText.textContent = "Preparando correo...";
+        } else {
+            showSilentToast('📧 Preparando correo...');
+        }
         if (emailBtn) emailBtn.style.pointerEvents = 'none';
 
         const emailContent = generateEmailContent();
         
-        if (loadingText) loadingText.textContent = "Enviando correo...";
+        if (!silent && loadingText) loadingText.textContent = "Enviando correo...";
+        else showSilentToast('📤 Enviando correo...');
         
         const result = await sendEmail(emailContent);
         
         if (result.success) {
-            alert('Correo enviado exitosamente');
+            if (silent) { showSilentToast('✅ Correo enviado'); setTimeout(removeSilentToast, 2000); }
+            else alert('Correo enviado exitosamente');
         } else {
-            alert('Error al enviar el correo: ' + (result.message || 'Error desconocido'));
+            if (silent) { showSilentToast('❌ Error al enviar'); setTimeout(removeSilentToast, 2000); }
+            else alert('Error al enviar el correo: ' + (result.message || 'Error desconocido'));
         }
 
     } catch (e) {
         console.error("Error al enviar email:", e);
-        alert("Error al enviar el correo electrónico.");
+        if (silent) { showSilentToast('❌ Error al enviar'); setTimeout(removeSilentToast, 2000); }
+        else alert("Error al enviar el correo electrónico.");
     } finally {
         if (emailBtn) emailBtn.style.pointerEvents = 'auto';
-        if (loadingOverlay) loadingOverlay.classList.remove('active');
+        if (!silent && loadingOverlay) loadingOverlay.classList.remove('active');
+        else removeSilentToast();
     }
 }
 
