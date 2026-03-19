@@ -1168,31 +1168,21 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
 
     <!-- Local Scripts (Load in order of dependency) -->
-    <script>const APP_VERSION = '35';</script>
-    <script>
-        (function(v){
-            const scripts = [
-                'js/config/constants.js',
-                'js/utils/date_utils.js',
-                'js/utils/formatters.js',
-                'js/api/google_sheets.js',
-                'js/core/metrics.js',
-                'js/core/trends_logic.js',
-                'js/ui/render.js',
-                'js/ui/charts.js',
-                'js/ui/events.js',
-                'js/ui/capture.js',
-                'js/ui/email.js',
-                'js/ui/database.js',
-                'js/ui/analytics_modals.js',
-                'js/pwa/sw_init.js',
-                'js/utils/particles.js',
-            ];
-            scripts.forEach(function(src){
-                document.write('<script src="'+src+'?v='+v+'"><\/script>');
-            });
-        })(APP_VERSION);
-    </script>
+    <script src="js/config/constants.js"></script>
+    <script src="js/utils/date_utils.js"></script>
+    <script src="js/utils/formatters.js"></script>
+    <script src="js/api/google_sheets.js"></script>
+    <script src="js/core/metrics.js"></script>
+    <script src="js/core/trends_logic.js"></script>
+    <script src="js/ui/render.js"></script>
+    <script src="js/ui/charts.js"></script>
+    <script src="js/ui/events.js"></script>
+    <script src="js/ui/capture.js"></script>
+    <script src="js/ui/email.js"></script>
+    <script src="js/ui/database.js"></script>
+    <script src="js/ui/analytics_modals.js"></script>
+    <script src="js/pwa/sw_init.js"></script>
+    <script src="js/utils/particles.js"></script>
 
 </body>
 
