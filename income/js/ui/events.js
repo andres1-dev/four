@@ -608,11 +608,31 @@ async function generarReporteCompleto(targetDate) {
     });
 
     // ── Tema ──────────────────────────────────────────────────────────────────
+    // Actualiza el meta theme-color para iOS PWA (status bar / dynamic island)
+    function updateThemeColor() {
+        const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+        const isSolid = document.documentElement.classList.contains('solid');
+        let color;
+        if (isLight) {
+            color = isSolid ? '#ffffff' : '#f1f5f9';
+        } else {
+            color = isSolid ? '#16181f' : '#0f1117';
+        }
+        let meta = document.querySelector('meta[name="theme-color"]');
+        if (!meta) {
+            meta = document.createElement('meta');
+            meta.name = 'theme-color';
+            document.head.appendChild(meta);
+        }
+        meta.content = color;
+    }
+
     function applyTheme(theme) {
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('theme', theme);
         themeIcon.className   = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
         themeLabel.textContent = theme === 'light' ? 'Modo oscuro' : 'Modo claro';
+        updateThemeColor();
         if (typeof particlesReinit === 'function') particlesReinit();
     }
 
@@ -634,6 +654,7 @@ async function generarReporteCompleto(targetDate) {
         solidIcon.className   = solidMode ? 'fas fa-droplet-slash' : 'fas fa-droplet';
         solidLabel.textContent = solidMode ? 'Modo transparente' : 'Modo sólido';
         solidBtn.classList.toggle('active', solidMode);
+        updateThemeColor();
     }
 
     applySolid();
