@@ -48,14 +48,14 @@ async function captureAndDownloadCards(silent = false) {
 
         // Crear contenedor temporal que incluya ambas secciones
         tempContainer = document.createElement('div');
-        tempContainer.style.cssText = 'width: 1800px; max-width: 1800px; min-width: 1800px; margin: 0 auto; padding: 20px; background: transparent; overflow: visible;';
+        tempContainer.style.cssText = 'width: 1840px; max-width: 1840px; min-width: 1840px; margin: 0; padding: 20px; background: transparent; overflow: visible; box-sizing: border-box;';
         tempContainer.className = 'capture-temp-container';
         
         // Clonar las tarjetas principales
         const cardsClone = cardsContainer.cloneNode(true);
-        cardsClone.style.width = '1800px';
-        cardsClone.style.maxWidth = '1800px';
-        cardsClone.style.minWidth = '1800px';
+        cardsClone.style.width = '100%';
+        cardsClone.style.maxWidth = '100%';
+        cardsClone.style.minWidth = 'unset';
         cardsClone.style.margin = '0';
         cardsClone.style.overflow = 'visible';
         tempContainer.appendChild(cardsClone);
@@ -77,9 +77,9 @@ async function captureAndDownloadCards(silent = false) {
             };
             
             // Aplicar estilos para captura
-            trendsContainer.style.width = '1800px';
-            trendsContainer.style.maxWidth = '1800px';
-            trendsContainer.style.minWidth = '1800px';
+            trendsContainer.style.width = '100%';
+            trendsContainer.style.maxWidth = '100%';
+            trendsContainer.style.minWidth = 'unset';
             trendsContainer.style.margin = '20px 0 0 0';
             trendsContainer.style.overflow = 'visible';
             
@@ -108,6 +108,20 @@ async function captureAndDownloadCards(silent = false) {
 
         // 1. Abrir todas las tarjetas en el contenedor temporal
         const cardHeaders = tempContainer.querySelectorAll('.card-header');
+
+        // Guardar estado expandido de las tarjetas del trendsContainer ANTES de expandir
+        const trendsExpandedState = new Map();
+        if (trendsContainer) {
+            trendsContainer.querySelectorAll('.card-header').forEach(header => {
+                const card = header.closest('.card');
+                const cardContent = card ? card.querySelector('.card-content') : null;
+                trendsExpandedState.set(header, {
+                    cardExpanded: card ? card.classList.contains('expanded') : false,
+                    contentExpanded: cardContent ? cardContent.classList.contains('expanded') : false,
+                    indicatorExpanded: header.querySelector('.collapse-indicator')?.classList.contains('expanded') || false
+                });
+            });
+        }
         
         cardHeaders.forEach(header => {
             const card = header.closest('.card');
@@ -153,7 +167,7 @@ async function captureAndDownloadCards(silent = false) {
             allowTaint: true,
             scrollX: 0,
             scrollY: 0,
-            windowWidth: isMobile ? 3000 : 1800,
+            windowWidth: isMobile ? 3000 : 1840,
             windowHeight: tempContainer.scrollHeight,
             backgroundColor: null  // se aplica manualmente en el canvas final
         };
@@ -161,19 +175,13 @@ async function captureAndDownloadCards(silent = false) {
         await new Promise(resolve => setTimeout(resolve, 300));
         const uiCanvas = await html2canvas(tempContainer, canvasOptions);
 
-        // Componer: fondo sólido + partículas + UI
+        // Canvas final con fondo transparente
         const finalCanvas = document.createElement('canvas');
         finalCanvas.width  = uiCanvas.width;
         finalCanvas.height = uiCanvas.height;
         const fCtx = finalCanvas.getContext('2d');
 
-        // 1. Fondo base — usa el color actual del documento
-        const bgColor = getComputedStyle(document.documentElement)
-            .getPropertyValue('--bg-light').trim() || '#0f1117';
-        fCtx.fillStyle = bgColor;
-        fCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-
-        // 2. UI encima (sin partículas)
+        // Solo UI, sin fondo sólido
         fCtx.drawImage(uiCanvas, 0, 0);
 
         const canvas = finalCanvas;
@@ -195,6 +203,16 @@ async function captureAndDownloadCards(silent = false) {
                 } else {
                     tempContainer._trendsOriginalParent.appendChild(trendsContainer);
                 }
+
+                // Restaurar estado expandido/contraído de las tarjetas de tendencias
+                trendsExpandedState.forEach((state, header) => {
+                    const card = header.closest('.card');
+                    const cardContent = card ? card.querySelector('.card-content') : null;
+                    const indicator = header.querySelector('.collapse-indicator');
+                    if (card) card.classList.toggle('expanded', state.cardExpanded);
+                    if (cardContent) cardContent.classList.toggle('expanded', state.contentExpanded);
+                    if (indicator) indicator.classList.toggle('expanded', state.indicatorExpanded);
+                });
             }
             
             // Remover el contenedor temporal
@@ -211,13 +229,13 @@ async function captureAndDownloadCards(silent = false) {
         else updateToast('Procesando imagen...');
         
         const blob = await new Promise(resolve => {
-            canvas.toBlob(resolve, 'image/jpeg', 0.85);
+            canvas.toBlob(resolve, 'image/png');
         });
         
         console.log('Imagen generada - Tamaño:', blob.size, 'bytes');
 
         // 6. Crear archivo y descargar
-        const fileName = `Informe_Ingresos_${formatDate(new Date()).replace(/\//g, '-')}.jpg`;
+        const fileName = `Informe_Ingresos_${formatDate(new Date()).replace(/\//g, '-')}.png`;
         downloadImage(blob, fileName);
         
         // 7. Esperar un momento para que se descargue
@@ -252,6 +270,16 @@ async function captureAndDownloadCards(silent = false) {
                 } else {
                     tempContainer._trendsOriginalParent.appendChild(trendsContainer);
                 }
+
+                // Restaurar estado expandido/contraído de las tarjetas de tendencias
+                trendsExpandedState.forEach((state, header) => {
+                    const card = header.closest('.card');
+                    const cardContent = card ? card.querySelector('.card-content') : null;
+                    const indicator = header.querySelector('.collapse-indicator');
+                    if (card) card.classList.toggle('expanded', state.cardExpanded);
+                    if (cardContent) cardContent.classList.toggle('expanded', state.contentExpanded);
+                    if (indicator) indicator.classList.toggle('expanded', state.indicatorExpanded);
+                });
             }
             
             // Remover contenedor temporal

@@ -1262,14 +1262,26 @@
 
 .capture-temp-container .cards-container,
 .capture-temp-container .cards-container2 {
-    width: 1800px !important;
-    max-width: 1800px !important;
-    min-width: 1800px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: unset !important;
 }
 
 .capture-temp-container .card {
     width: auto !important;
     max-width: none !important;
+    background: rgba(26,29,39,0.98) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: var(--border-radius-lg) !important;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3) !important;
+    overflow: hidden !important;
+    margin-bottom: 12px !important;
+}
+
+[data-theme="light"] .capture-temp-container .card {
+    background: rgba(255,255,255,0.98) !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08) !important;
 }
 
 .capture-temp-container .data-grid {
