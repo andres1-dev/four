@@ -34,37 +34,67 @@ function cargarDatosTendencia() {
 
 // Actualizar la UI con los resultados del análisis diario
 function actualizarTendenciaUI(analisisDiario, actual, anterior) {
-    const { proyeccion } = analisisDiario;
-
-    // Tendencia actual (comparación con mes anterior)
-    if (anterior) {
-        const crecimiento = calculateGrowthValue(actual.ingreso, anterior.ingreso);
-        const tendenciaEl = document.getElementById("tendencia-actual");
-        if (tendenciaEl) {
-            tendenciaEl.textContent = crecimiento.value;
-            tendenciaEl.className = "data-value " + crecimiento.tendencia;
-        }
-        tendenciaValues.push(crecimiento.tendencia);
-    }
+    const { proyeccion, tendencia, promedioMovil, datosDiarios } = analisisDiario;
 
     // Proyección mensual
     if (proyeccion) {
+        // Obtener el budget total del mes (no la meta acumulada)
+        const budgetMes = budgetData.find(b => 
+            b.MES.toUpperCase() === actual.mes && 
+            b.ANO === String(actual.año)
+        );
+        const metaTotalMes = budgetMes ? budgetMes.TOTAL : actual.meta;
+
         const proyeccionEl = document.getElementById("tendencia-proyeccion");
-        const diferencia = proyeccion.proyeccionConservadora - actual.meta;
-        const porcentaje = ((diferencia / actual.meta) * 100).toFixed(1);
-        const tendencia = diferencia >= 0 ? "positive" : "negative";
+        const diferencia = proyeccion.proyeccionConservadora - metaTotalMes;
+        const porcentaje = ((diferencia / metaTotalMes) * 100).toFixed(1);
+        const tendenciaClass = diferencia >= 0 ? "positive" : "negative";
 
         if (proyeccionEl) {
-            proyeccionEl.innerHTML = `${formatoCantidad(proyeccion.proyeccionConservadora)}<span class="proyeccion-pct ${tendencia}">${porcentaje >= 0 ? '+' : ''}${porcentaje}%</span>`;
-            proyeccionEl.className = "data-value " + tendencia;
+            proyeccionEl.innerHTML = `${formatoCantidad(proyeccion.proyeccionConservadora)}<span class="proyeccion-pct ${tendenciaClass}">${porcentaje >= 0 ? '+' : ''}${porcentaje}%</span>`;
+            proyeccionEl.className = "data-value " + tendenciaClass;
         }
 
         updateResumenEjecutivo('proyeccion', {
             valor: proyeccion.proyeccionConservadora,
-            meta: actual.meta,
+            meta: metaTotalMes,
             porcentaje: porcentaje,
             tendencia: diferencia >= 0 ? "positive" : "negative"
         });
+
+        // Poblar datos de análisis avanzado para modales (con manejo de errores)
+        try {
+            poblarDatosAnalisisAvanzado(analisisDiario, actual, metaTotalMes);
+        } catch (error) {
+            console.error('Error al poblar datos de análisis avanzado:', error);
+            // Continuar sin romper el flujo
+        }
+    }
+
+    // Calcular tendencia basada en regresión lineal de datos diarios
+    if (datosDiarios && datosDiarios.length >= 2) {
+        const n = datosDiarios.length;
+        let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+        datosDiarios.forEach((d, i) => {
+            sumX += i;
+            sumY += d.Ingreso;
+            sumXY += i * d.Ingreso;
+            sumXX += i * i;
+        });
+        const pendiente = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+        
+        // Determinar tendencia basada en la pendiente de regresión lineal
+        // Usar el mismo criterio que en el modal: pendiente >= 0 es alza, < 0 es baja
+        if (pendiente > 100) {
+            globalTrend = 'positive';
+        } else if (pendiente < -100) {
+            globalTrend = 'negative';
+        } else {
+            globalTrend = 'neutral';
+        }
+        
+        console.log(`📊 Pendiente regresión: ${pendiente.toFixed(2)} → Tendencia: ${globalTrend}`);
+        updateTrendIndicator();
     }
 }
 
@@ -81,8 +111,9 @@ function updateResumenEjecutivo(tipo, datos) {
             break;
         case 'proyeccion':
             const vsMeta = parseFloat(datos.porcentaje);
-            resumenEl.textContent = `Proyección mensual: ${vsMeta >= 0 ? 'supera' : 'está por debajo de'} ` +
-                `la meta en un ${Math.abs(vsMeta)}%.`;
+            // Texto corregido para reflejar que se compara con el budget total del mes
+            resumenEl.textContent = `Proyección: ${vsMeta >= 0 ? 'supera' : 'por debajo de'} ` +
+                `el budget mensual en ${Math.abs(vsMeta).toFixed(1)}%`;
             break;
         case 'interanual':
             resumenEl.textContent = `En comparación anual, el crecimiento es ${datos.tendencia === 'positive' ? 'positivo' :
@@ -111,19 +142,6 @@ function calcularEstadisticasTendenciaDiaria(analisisDiario, año, mesActual, ac
     const desviacion = calcularDesviacionEstandar(ingresos);
     const variabilidad = ((desviacion / promedio) * 100).toFixed(1) + '%';
 
-    // Actualizar UI
-    safeSetText("tendencia-promedio-3m", formatoCantidad(promedio));
-
-    if (mejorDia) {
-        safeSetText("tendencia-mejor-mes", `${mejorDia.Fecha}: ${formatoCantidad(maxIngreso)}`);
-    }
-
-    if (peorDia) {
-        safeSetText("tendencia-peor-mes", `${peorDia.Fecha}: ${formatoCantidad(minIngreso)}`);
-    }
-
-    safeSetText("tendencia-variabilidad", variabilidad);
-
     // Actualizar información de proyección si existe
     if (proyeccion) {
         const comparisonGrid = document.querySelector('.trend-analysis-card .comparison-grid');
@@ -144,15 +162,6 @@ function calcularEstadisticasTendenciaDiaria(analisisDiario, año, mesActual, ac
             }
         }
     }
-
-    // Calcular tendencia del promedio
-    if (actual && actual.meta) {
-        const tendenciaPromedio = promedio > (actual.meta / 30) ? 'positive' : 'negative';
-        tendenciaValues.push(tendenciaPromedio);
-    }
-
-    // Determinar la tendencia global con todos los datos
-    determinarTendenciaGlobal();
 }
 
 // Desviación estándar
@@ -355,4 +364,140 @@ function exportChartAsImage(chartId, filename) {
 // Obtener tendencia global
 function getGlobalTrend() {
     return globalTrend || 'neutral';
+}
+
+/**
+ * Poblar datos de análisis avanzado para los modales
+ */
+function poblarDatosAnalisisAvanzado(analisisDiario, actual, metaTotalMes) {
+    try {
+        const { proyeccion, datosDiarios, tendencia, promedioMovil } = analisisDiario;
+        
+        if (!proyeccion || !datosDiarios || datosDiarios.length === 0) {
+            console.warn('No hay datos suficientes para análisis avanzado');
+            return;
+        }
+
+        // Usar la meta total del mes pasada como parámetro
+        const metaTotal = metaTotalMes || actual.meta;
+
+        // Función auxiliar para parsear fechas
+        const parseFecha = (dateStr) => {
+            if (!dateStr) return null;
+            const parts = dateStr.split('/');
+            if (parts.length !== 3) return null;
+            return new Date(parts[2], parts[1] - 1, parts[0]);
+        };
+
+        // Calcular regresión lineal
+        const n = datosDiarios.length;
+        let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+        datosDiarios.forEach((d, i) => {
+            sumX += i;
+            sumY += d.Ingreso;
+            sumXY += i * d.Ingreso;
+            sumXX += i * i;
+        });
+        const pendiente = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+        const intercepto = (sumY - pendiente * sumX) / n;
+
+        // Identificar días no hábiles trabajados
+        const sabDomTrabajados = datosDiarios.filter(d => {
+            const fecha = parseFecha(d.Fecha);
+            if (!fecha) return false;
+            const dow = fecha.getDay();
+            return dow === 0 || dow === 6;
+        });
+
+        // Calcular días restantes
+        const ultimaFecha = parseFecha(datosDiarios[datosDiarios.length - 1].Fecha);
+        if (!ultimaFecha) {
+            console.warn('No se pudo parsear la última fecha');
+            return;
+        }
+        
+        const año = ultimaFecha.getFullYear();
+        const mes = ultimaFecha.getMonth();
+        const diasEnMes = new Date(año, mes + 1, 0).getDate();
+        const offset = ultimaFecha.getTimezoneOffset() + 300;
+        const ultimaFechaCol = new Date(ultimaFecha.getTime() + offset * 60000);
+        const ultimoDiaConDatos = ultimaFechaCol.getDate();
+        
+        const diasRestantesList = [];
+        const dowNames = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+        for (let d = ultimoDiaConDatos + 1; d <= diasEnMes; d++) {
+            const dow = new Date(año, mes, d).getDay();
+            const esHabil = dow !== 0 && dow !== 6;
+            diasRestantesList.push({ dia: d, dow: dowNames[dow], esHabil });
+        }
+
+        // Últimos 7 días para promedio móvil
+        const ultimos7 = datosDiarios.slice(-7);
+        const promedioMovilValor = ultimos7.reduce((s, d) => s + d.Ingreso, 0) / ultimos7.length;
+
+        // Actualizar UI con métricas adicionales
+        const pendienteEl = document.getElementById('tendencia-pendiente');
+        if (pendienteEl) {
+            const direccion = pendiente >= 0 ? 'positive' : 'negative';
+            pendienteEl.textContent = `${pendiente >= 0 ? '+' : ''}${pendiente.toFixed(1)} /día`;
+            pendienteEl.className = 'data-value ' + direccion;
+        }
+
+        const promedioMovilEl = document.getElementById('tendencia-promedio-movil');
+        if (promedioMovilEl) {
+            promedioMovilEl.textContent = formatoCantidad(Math.round(promedioMovilValor));
+        }
+
+        // Integrar información de días hábiles en el promedio móvil
+        const diasInfoEl = document.getElementById('tendencia-dias-info');
+        if (diasInfoEl) {
+            const extraInfo = sabDomTrabajados.length > 0 
+                ? ` · <span style="color: var(--warning-color)">${sabDomTrabajados.length} día${sabDomTrabajados.length > 1 ? 's' : ''} extra${sabDomTrabajados.length > 1 ? 's' : ''}</span>`
+                : '';
+            diasInfoEl.innerHTML = `<i class="fas fa-calendar-check" style="margin-right: 4px;"></i>${proyeccion.diasTranscurridos} de ${proyeccion.diasHabilesTotales} días hábiles${extraInfo}`;
+        }
+
+        // Guardar datos en variable global para los modales
+        window.analyticsData = {
+            proyeccion: {
+                proyeccionConservadora: proyeccion.proyeccionConservadora,
+                proyeccionTendencia: proyeccion.proyeccionTendencia,
+                proyeccionMovil: proyeccion.proyeccionMovil,
+                ultimaTendencia: tendencia[tendencia.length - 1],
+                promedioMovil: Math.round(promedioMovilValor),
+                diasHabilesTotales: proyeccion.diasHabilesTotales,
+                metaTotal: metaTotal, // Meta total del mes (budget)
+                ingresosAcumulados: proyeccion.ingresosAcumulados
+            },
+            regresion: {
+                pendiente,
+                intercepto,
+                n,
+                sumX,
+                sumY,
+                sumXY,
+                sumXX
+            },
+            diasHabiles: {
+                diasHabilesTranscurridos: proyeccion.diasTranscurridos,
+                diasHabilesRestantes: proyeccion.diasRestantes,
+                diasHabilesTotales: proyeccion.diasHabilesTotales,
+                sabDomTrabajados,
+                diasRestantesList,
+                diasEnMes,
+                ultimoDiaConDatos,
+                mes: actual.mes,
+                año: actual.año
+            },
+            promedioMovil: {
+                ultimos7,
+                promedioMovil: Math.round(promedioMovilValor)
+            }
+        };
+
+        console.log('✅ Datos de análisis avanzado poblados correctamente');
+    } catch (error) {
+        console.error('❌ Error en poblarDatosAnalisisAvanzado:', error);
+        // No lanzar el error para no romper el flujo
+    }
 }

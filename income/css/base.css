@@ -222,9 +222,9 @@
 }
 
 [data-theme="light"] .chart-action-btn {
-    background: transparent;
-    border-color: rgba(0,0,0,0.1);
-    color: #475569;
+    background: rgba(79,70,229,0.08);
+    border-color: rgba(79,70,229,0.2);
+    color: #4f46e5;
 }
 
 [data-theme="light"] .chart-action-btn:hover {
@@ -445,7 +445,6 @@
 .solid .card:hover,
 .solid .trend-analysis-card:hover {
     background: #1a1d26;
-    border-bottom-color: rgba(99,102,241,0.35);
     box-shadow: 0 4px 20px rgba(0,0,0,0.25);
 }
 
@@ -615,7 +614,6 @@
 
 .solid[data-theme="light"] .card:hover,
 .solid[data-theme="light"] .trend-analysis-card:hover {
-    border-bottom-color: #4f46e5;
     box-shadow: 0 4px 20px rgba(79,70,229,0.1);
 }
 
@@ -700,9 +698,9 @@
 }
 
 .solid[data-theme="light"] .chart-action-btn {
-    background: #ffffff;
-    border: 1px solid #e4e8f0;
-    color: #64748b;
+    background: rgba(79,70,229,0.08);
+    border: 1px solid rgba(79,70,229,0.2);
+    color: #4f46e5;
 }
 
 .solid[data-theme="light"] .chart-action-btn:hover {
