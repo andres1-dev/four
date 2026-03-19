@@ -596,6 +596,7 @@ async function generarReporteCompleto(targetDate) {
             partLabel.textContent = 'Desactivar partículas';
             partBtn.classList.remove('active');
         }
+        updateThemeColor();
     }
 
     applyParticles();
@@ -616,8 +617,9 @@ async function generarReporteCompleto(targetDate) {
         if (isLight) {
             color = isSolid ? '#ffffff' : '#f1f5f9';
         } else {
-            color = isSolid ? '#16181f' : '#0f1117';
+            color = isSolid ? '#16181f' : '#080a0f';
         }
+        // Meta tag — lo que iOS usa para la barra de estado
         let meta = document.querySelector('meta[name="theme-color"]');
         if (!meta) {
             meta = document.createElement('meta');
@@ -625,6 +627,8 @@ async function generarReporteCompleto(targetDate) {
             document.head.appendChild(meta);
         }
         meta.content = color;
+        // También forzar el background del html para que iOS lo lea sin importar partículas
+        document.documentElement.style.backgroundColor = color;
     }
 
     function applyTheme(theme) {
