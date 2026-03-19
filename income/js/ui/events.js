@@ -638,6 +638,12 @@ async function generarReporteCompleto(targetDate) {
         themeLabel.textContent = theme === 'light' ? 'Modo oscuro' : 'Modo claro';
         updateThemeColor();
         if (typeof particlesReinit === 'function') particlesReinit();
+        // Swap logo SVG files for crisp vector rendering at any size
+        const logoInnerSrc = theme === 'light' ? 'icons/logo-inner-light.svg' : 'icons/logo-inner-dark.svg';
+        const headerLogo  = document.getElementById('headerLogo');
+        const loadingLogo = document.getElementById('loadingLogo');
+        if (headerLogo)  headerLogo.src  = logoInnerSrc;
+        if (loadingLogo) loadingLogo.src = logoInnerSrc;
     }
 
     const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -699,123 +705,123 @@ async function generarReporteCompleto(targetDate) {
 // ── Loading Stream ────────────────────────────────────────────────────────────
 (function () {
     const LINES = [
-        ['Inicializando entorno de ejecución',           'mid'],
-        ['Verificando integridad del sistema',           'dim'],
-        ['Cargando módulos principales',                 'cyan'],
-        ['Estableciendo conexión segura',                'indigo'],
-        ['Autenticando credenciales',                    'dim'],
-        ['Validando permisos de acceso',                 'yellow'],
-        ['Conexión establecida',                         'accent'],
-        ['Inicializando motor de datos',                 'cyan'],
-        ['Configurando protocolo de transferencia',      'dim'],
-        ['Preparando solicitudes en paralelo',           'indigo'],
-        ['Enviando solicitud al servidor primario',      'dim'],
-        ['Enviando solicitud al servidor secundario',    'dim'],
-        ['Enviando solicitud al servidor terciario',     'dim'],
-        ['Esperando respuesta del servidor',             'yellow'],
-        ['Recibiendo paquetes de datos',                 'cyan'],
-        ['Verificando integridad de paquetes',           'dim'],
-        ['Descomprimiendo payload',                      'dim'],
-        ['Deserializando estructura de datos',           'mid'],
-        ['Validando esquema de respuesta',               'dim'],
-        ['Esquema validado correctamente',               'accent'],
-        ['Procesando registros fuente primaria',         'bright'],
-        ['Normalizando campos de texto',                 'dim'],
-        ['Normalizando campos numéricos',                'cyan'],
-        ['Normalizando campos de fecha',                 'dim'],
-        ['Aplicando zona horaria UTC-5',                 'yellow'],
-        ['Resolviendo referencias cruzadas',             'indigo'],
-        ['Clasificando registros por categoría',         'dim'],
-        ['Aplicando reglas de negocio',                  'mid'],
-        ['Filtrando registros inválidos',                'red'],
-        ['Fuente primaria procesada',                    'accent'],
-        ['Procesando registros fuente secundaria',       'bright'],
-        ['Mapeando estructura de columnas',              'cyan'],
-        ['Validando tipos de datos por campo',           'dim'],
-        ['Aplicando transformaciones de normalización',  'dim'],
-        ['Resolviendo entidades relacionadas',           'indigo'],
-        ['Calculando campos derivados',                  'dim'],
-        ['Aplicando filtros de integridad',              'mid'],
-        ['Fuente secundaria procesada',                  'accent'],
-        ['Procesando registros fuente histórica',        'bright'],
-        ['Cargando datos del período anterior',          'cyan'],
-        ['Normalizando serie temporal histórica',        'dim'],
-        ['Alineando períodos para comparación',          'indigo'],
-        ['Fuente histórica procesada',                   'accent'],
-        ['Cargando parámetros presupuestales',           'bright'],
-        ['Procesando estructura de presupuesto',         'dim'],
-        ['Calculando distribución por período',          'cyan'],
-        ['Calculando días hábiles por mes',              'yellow'],
-        ['Calculando meta diaria por período',           'mid'],
-        ['Parámetros presupuestales cargados',           'accent'],
-        ['Iniciando consolidación de fuentes',           'bright'],
-        ['Unificando registros de todas las fuentes',    'indigo'],
-        ['Agrupando transacciones por fecha',            'dim'],
-        ['Calculando totales diarios',                   'cyan'],
-        ['Calculando diferencia vs objetivo',            'yellow'],
-        ['Calculando porcentaje de cumplimiento',        'dim'],
-        ['Asignando semana ISO a cada registro',         'dim'],
-        ['Generando índice temporal',                    'mid'],
-        ['Consolidación completada',                     'accent'],
-        ['Iniciando cálculo de métricas',                'bright'],
-        ['Calculando métricas del período diario',       'cyan'],
-        ['Calculando métricas del período mensual',      'indigo'],
-        ['Calculando métricas del período anual',        'bright'],
-        ['Calculando promedio aritmético',               'dim'],
-        ['Calculando promedio ponderado',                'dim'],
-        ['Calculando desviación estándar',               'yellow'],
-        ['Calculando varianza del período',              'dim'],
-        ['Identificando valor máximo',                   'accent'],
-        ['Identificando valor mínimo',                   'red'],
-        ['Calculando percentil 75',                      'dim'],
-        ['Calculando percentil 25',                      'dim'],
-        ['Buscando fecha de referencia más cercana',     'cyan'],
-        ['Métricas del período actual calculadas',       'accent'],
-        ['Calculando métricas comparativas',             'bright'],
-        ['Cargando datos del mismo período año anterior','dim'],
-        ['Alineando fechas para comparación interanual', 'indigo'],
-        ['Calculando variación absoluta',                'dim'],
-        ['Calculando variación porcentual',              'yellow'],
-        ['Calculando gestión interanual',                'mid'],
-        ['Métricas comparativas calculadas',             'accent'],
-        ['Iniciando análisis de tendencia',              'bright'],
-        ['Construyendo serie temporal',                  'cyan'],
-        ['Aplicando regresión lineal',                   'indigo'],
-        ['Calculando coeficiente de correlación',        'dim'],
-        ['Calculando pendiente de tendencia',            'dim'],
-        ['Generando proyección conservadora',            'yellow'],
-        ['Generando proyección optimista',               'accent'],
-        ['Calculando intervalo de confianza',            'dim'],
-        ['Identificando mejor período',                  'accent'],
-        ['Identificando período crítico',                'red'],
-        ['Análisis de tendencia completado',             'accent'],
-        ['Preparando capa de presentación',              'bright'],
-        ['Compilando datos para visualización',          'cyan'],
-        ['Renderizando componentes gráficos',            'indigo'],
-        ['Generando gráfico de tendencia',               'bright'],
-        ['Aplicando paleta de colores',                  'yellow'],
-        ['Calculando escala de ejes',                    'dim'],
-        ['Renderizando tarjeta de período diario',       'cyan'],
-        ['Renderizando tarjeta de período mensual',      'indigo'],
-        ['Renderizando tarjeta de período anual',        'bright'],
-        ['Actualizando indicadores de progreso',         'dim'],
-        ['Aplicando umbrales de color por rendimiento',  'yellow'],
-        ['Actualizando indicadores de gestión',          'mid'],
-        ['Interfaz de usuario actualizada',              'accent'],
-        ['Inicializando módulo de exportación',          'cyan'],
-        ['Preparando motor de exportación CSV',          'dim'],
-        ['Preparando motor de exportación JSON',         'dim'],
-        ['Preparando motor de exportación Excel',        'indigo'],
-        ['Configurando selector de rango de fechas',     'dim'],
-        ['Módulo de exportación listo',                  'accent'],
-        ['Registrando Service Worker',                   'cyan'],
-        ['Verificando recursos en caché',                'dim'],
-        ['Sincronizando estado de la aplicación',        'indigo'],
-        ['Aplicando preferencias del usuario',           'dim'],
-        ['Optimizando rendimiento de renderizado',       'yellow'],
-        ['Liberando memoria temporal',                   'dim'],
-        ['Todos los módulos inicializados',              'accent'],
-        ['Sistema operativo',                            'bright'],
+        ['Grupo TDM', 'mid'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'cyan'],
+        ['Grupo TDM', 'indigo'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'yellow'],
+        ['Grupo TDM', 'accent'],
+        ['Grupo TDM', 'cyan'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'indigo'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'yellow'],
+        ['Grupo TDM', 'cyan'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'mid'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'accent'],
+        ['Grupo TDM', 'bright'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'cyan'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'yellow'],
+        ['Grupo TDM', 'indigo'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'mid'],
+        ['Grupo TDM', 'red'],
+        ['Grupo TDM', 'accent'],
+        ['Grupo TDM', 'bright'],
+        ['Grupo TDM', 'cyan'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'indigo'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'mid'],
+        ['Grupo TDM', 'accent'],
+        ['Grupo TDM', 'bright'],
+        ['Grupo TDM', 'cyan'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'indigo'],
+        ['Grupo TDM', 'accent'],
+        ['Grupo TDM', 'bright'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'cyan'],
+        ['Grupo TDM', 'yellow'],
+        ['Grupo TDM', 'mid'],
+        ['Grupo TDM', 'accent'],
+        ['Grupo TDM', 'bright'],
+        ['Grupo TDM', 'indigo'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'cyan'],
+        ['Grupo TDM', 'yellow'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'mid'],
+        ['Grupo TDM', 'accent'],
+        ['Grupo TDM', 'bright'],
+        ['Grupo TDM', 'cyan'],
+        ['Grupo TDM', 'indigo'],
+        ['Grupo TDM', 'bright'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'yellow'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'accent'],
+        ['Grupo TDM', 'red'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'cyan'],
+        ['Grupo TDM', 'accent'],
+        ['Grupo TDM', 'bright'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'indigo'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'yellow'],
+        ['Grupo TDM', 'mid'],
+        ['Grupo TDM', 'accent'],
+        ['Grupo TDM', 'bright'],
+        ['Grupo TDM', 'cyan'],
+        ['Grupo TDM', 'indigo'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'yellow'],
+        ['Grupo TDM', 'accent'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'accent'],
+        ['Grupo TDM', 'red'],
+        ['Grupo TDM', 'accent'],
+        ['Grupo TDM', 'bright'],
+        ['Grupo TDM', 'cyan'],
+        ['Grupo TDM', 'indigo'],
+        ['Grupo TDM', 'bright'],
+        ['Grupo TDM', 'yellow'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'cyan'],
+        ['Grupo TDM', 'indigo'],
+        ['Grupo TDM', 'bright'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'yellow'],
+        ['Grupo TDM', 'mid'],
+        ['Grupo TDM', 'accent'],
+        ['Grupo TDM', 'cyan'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'indigo'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'accent'],
+        ['Grupo TDM', 'cyan'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'indigo'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'yellow'],
+        ['Grupo TDM', 'dim'],
+        ['Grupo TDM', 'accent'],
+        ['Grupo TDM', 'bright'],
     ];
 
     let currentEl = null;
@@ -823,43 +829,13 @@ async function generarReporteCompleto(targetDate) {
     let timer = null;
 
     function showNext() {
-        const container = document.getElementById('loadingStream');
-        if (!container) return;
-
-        if (currentEl) currentEl.classList.remove('visible');
-
-        const [text, cls] = LINES[idx % LINES.length];
-        const el = document.createElement('div');
-        el.className = `loading-stream-line ${cls}`;
-        el.textContent = text;
-        container.appendChild(el);
-
-        el.getBoundingClientRect();
-        el.classList.add('visible');
-
-        if (currentEl) {
-            const old = currentEl;
-            setTimeout(() => old.remove(), 300);
-        }
-
-        currentEl = el;
-        idx++;
-        timer = setTimeout(showNext, 150);
+        /* desactivado — texto estático en HTML */
     }
 
-    function startStream() {
-        idx = 0;
-        currentEl = null;
-        clearTimeout(timer);
-        const container = document.getElementById('loadingStream');
-        if (container) container.innerHTML = '';
-        showNext();
-    }
+    function startStream() { /* texto estático, no se necesita */ }
 
     function stopStream() {
         clearTimeout(timer);
-        const container = document.getElementById('loadingStream');
-        if (container) container.innerHTML = '';
         currentEl = null;
     }
 

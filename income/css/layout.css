@@ -17,10 +17,10 @@
 .dashboard-title {
     margin: 0;
     font-size: 22px;
-    font-weight: 800;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 300;
+    font-family: 'Raleway', 'Plus Jakarta Sans', sans-serif;
     font-style: normal;
-    letter-spacing: -0.03em;
+    letter-spacing: 0.15em;
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
@@ -43,63 +43,85 @@
     display: block;
 }
 
-/* ── Animated pulse logo ── */
-.header-pulse-logo {
+/* ── TDM SVG logo (theme-aware) ── */
+.header-tdm-logo {
+    flex-shrink: 0;
     position: relative;
-    width: 44px;
-    height: 44px;
+    width: 52px;
+    height: 52px;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
 }
 
-.hpl-ring {
+/* Círculo base permanente — siempre visible, pulsa suave */
+.header-ring-base {
     position: absolute;
+    width: 44px; height: 44px;
     border-radius: 50%;
-    animation: hplPulse 2.4s ease-out infinite;
-    border: 1.5px solid rgba(37, 99, 235, 0.45);
+    box-shadow: 0 0 0 1px rgba(224,85,96,0.45), 0 0 10px 3px rgba(224,85,96,0.15);
+    animation: headerBaseBreath 3s ease-in-out infinite;
 }
 
-/* Logo animado — siempre índigo (dark permanente) */
-.hpl-ring.r1 { width: 44px; height: 44px; animation-delay: 0s;  border-color: rgba(99,102,241,0.55); }
-.hpl-ring.r2 { width: 34px; height: 34px; animation-delay: 0.5s; border-color: rgba(99,102,241,0.4); }
-.hpl-ring.r3 { width: 24px; height: 24px; animation-delay: 1s;   border-color: rgba(99,102,241,0.28); }
-
-@keyframes hplPulse {
-    0%   { transform: scale(0.88); opacity: 0.9; }
-    60%  { transform: scale(1.14); opacity: 0.1; }
-    100% { transform: scale(0.88); opacity: 0.9; }
+@keyframes headerBaseBreath {
+    0%, 100% { transform: scale(0.92); opacity: 0.6; }
+    50%       { transform: scale(1.04); opacity: 1; }
 }
 
-.hpl-bars {
+/* Ondas que salen desde el centro y se desvanecen */
+.header-pulse-ring {
+    position: absolute;
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: transparent;
+    box-shadow: 0 0 0 1px rgba(224,85,96,0.5), 0 0 8px 3px rgba(224,85,96,0.12);
+    animation: headerPulse 3s ease-out infinite;
+}
+
+.hr1 { animation-delay: 0s; }
+.hr2 { animation-delay: 1s; }
+.hr3 { animation-delay: 2s; }
+
+@keyframes headerPulse {
+    0%   { transform: scale(1);   opacity: 0.6; filter: blur(0px); }
+    100% { transform: scale(2.2); opacity: 0;   filter: blur(5px); }
+}
+
+.header-logo-inner {
     position: relative;
     z-index: 2;
-    display: flex;
-    align-items: flex-end;
-    gap: 2.5px;
-    height: 16px;
+    display: block;
+    animation: headerLogoBreath 3s ease-in-out infinite;
 }
 
-.hpl-bars span {
-    width: 3px;
-    border-radius: 2px;
-    background: linear-gradient(180deg, #a78bfa, #6366f1);
-    animation: hplBar 0.9s ease-in-out infinite;
+@keyframes headerLogoBreath {
+    0%, 100% { opacity: 0.85; transform: scale(0.97); }
+    50%       { opacity: 1;   transform: scale(1.03); }
 }
 
-.hpl-bars span:nth-child(1) { height: 35%; animation-delay: 0s; }
-.hpl-bars span:nth-child(2) { height: 65%; animation-delay: 0.12s; }
-.hpl-bars span:nth-child(3) { height: 100%; animation-delay: 0.24s; }
-.hpl-bars span:nth-child(4) { height: 65%; animation-delay: 0.36s; }
-.hpl-bars span:nth-child(5) { height: 35%; animation-delay: 0.48s; }
-
-@keyframes hplBar {
-    0%, 100% { transform: scaleY(0.4); opacity: 0.5; }
-    50%       { transform: scaleY(1);   opacity: 1; }
+/* Modo claro — halo pulsante, sin ondas */
+[data-theme="light"] .header-ring-base {
+    background: transparent;
+    box-shadow: 0 0 0 1.5px rgba(210,23,35,0.3), 0 0 8px 2px rgba(210,23,35,0.1);
+    animation: headerBaseColorPulse 2s ease-in-out infinite;
+}
+[data-theme="light"] .header-pulse-ring {
+    display: none;
+}
+[data-theme="light"] .header-logo-inner {
+    filter: none;
+    animation: headerLogoColorPulse 2s ease-in-out infinite;
 }
 
-/* Dark mode override del logo — eliminado, ya es dark por defecto */
+@keyframes headerBaseColorPulse {
+    0%, 100% { transform: scale(0.92); box-shadow: 0 0 0 1.5px rgba(210,23,35,0.15); }
+    50%       { transform: scale(1.04); box-shadow: 0 0 0 1.5px rgba(210,23,35,0.85); }
+}
+
+@keyframes headerLogoColorPulse {
+    0%, 100% { opacity: 0.4; transform: scale(0.97); }
+    50%       { opacity: 1;   transform: scale(1.08); }
+}
 
 .dashboard-title i {
     font-size: 14px;
@@ -596,21 +618,19 @@
         width: 100%;
     }
 
-    .header-pulse-logo {
-        width: 72px;
-        height: 72px;
+    .header-tdm-logo {
+        width: 64px;
+        height: 64px;
     }
 
-    .hpl-ring.r1 { width: 72px; height: 72px; }
-    .hpl-ring.r2 { width: 56px; height: 56px; }
-    .hpl-ring.r3 { width: 40px; height: 40px; }
+    .hr1 { width: 64px; height: 64px; }
+    .hr2 { width: 52px; height: 52px; }
+    .hr3 { width: 40px; height: 40px; }
 
-    .hpl-bars {
-        height: 26px;
-        gap: 3.5px;
+    .header-logo-inner {
+        width: 44px;
+        height: 44px;
     }
-
-    .hpl-bars span { width: 4px; }
 
     .dashboard-title {
         font-size: 22px;

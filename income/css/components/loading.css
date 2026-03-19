@@ -3,7 +3,7 @@
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    background: #0f1117;
+    background: var(--bg-light, #080a0f);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -11,7 +11,7 @@
     z-index: 9999;
     opacity: 0;
     visibility: hidden;
-    gap: 20px;
+    gap: 12px;
     overflow: hidden;
 }
 
@@ -31,104 +31,127 @@
     transition: opacity 0.4s ease, visibility 0.4s ease;
 }
 
-/* Core: rings + bars */
+/* Core: rings + logo */
 .loading-core {
     position: relative;
-    width: 120px; height: 120px;
+    width: 160px; height: 160px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+}
+
+/* Círculo base permanente */
+.loading-ring-base {
+    position: absolute;
+    width: 112px; height: 112px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(224,85,96,0.45), 0 0 16px 5px rgba(224,85,96,0.15);
+    animation: loadingBaseBreath 3s ease-in-out infinite;
+}
+
+@keyframes loadingBaseBreath {
+    0%, 100% { transform: scale(0.92); opacity: 0.6; }
+    50%       { transform: scale(1.04); opacity: 1; }
 }
 
 .loading-pulse-ring {
     position: absolute;
+    width: 112px; height: 112px;
     border-radius: 50%;
-    animation: pulseRing 2.4s ease-out infinite;
+    background: transparent;
+    box-shadow: 0 0 0 1px rgba(224,85,96,0.5), 0 0 12px 4px rgba(224,85,96,0.12);
+    animation: pulseRing 3s ease-out infinite;
 }
 
-/* Anillos azules — igual que el logo del header */
-.ring-1 { width: 120px; height: 120px; border: 1.5px solid rgba(99,102,241,0.5);  animation-delay: 0s; }
-.ring-2 { width: 92px;  height: 92px;  border: 1.5px solid rgba(139,92,246,0.4);  animation-delay: 0.5s; }
-.ring-3 { width: 66px;  height: 66px;  border: 1.5px solid rgba(167,139,250,0.3); animation-delay: 1s; }
+.ring-1 { animation-delay: 0s; }
+.ring-2 { animation-delay: 1s; }
+.ring-3 { animation-delay: 2s; }
 
 @keyframes pulseRing {
-    0%   { transform: scale(0.88); opacity: 0.9; }
-    60%  { transform: scale(1.12); opacity: 0.1; }
-    100% { transform: scale(0.88); opacity: 0.9; }
+    0%   { transform: scale(1);   opacity: 0.6; filter: blur(0px); }
+    100% { transform: scale(2.2); opacity: 0;   filter: blur(8px); }
 }
 
-.loading-logo-wrap, .loading-logo-img { display: none; }
-
-/* Barras azules — igual que el logo del header */
-.loading-bars {
+/* TDM logo en loading */
+.loading-tdm-logo {
     position: relative;
     z-index: 2;
-    display: flex;
-    align-items: flex-end;
-    gap: 4px;
-    height: 28px;
+    display: block;
+    animation: logoBreath 3s ease-in-out infinite;
 }
 
-.loading-bars span {
-    width: 5px;
-    border-radius: 3px;
-    background: linear-gradient(180deg, #a78bfa, #6366f1);
-    animation: barBounce 0.9s ease-in-out infinite;
+@keyframes logoBreath {
+    0%, 100% { opacity: 0.88; transform: scale(0.98); }
+    50%       { opacity: 1;   transform: scale(1.02); }
 }
 
-.loading-bars span:nth-child(1) { animation-delay: 0s;    height: 35%; }
-.loading-bars span:nth-child(2) { animation-delay: 0.12s; height: 65%; }
-.loading-bars span:nth-child(3) { animation-delay: 0.24s; height: 100%; }
-.loading-bars span:nth-child(4) { animation-delay: 0.36s; height: 65%; }
-.loading-bars span:nth-child(5) { animation-delay: 0.48s; height: 35%; }
-
-@keyframes barBounce {
-    0%, 100% { transform: scaleY(0.4); opacity: 0.4; }
-    50%       { transform: scaleY(1);   opacity: 1; }
+/* Modo claro — halo pulsante, sin ondas */
+[data-theme="light"] .loading-ring-base {
+    background: transparent;
+    box-shadow: 0 0 0 1.5px rgba(210,23,35,0.3), 0 0 8px 2px rgba(210,23,35,0.1);
+    animation: loadingBaseColorPulse 2s ease-in-out infinite;
+}
+[data-theme="light"] .loading-pulse-ring {
+    display: none;
+}
+[data-theme="light"] .loading-tdm-logo {
+    filter: none;
+    animation: loadingLogoColorPulse 2s ease-in-out infinite;
 }
 
-/* Stream de texto */
-.loading-stream {
-    width: 360px;
-    max-width: 88vw;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    flex-shrink: 0;
+@keyframes loadingLogoColorPulse {
+    0%, 100% { opacity: 0.4; transform: scale(0.98); }
+    50%       { opacity: 1;   transform: scale(1.08); }
+}
+[data-theme="light"] .loading-brand {
+    color: rgba(30,41,59,0.85);
+}
+[data-theme="light"] .loading-brand .tdm-bold {
+    color: #1e293b;
 }
 
-.loading-stream-line {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    text-align: center;
+@keyframes loadingBaseColorPulse {
+    0%, 100% { transform: scale(0.92); box-shadow: 0 0 0 1.5px rgba(210,23,35,0.15); }
+    50%       { transform: scale(1.04); box-shadow: 0 0 0 1.5px rgba(210,23,35,0.85); }
+}
+
+.loading-logo-wrap, .loading-logo-img, .loading-bars { display: none; }
+
+/* Brand label estático — respira igual que el icono */
+.loading-brand {
+    font-family: 'Raleway', 'Plus Jakarta Sans', sans-serif;
+    font-size: 28px;
+    font-weight: 300;
+    letter-spacing: 0.45em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.8);
     white-space: nowrap;
+    margin-top: -4px;
     opacity: 0;
-    transition: opacity 0.25s ease;
-    pointer-events: none;
+    transition: opacity 0.4s ease;
+    animation: none;
 }
 
-.loading-stream-line.visible { opacity: 1; }
+.loading-brand.fonts-ready {
+    opacity: 1;
+    animation: logoBreath 3s ease-in-out infinite;
+}
 
-/* Colores del logo - indigo y violeta */
-.loading-stream-line.dim,
-.loading-stream-line.mid,
-.loading-stream-line.red,
-.loading-stream-line.yellow { color: #6366f1; }
+.loading-brand .tdm-bold {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    margin-left: -0.55em;
+}
 
-.loading-stream-line.bright,
-.loading-stream-line.accent,
-.loading-stream-line.cyan,
-.loading-stream-line.indigo { color: #a78bfa; }
+[data-theme="light"] .loading-brand .tdm-bold {
+    color: #1e293b;
+}
+
+/* Stream — desactivado */
+.loading-stream { display: none; }
+.loading-stream-line { display: none; }
 
 .loading-progress {
     width: 200px; height: 2px;
@@ -140,7 +163,7 @@
 
 .loading-progress-bar {
     height: 100%; width: 0%;
-    background: linear-gradient(90deg, #6366f1, #a78bfa, #6366f1);
+    background: linear-gradient(90deg, #c94049, #e05560, #c94049);
     background-size: 200% 100%;
     border-radius: 99px;
     transition: width 0.3s ease;

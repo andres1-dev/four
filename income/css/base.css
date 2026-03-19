@@ -14,9 +14,9 @@
     --warning-color: #fbbf24;
     --warning-light: rgba(251,191,36,0.12);
     --info-color: #38bdf8;
-    --text-dark: #94a3b8;
-    --text-medium: #64748b;
-    --text-light: #475569;
+    --text-dark: #e2e8f0;
+    --text-medium: #b0bec5;
+    --text-light: #8a9bb0;
     --bg-light: #080a0f;
     --bg-gray: #1a1d27;
     --bg-white: #1a1d27;
@@ -61,6 +61,11 @@
     --transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
     --transition-fast: all 0.15s cubic-bezier(0.4,0,0.2,1);
     --transition-slow: all 0.5s cubic-bezier(0.4,0,0.2,1);
+
+    /* TDM Logo colors — dark mode */
+    --tdm-primary:      #e05560;
+    --tdm-primary-dark: #c94049;
+    --tdm-accent:       #e2e8f0;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -89,6 +94,11 @@
     --box-shadow-md: 0 3px 8px -1px rgba(0,0,0,0.1), 0 1px 3px -1px rgba(0,0,0,0.06);
     --box-shadow-lg: 0 8px 20px -4px rgba(0,0,0,0.12), 0 3px 6px -3px rgba(0,0,0,0.08);
     --box-shadow-xl: 0 16px 32px -6px rgba(0,0,0,0.15), 0 6px 10px -5px rgba(0,0,0,0.1);
+
+    /* TDM Logo colors — light mode */
+    --tdm-primary:      #D21723;
+    --tdm-primary-dark: #a8111b;
+    --tdm-accent:       #1e293b;
 }
 
 /* Body en modo claro */
