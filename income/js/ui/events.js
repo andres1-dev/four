@@ -77,13 +77,17 @@ document.addEventListener('DOMContentLoaded', async function () {
 function initDatePicker() {
     const datePicker = document.getElementById('datePicker');
     const updateBtn = document.getElementById('updateReportBtn');
+    const dateIconBtn = document.getElementById('dateIconBtn');
     if (!datePicker) return;
 
     datePicker.valueAsDate = new Date();
-    fitInputWidth(datePicker);
+
+    // Abrir el picker nativo al hacer click en el botón icono
+    if (dateIconBtn) {
+        dateIconBtn.addEventListener('click', () => datePicker.showPicker?.() || datePicker.click());
+    }
 
     datePicker.addEventListener('change', () => {
-        fitInputWidth(datePicker);
         const selectedDate = datePicker.valueAsDate;
         if (selectedDate && consolidatedData.length > 0) {
             generarReporteCompleto(selectedDate).then(reporte => {

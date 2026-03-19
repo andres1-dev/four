@@ -536,24 +536,30 @@
             </h1>
         </div>
         <div class="date-selector-container">
-            <div class="social-links">
-                <button id="settingsBtn" class="theme-toggle-btn" title="Configuración" aria-label="Configuración">
-                    <i class="fas fa-sliders"></i>
-                </button>
-            </div>
-            <div class="date-picker-wrap">
-                <i class="fas fa-calendar-day date-picker-icon"></i>
-                <input type="date" id="datePicker" class="date-picker">
-            </div>
-            <div class="proveedor-filter-wrap">
-                <button id="proveedorBtn" class="theme-toggle-btn" title="Filtrar proveedor" aria-label="Filtrar proveedor">
-                    <i class="fas fa-house" id="proveedorIcon"></i>
-                </button>
-                <select id="proveedorFilter" class="proveedor-filter" style="display:none;">
-                    <option value="todos">TODOS</option>
-                    <option value="universo">UNIVERSO</option>
-                    <option value="angeles">ÁNGELES</option>
-                </select>
+            <div class="header-btn-group">
+                <div class="social-links">
+                    <button id="settingsBtn" class="theme-toggle-btn" title="Configuración" aria-label="Configuración">
+                        <i class="fas fa-sliders"></i>
+                    </button>
+                </div>
+                <div class="btn-group-divider"></div>
+                <div class="date-picker-wrap">
+                    <button class="theme-toggle-btn" id="dateIconBtn" title="Seleccionar fecha" aria-label="Seleccionar fecha">
+                        <i class="fas fa-calendar-day"></i>
+                    </button>
+                    <input type="date" id="datePicker" class="date-picker">
+                </div>
+                <div class="btn-group-divider"></div>
+                <div class="proveedor-filter-wrap">
+                    <button id="proveedorBtn" class="theme-toggle-btn" title="Filtrar proveedor" aria-label="Filtrar proveedor">
+                        <i class="fas fa-house" id="proveedorIcon"></i>
+                    </button>
+                    <select id="proveedorFilter" class="proveedor-filter" style="display:none;">
+                        <option value="todos">TODOS</option>
+                        <option value="universo">UNIVERSO</option>
+                        <option value="angeles">ÁNGELES</option>
+                    </select>
+                </div>
             </div>
             <button id="captureBtn" class="capture-btn" title="Enviar informe" style="display: none;">
                 <i class="fas fa-paper-plane"></i>

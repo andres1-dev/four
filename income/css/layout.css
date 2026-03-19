@@ -138,6 +138,69 @@
     flex-wrap: nowrap;
 }
 
+/* Grupo pill premium para los 3 botones */
+.header-btn-group {
+    display: flex;
+    align-items: center;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 24px;
+    padding: 3px;
+    gap: 0;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.header-btn-group .theme-toggle-btn {
+    border: none;
+    border-radius: 20px;
+    background: transparent;
+    box-shadow: none;
+    transition: color 0.2s ease, background 0.2s ease;
+}
+
+.header-btn-group .theme-toggle-btn:hover {
+    background: rgba(255,255,255,0.08);
+    color: #ffffff;
+    transform: none;
+}
+
+.header-btn-group .theme-toggle-btn:active {
+    background: rgba(255,255,255,0.12);
+    color: #ffffff;
+    transform: none;
+}
+
+.btn-group-divider {
+    width: 1px;
+    height: 18px;
+    background: rgba(255,255,255,0.1);
+    flex-shrink: 0;
+}
+
+/* Light mode */
+[data-theme="light"] .header-btn-group {
+    background: rgba(255,255,255,0.7);
+    border-color: rgba(0,0,0,0.08);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+[data-theme="light"] .header-btn-group .theme-toggle-btn:hover {
+    background: rgba(0,0,0,0.05);
+    color: #0f172a;
+    transform: none;
+}
+
+[data-theme="light"] .header-btn-group .theme-toggle-btn:active {
+    background: rgba(0,0,0,0.08);
+    color: #0f172a;
+    transform: none;
+}
+
+[data-theme="light"] .btn-group-divider {
+    background: rgba(0,0,0,0.08);
+}
+
 .social-links {
     display: flex;
     align-items: center;
@@ -219,20 +282,14 @@
     align-items: center;
 }
 
-.date-picker-icon {
-    position: absolute;
-    left: 12px;
-    font-size: 14px;
-    color: var(--text-medium);
-    pointer-events: none;
-    z-index: 1;
-    transition: var(--transition);
-}
-
 .date-picker {
-    padding-left: 34px;
-    padding-right: 8px;
-    width: auto;
+    position: absolute;
+    opacity: 0;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    z-index: 3;
+    pointer-events: none;
 }
 
 /* Ocultar el ícono nativo del navegador */
@@ -459,7 +516,11 @@
 }
 
 .theme-toggle-btn:hover {
-    transform: translateY(-3px) scale(1.05);
+    background: rgba(255,255,255,0.08);
+    color: var(--text-dark);
+}
+
+.theme-toggle-btn:active {
     background: rgba(255,255,255,0.08);
     color: var(--text-dark);
 }
@@ -471,6 +532,12 @@
 }
 
 [data-theme="light"] .theme-toggle-btn:hover {
+    background: rgba(0,0,0,0.04);
+    border-color: rgba(0,0,0,0.2);
+    color: #0f172a;
+}
+
+[data-theme="light"] .theme-toggle-btn:active {
     background: rgba(0,0,0,0.04);
     border-color: rgba(0,0,0,0.2);
     color: #0f172a;
