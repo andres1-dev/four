@@ -5,6 +5,7 @@
 
 async function captureAndDownloadCards(silent = false) {
     const cardsContainer = document.querySelector('.cards-container');
+    const trendsContainer = document.querySelector('.cards-container2');
     const captureBtn = document.getElementById('captureBtn');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const loadingText = document.getElementById('loadingText');
@@ -30,6 +31,9 @@ async function captureAndDownloadCards(silent = false) {
         }
     }
 
+    // Crear contenedor temporal para captura
+    let tempContainer = null;
+
     try {
         if (!silent) {
             if (loadingOverlay) loadingOverlay.classList.add('active');
@@ -42,14 +46,72 @@ async function captureAndDownloadCards(silent = false) {
         // Agregar clase capturing al body para estilos específicos
         document.body.classList.add('capturing');
 
-        // 1. Abrir todas las tarjetas y guardar estado original
-        const cardHeaders = document.querySelectorAll('.card-header');
-        const originalStates = [];
+        // Crear contenedor temporal que incluya ambas secciones
+        tempContainer = document.createElement('div');
+        tempContainer.style.cssText = 'width: 1800px; max-width: 1800px; min-width: 1800px; margin: 0 auto; padding: 20px; background: transparent; overflow: visible;';
+        tempContainer.className = 'capture-temp-container';
+        
+        // Clonar las tarjetas principales
+        const cardsClone = cardsContainer.cloneNode(true);
+        cardsClone.style.width = '1800px';
+        cardsClone.style.maxWidth = '1800px';
+        cardsClone.style.minWidth = '1800px';
+        cardsClone.style.margin = '0';
+        cardsClone.style.overflow = 'visible';
+        tempContainer.appendChild(cardsClone);
+        
+        // Mover temporalmente la tarjeta de tendencias ORIGINAL al contenedor temporal
+        let trendsOriginalParent = null;
+        let trendsNextSibling = null;
+        if (trendsContainer) {
+            trendsOriginalParent = trendsContainer.parentNode;
+            trendsNextSibling = trendsContainer.nextSibling;
+            
+            // Guardar estilos originales de la tarjeta de tendencias
+            const originalTrendsStyles = {
+                width: trendsContainer.style.width,
+                maxWidth: trendsContainer.style.maxWidth,
+                minWidth: trendsContainer.style.minWidth,
+                margin: trendsContainer.style.margin,
+                overflow: trendsContainer.style.overflow
+            };
+            
+            // Aplicar estilos para captura
+            trendsContainer.style.width = '1800px';
+            trendsContainer.style.maxWidth = '1800px';
+            trendsContainer.style.minWidth = '1800px';
+            trendsContainer.style.margin = '20px 0 0 0';
+            trendsContainer.style.overflow = 'visible';
+            
+            // Mover al contenedor temporal
+            tempContainer.appendChild(trendsContainer);
+            
+            // Guardar para restaurar después
+            tempContainer._trendsOriginalParent = trendsOriginalParent;
+            tempContainer._trendsNextSibling = trendsNextSibling;
+            tempContainer._originalTrendsStyles = originalTrendsStyles;
+        }
+        
+        // Insertar el contenedor temporal en el DOM (invisible)
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.left = '-9999px';
+        tempContainer.style.top = '0';
+        document.body.appendChild(tempContainer);
+        
+        // Forzar que el contenedor temporal tenga el ancho de escritorio
+        tempContainer.style.width = '1800px';
+        tempContainer.style.maxWidth = '1800px';
+        tempContainer.style.minWidth = '1800px';
+        
+        // Esperar a que el DOM se actualice y la gráfica se redibuje
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // 1. Abrir todas las tarjetas en el contenedor temporal
+        const cardHeaders = tempContainer.querySelectorAll('.card-header');
         
         cardHeaders.forEach(header => {
             const card = header.closest('.card');
             const cardContent = card ? card.querySelector('.card-content') : header.nextElementSibling;
-            originalStates.push(cardContent ? cardContent.classList.contains('expanded') : false);
             if (cardContent && !cardContent.classList.contains('expanded')) {
                 cardContent.classList.add('expanded');
                 if (card) card.classList.add('expanded');
@@ -58,7 +120,12 @@ async function captureAndDownloadCards(silent = false) {
             }
         });
 
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Ocultar botones de info en el clon
+        const infoButtons = tempContainer.querySelectorAll('.info-btn-inline');
+        infoButtons.forEach(btn => btn.style.display = 'none');
+
+        // Esperar más tiempo para que el canvas se renderice correctamente
+        await new Promise(resolve => setTimeout(resolve, 800));
 
         // Asegurar que todas las fuentes estén cargadas antes de capturar
         await document.fonts.ready;
@@ -66,7 +133,7 @@ async function captureAndDownloadCards(silent = false) {
         // Forzar render de FontAwesome precargando un elemento invisible con cada ícono usado
         const faPreload = document.createElement('div');
         faPreload.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;font-size:1px;';
-        faPreload.innerHTML = '<i class="fas fa-calendar-day"></i><i class="fas fa-calendar-alt"></i><i class="fas fa-chart-line"></i><i class="fas fa-bullseye"></i><i class="fas fa-money-bill-wave"></i><i class="fas fa-percent"></i><i class="fas fa-chart-simple"></i><i class="fas fa-calculator"></i><i class="fas fa-crown"></i><i class="fas fa-weight-hanging"></i>';
+        faPreload.innerHTML = '<i class="fas fa-calendar-day"></i><i class="fas fa-calendar-alt"></i><i class="fas fa-chart-line"></i><i class="fas fa-bullseye"></i><i class="fas fa-money-bill-wave"></i><i class="fas fa-percent"></i><i class="fas fa-chart-simple"></i><i class="fas fa-calculator"></i><i class="fas fa-crown"></i><i class="fas fa-weight-hanging"></i><i class="fas fa-project-diagram"></i>';
         document.body.appendChild(faPreload);
         await new Promise(resolve => setTimeout(resolve, 200));
         faPreload.remove();
@@ -78,27 +145,6 @@ async function captureAndDownloadCards(silent = false) {
         const elementsToHide = document.querySelectorAll('.date-selector-container, .social-links');
         elementsToHide.forEach(el => el.style.visibility = 'hidden');
 
-        // Guardar estilos originales
-        const originalStyles = {
-            width: cardsContainer.style.width,
-            maxWidth: cardsContainer.style.maxWidth,
-            minWidth: cardsContainer.style.minWidth,
-            overflow: cardsContainer.style.overflow,
-            margin: cardsContainer.style.margin,
-            transform: cardsContainer.style.transform,
-        };
-
-        // Ajustar para captura
-        cardsContainer.style.width = '1800px';
-        cardsContainer.style.maxWidth = '1800px';
-        cardsContainer.style.minWidth = '1800px';
-        cardsContainer.style.overflow = 'visible';
-        cardsContainer.style.margin = '0 auto';
-        
-        if (isMobile) {
-            // zoom ya no se usa, no-op
-        }
-
         // 3. Capturar con html2canvas
         const canvasOptions = {
             scale: isMobile ? 3 : 2,
@@ -108,12 +154,12 @@ async function captureAndDownloadCards(silent = false) {
             scrollX: 0,
             scrollY: 0,
             windowWidth: isMobile ? 3000 : 1800,
-            windowHeight: cardsContainer.scrollHeight,
+            windowHeight: tempContainer.scrollHeight,
             backgroundColor: null  // se aplica manualmente en el canvas final
         };
 
         await new Promise(resolve => setTimeout(resolve, 300));
-        const uiCanvas = await html2canvas(cardsContainer, canvasOptions);
+        const uiCanvas = await html2canvas(tempContainer, canvasOptions);
 
         // Componer: fondo sólido + partículas + UI
         const finalCanvas = document.createElement('canvas');
@@ -132,30 +178,33 @@ async function captureAndDownloadCards(silent = false) {
 
         const canvas = finalCanvas;
 
-        // 4. Restaurar todo al estado original
-        elementsToHide.forEach(el => el.style.visibility = 'visible');
-        cardsContainer.style.width = originalStyles.width;
-        cardsContainer.style.maxWidth = originalStyles.maxWidth;
-        cardsContainer.style.minWidth = originalStyles.minWidth;
-        cardsContainer.style.overflow = originalStyles.overflow;
-        cardsContainer.style.margin = originalStyles.margin;
-        cardsContainer.style.transform = originalStyles.transform;
-        
-        // Restaurar estado de las tarjetas
-        cardHeaders.forEach((header, index) => {
-            const card = header.closest('.card');
-            const cardContent = card ? card.querySelector('.card-content') : header.nextElementSibling;
-            const indicator = header.querySelector('.collapse-indicator');
-            
-            if (cardContent && !originalStates[index]) {
-                cardContent.classList.remove('expanded');
-                if (card) card.classList.remove('expanded');
-                if (indicator) indicator.classList.remove('expanded');
+        // 4. Limpiar: restaurar tarjeta de tendencias y remover contenedor temporal
+        if (tempContainer) {
+            // Restaurar la tarjeta de tendencias a su posición original
+            if (tempContainer._trendsOriginalParent && trendsContainer) {
+                const originalStyles = tempContainer._originalTrendsStyles;
+                trendsContainer.style.width = originalStyles.width;
+                trendsContainer.style.maxWidth = originalStyles.maxWidth;
+                trendsContainer.style.minWidth = originalStyles.minWidth;
+                trendsContainer.style.margin = originalStyles.margin;
+                trendsContainer.style.overflow = originalStyles.overflow;
+                
+                // Reinsertar en su posición original
+                if (tempContainer._trendsNextSibling) {
+                    tempContainer._trendsOriginalParent.insertBefore(trendsContainer, tempContainer._trendsNextSibling);
+                } else {
+                    tempContainer._trendsOriginalParent.appendChild(trendsContainer);
+                }
             }
-        });
-
+            
+            // Remover el contenedor temporal
+            tempContainer.remove();
+        }
+        
+        elementsToHide.forEach(el => el.style.visibility = 'visible');
+        
         // Forzar reflow para que el DOM aplique los cambios
-        void cardsContainer.offsetHeight;
+        void document.body.offsetHeight;
 
         // 5. Convertir canvas a Blob
         if (!silent && loadingText) loadingText.textContent = "Generando imagen...";
@@ -184,6 +233,33 @@ async function captureAndDownloadCards(silent = false) {
         console.error("Capture error:", e);
         alert("Error al generar el informe visual.");
     } finally {
+        // Limpiar y restaurar
+        if (tempContainer) {
+            // Restaurar la tarjeta de tendencias si fue movida
+            if (tempContainer._trendsOriginalParent && trendsContainer) {
+                const originalStyles = tempContainer._originalTrendsStyles;
+                if (originalStyles) {
+                    trendsContainer.style.width = originalStyles.width;
+                    trendsContainer.style.maxWidth = originalStyles.maxWidth;
+                    trendsContainer.style.minWidth = originalStyles.minWidth;
+                    trendsContainer.style.margin = originalStyles.margin;
+                    trendsContainer.style.overflow = originalStyles.overflow;
+                }
+                
+                // Reinsertar en su posición original
+                if (tempContainer._trendsNextSibling) {
+                    tempContainer._trendsOriginalParent.insertBefore(trendsContainer, tempContainer._trendsNextSibling);
+                } else {
+                    tempContainer._trendsOriginalParent.appendChild(trendsContainer);
+                }
+            }
+            
+            // Remover contenedor temporal
+            if (tempContainer.parentNode) {
+                tempContainer.remove();
+            }
+        }
+        
         // Remover clase capturing del body
         document.body.classList.remove('capturing');
         
