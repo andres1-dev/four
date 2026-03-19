@@ -38,6 +38,9 @@ async function captureAndDownloadCards(silent = false) {
             updateToast('Generando imagen...');
         }
         if (captureBtn) captureBtn.classList.add('hidden');
+        
+        // Agregar clase capturing al body para estilos específicos
+        document.body.classList.add('capturing');
 
         // 1. Abrir todas las tarjetas y guardar estado original
         const cardHeaders = document.querySelectorAll('.card-header');
@@ -181,6 +184,9 @@ async function captureAndDownloadCards(silent = false) {
         console.error("Capture error:", e);
         alert("Error al generar el informe visual.");
     } finally {
+        // Remover clase capturing del body
+        document.body.classList.remove('capturing');
+        
         if (captureBtn) captureBtn.classList.remove('hidden');
         if (!silent) {
             if (loadingOverlay) {

@@ -385,6 +385,9 @@ async function sendEmail(emailContent) {
 }
 
 // Inicializar el botón de email
+// NOTA: El botón de email está manejado en events.js dentro del panel flotante
+// No es necesario inicializarlo aquí para evitar doble verificación de contraseña
+/*
 function initEmailButton() {
     const emailBtn = document.getElementById('emailBtn');
     if (emailBtn) {
@@ -405,3 +408,4 @@ if (document.readyState === 'loading') {
 } else {
     initEmailButton();
 }
+*/
