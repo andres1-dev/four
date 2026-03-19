@@ -15,6 +15,8 @@ function generateDayMetrics(dayData, date, fullYearData, isFromPreviousYear = fa
         previousWeekData = getPreviousWeekData(date, fullYearData);
     }
 
+    const maxData = findMax([...weekData, ...previousWeekData]);
+    const minData = findMin([...weekData, ...previousWeekData]);
     return {
         medicion: "dia",
         fecha: dayData.Fecha,
@@ -31,7 +33,10 @@ function generateDayMetrics(dayData, date, fullYearData, isFromPreviousYear = fa
         promedio: calculateAverage([...weekData, ...previousWeekData]),
         ponderado: calculateWeightedAvg([...weekData, ...previousWeekData]),
         desvest: calculateStdDev([...weekData, ...previousWeekData]),
-        max: findMax([...weekData, ...previousWeekData])
+        max: maxData.value,
+        max_fecha: maxData.fecha,
+        min: minData.value,
+        min_fecha: minData.fecha
     };
 }
 
@@ -89,28 +94,45 @@ function generatePeriodMetrics(type, date, fullYearData, isFromPreviousYear = fa
     // Calcular días hábiles totales dinámicamente
     let habiles_totales = 0;
     if (type === 'mes') {
-        const offset = date.getTimezoneOffset() + 300;
-        const dateCol = new Date(date.getTime() + offset * 60000);
-        const diasEnMes = new Date(year, dateCol.getMonth() + 1, 0).getDate();
+        // Días no-hábiles (sáb/dom) que se trabajaron
+        const diasNoHabilesLaborados = globalPeriodData.filter(d => {
+            const dDate = parseDate(d.Fecha);
+            if (!dDate) return false;
+            const dow = dDate.getDay();
+            return dow === 0 || dow === 6;
+        }).length;
 
-        // Último día con datos en Colombia
-        const sortedGlobal = globalPeriodData.slice().sort((a, b) => parseDate(b.Fecha) - parseDate(a.Fecha));
-        const ultimoDatoFecha = sortedGlobal.length > 0 ? parseDate(sortedGlobal[0].Fecha) : date;
-        const ultimoDatoCol = new Date(ultimoDatoFecha.getTime() + (ultimoDatoFecha.getTimezoneOffset() + 300) * 60000);
-        const ultimoDia = ultimoDatoCol.getDate();
+        // Fuente de verdad: budget.HABILES ya descuenta festivos colombianos
+        const budgetForMonth = budgetData.find(b =>
+            b.MES.toUpperCase() === monthName.toUpperCase() && b.ANO === String(year)
+        );
 
-        // Días hábiles restantes: solo lunes-viernes futuros
-        let habilesRestantes = 0;
-        for (let d = ultimoDia + 1; d <= diasEnMes; d++) {
-            const dow = new Date(year, dateCol.getMonth(), d).getDay();
-            if (dow !== 0 && dow !== 6) habilesRestantes++;
+        if (budgetForMonth && budgetForMonth.HABILES > 0) {
+            // Total = hábiles del budget + días no-hábiles que se trabajaron
+            habiles_totales = budgetForMonth.HABILES + diasNoHabilesLaborados;
+        } else {
+            // Fallback: contar lun-vie restantes desde el último día con datos
+            const offset = date.getTimezoneOffset() + 300;
+            const dateCol = new Date(date.getTime() + offset * 60000);
+            const diasEnMes = new Date(year, dateCol.getMonth() + 1, 0).getDate();
+            const sortedGlobal = globalPeriodData.slice().sort((a, b) => parseDate(b.Fecha) - parseDate(a.Fecha));
+            const ultimoDatoFecha = sortedGlobal.length > 0 ? parseDate(sortedGlobal[0].Fecha) : date;
+            const ultimoDatoCol = new Date(ultimoDatoFecha.getTime() + (ultimoDatoFecha.getTimezoneOffset() + 300) * 60000);
+            const ultimoDia = ultimoDatoCol.getDate();
+            let habilesRestantes = 0;
+            for (let d = ultimoDia + 1; d <= diasEnMes; d++) {
+                const dow = new Date(year, dateCol.getMonth(), d).getDay();
+                if (dow !== 0 && dow !== 6) habilesRestantes++;
+            }
+            habiles_totales = globalPeriodData.length + habilesRestantes;
         }
-        habiles_totales = globalPeriodData.length + habilesRestantes;
     } else {
         const budgetForYear = budgetData.filter(b => b.ANO === String(year));
         habiles_totales = budgetForYear.reduce((sum, b) => sum + b.HABILES, 0);
     }
 
+    const maxData = findMax(periodData);
+    const minData = findMin(periodData);
     return {
         medicion: type,
         fecha: formatDate(date),
@@ -127,7 +149,10 @@ function generatePeriodMetrics(type, date, fullYearData, isFromPreviousYear = fa
         promedio: calculateAverage(periodData),
         ponderado: calculateWeightedAvg(periodData),
         desvest: calculateStdDev(periodData),
-        max: findMax(periodData)
+        max: maxData.value,
+        max_fecha: maxData.fecha,
+        min: minData.value,
+        min_fecha: minData.fecha
     };
 }
 
@@ -210,8 +235,15 @@ function calculateStdDev(data) {
 }
 
 function findMax(data) {
-    if (data.length === 0) return 0;
-    return Math.max(...data.map(d => d.Ingreso));
+    if (data.length === 0) return { value: 0, fecha: null };
+    const item = data.reduce((a, b) => b.Ingreso > a.Ingreso ? b : a);
+    return { value: item.Ingreso, fecha: item.Fecha || null };
+}
+
+function findMin(data) {
+    if (data.length === 0) return { value: 0, fecha: null };
+    const item = data.reduce((a, b) => b.Ingreso < a.Ingreso ? b : a);
+    return { value: item.Ingreso, fecha: item.Fecha || null };
 }
 
 function findClosestDateWithData(targetDate, year, data) {
@@ -290,6 +322,21 @@ function procesarDatosConsolidados(incomeData, budget, baseDates = null) {
         });
     }
 
+    // Pre-calcular días no-hábiles laborados por mes/año para ajustar meta diaria
+    // Clave: "MES-AÑO", valor: cantidad de sáb/dom con datos
+    const diasNoHabilesXMes = {};
+    Object.keys(groupedByDate).forEach(fechaStr => {
+        const dObj = parseDate(fechaStr);
+        if (!dObj) return;
+        const dow = dObj.getDay();
+        if (dow === 0 || dow === 6) {
+            const mes = getNombreMes(fechaStr).toUpperCase();
+            const año = String(dObj.getFullYear());
+            const key = `${mes}-${año}`;
+            diasNoHabilesXMes[key] = (diasNoHabilesXMes[key] || 0) + 1;
+        }
+    });
+
     return Object.values(groupedByDate).map(item => {
         const dateObj = parseDate(item.fecha);
         if (!dateObj) return null;
@@ -304,7 +351,12 @@ function procesarDatosConsolidados(incomeData, budget, baseDates = null) {
             b.ANO === String(año)
         );
 
-        const metaDiaria = budgetForMonth ? (budgetForMonth.TOTAL / budgetForMonth.HABILES) : 0;
+        // Divisor = hábiles oficiales + días no-hábiles que se trabajaron ese mes
+        const habilesOficiales = budgetForMonth ? budgetForMonth.HABILES : 0;
+        const extraDias = diasNoHabilesXMes[`${mes.toUpperCase()}-${año}`] || 0;
+        const divisor = habilesOficiales + extraDias;
+
+        const metaDiaria = (budgetForMonth && divisor > 0) ? (budgetForMonth.TOTAL / divisor) : 0;
         const diferencia = item.unidades - metaDiaria;
         const cumplimiento = metaDiaria > 0 ? (item.unidades / metaDiaria * 100).toFixed(2) + '%' : '0%';
 

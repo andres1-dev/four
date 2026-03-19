@@ -22,6 +22,14 @@ function toggleComparison(header) {
     if (indicator) indicator.classList.toggle('expanded');
 }
 
+function switchCompTab(btn, panelId) {
+    const content = btn.closest('.comparison-content');
+    content.querySelectorAll('.comp-tab').forEach(t => t.classList.remove('active'));
+    content.querySelectorAll('.comp-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(panelId).classList.add('active');
+}
+
 function datosToggleCard(element) {
     const content = element.nextElementSibling;
     const indicator = element.querySelector('.collapse-indicator');
@@ -295,6 +303,7 @@ function reconsolidateWithFilter() {
     globalConsolidatedData = procesarDatosConsolidados(allIncomeData, budgetData);
     const globalDates = globalConsolidatedData.map(d => d.Fecha);
 
+    activeBudgetData = filteredBudget;
     consolidatedData = procesarDatosConsolidados(filteredData, filteredBudget, globalDates);
 }
 
@@ -851,7 +860,7 @@ async function generarReporteCompleto(targetDate) {
 
     function showTip(text, triggerEl) {
         clearTimeout(hideTimer);
-        tip.textContent = text;
+        tip.innerHTML = text;
         tip.classList.add('visible');
         positionTip(triggerEl);
     }
@@ -886,7 +895,8 @@ async function generarReporteCompleto(targetDate) {
     document.addEventListener('mouseover', e => {
         const trigger = e.target.closest('.tooltip');
         if (!trigger) return;
-        const text = trigger.querySelector('.tooltiptext')?.textContent?.trim();
+        const tooltipEl = trigger.querySelector('.tooltiptext');
+        const text = tooltipEl?.innerHTML?.trim();
         if (text) showTip(text, trigger);
     });
 
@@ -898,10 +908,11 @@ async function generarReporteCompleto(targetDate) {
     document.addEventListener('touchstart', e => {
         const trigger = e.target.closest('.tooltip');
         if (!trigger) { hideTip(); return; }
-        const text = trigger.querySelector('.tooltiptext')?.textContent?.trim();
+        const tooltipEl = trigger.querySelector('.tooltiptext');
+        const text = tooltipEl?.innerHTML?.trim();
         if (!text) return;
         e.preventDefault();
-        if (tip.classList.contains('visible') && tip.textContent === text) {
+        if (tip.classList.contains('visible') && tip.innerHTML === text) {
             hideTip();
         } else {
             showTip(text, trigger);

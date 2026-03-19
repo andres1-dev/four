@@ -84,18 +84,42 @@ function calcularProyeccionDiaria(datos) {
     const diasHabilesTranscurridos = datos.length;
 
     // ── Días hábiles restantes en el mes ────────────────────────────────────
-    const diasEnMes = new Date(año, mes + 1, 0).getDate();
-    // Usar hora Colombia (UTC-5) para evitar desfase de zona horaria
-    const offset = ultimaFecha.getTimezoneOffset() + 300;
-    const ultimaFechaCol = new Date(ultimaFecha.getTime() + offset * 60000);
-    const ultimoDia = ultimaFechaCol.getDate();
-    let diasHabilesRestantes = 0;
-    for (let d = ultimoDia + 1; d <= diasEnMes; d++) {
-        const dow = new Date(año, mes, d).getDay();
-        if (dow !== 0 && dow !== 6) diasHabilesRestantes++;
+    // Días no-hábiles (sáb/dom) que ya se trabajaron
+    const diasNoHabilesLaborados = datos.filter(d => {
+        const dDate = parseDate(d.Fecha);
+        if (!dDate) return false;
+        const dow = dDate.getDay();
+        return dow === 0 || dow === 6;
+    }).length;
+
+    // Días lun-vie realmente trabajados
+    const diasLunVieTranscurridos = diasHabilesTranscurridos - diasNoHabilesLaborados;
+
+    // Budget como fuente de verdad (festivos ya descontados)
+    const nombreMes = getNombreMes(datos[datos.length - 1].Fecha);
+    const budgetMes = budgetData.find(b =>
+        b.MES.toUpperCase() === nombreMes.toUpperCase() && b.ANO === String(año)
+    );
+
+    let habilesOficiales;
+    if (budgetMes && budgetMes.HABILES > 0) {
+        habilesOficiales = budgetMes.HABILES;
+    } else {
+        // Fallback: contar lun-vie del mes completo
+        const diasEnMes = new Date(año, mes + 1, 0).getDate();
+        habilesOficiales = 0;
+        for (let d = 1; d <= diasEnMes; d++) {
+            const dow = new Date(año, mes, d).getDay();
+            if (dow !== 0 && dow !== 6) habilesOficiales++;
+        }
     }
 
-    const diasHabilesTotales = diasHabilesTranscurridos + diasHabilesRestantes;
+    // Restantes = hábiles oficiales que aún no se han trabajado
+    const habilesRestantesOficiales = Math.max(0, habilesOficiales - diasLunVieTranscurridos);
+
+    // Total = hábiles oficiales + días no-hábiles ya trabajados
+    const diasHabilesTotales = habilesOficiales + diasNoHabilesLaborados;
+    const diasHabilesRestantes = habilesRestantesOficiales;
 
     if (diasHabilesRestantes <= 0) return null;
 

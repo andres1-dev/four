@@ -32,3 +32,4 @@ let datosCargando = false;
 // Provider filter
 let selectedProveedor = 'todos';
 let allIncomeData = []; // Stores raw income data before consolidation
+let activeBudgetData = []; // Budget filtered by active provider

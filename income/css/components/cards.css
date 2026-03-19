@@ -181,14 +181,14 @@
 }
 
 /* Colores semánticos para el superíndice de tendencia */
-.days-badge.positive { color: rgba(16,185,129,0.6); }
-.days-badge.negative { color: rgba(248,113,113,0.6); }
-.days-badge.neutral  { color: rgba(251,191,36,0.6); }
+.days-badge.positive { color: var(--success-color); }
+.days-badge.negative { color: var(--danger-color); }
+.days-badge.neutral  { color: var(--warning-color); }
 
 /* Brilla al pasar el cursor por la tarjeta */
-.card:hover .days-badge.positive { color: var(--success-color); }
-.card:hover .days-badge.negative { color: var(--danger-color); }
-.card:hover .days-badge.neutral  { color: var(--warning-color); }
+.card:hover .days-badge.positive { color: var(--success-color); filter: brightness(1.2); }
+.card:hover .days-badge.negative { color: var(--danger-color); filter: brightness(1.2); }
+.card:hover .days-badge.neutral  { color: var(--warning-color); filter: brightness(1.2); }
 
 .date-badge {
     font-size: var(--font-size-sm);
@@ -248,6 +248,7 @@
 .data-item:has(.fa-crown)           { border-left: 2px solid rgba(217, 119, 6, 0.55); }
 .data-item:has(.fa-chart-bar)       { border-left: 2px solid rgba(124, 58, 237, 0.45); }
 .data-item:has(.fa-weight-hanging)  { border-left: 2px solid rgba(100, 116, 139, 0.35); }
+.data-item:has(.fa-arrow-down)      { border-left: 2px solid rgba(239, 68, 68, 0.45); }
 
 .data-label {
     font-size: 10px;
@@ -296,6 +297,7 @@
 .data-label i.fa-weight-hanging    { color: #64748b; }   /* peso/ponderado — slate */
 .data-label i.fa-chart-bar         { color: #7c3aed; }   /* barras — violeta */
 .data-label i.fa-crown             { color: #d97706; }   /* corona/top — dorado */
+.data-label i.fa-arrow-down        { color: #ef4444; }   /* mínimo — rojo */
 .data-label i.fa-calendar-day      { color: #2563eb; }   /* día — azul */
 .data-label i.fa-calendar-alt      { color: #059669; }   /* mes — verde */
 .data-label i.fa-calendar          { color: #d97706; }   /* año — ámbar */
@@ -311,6 +313,48 @@
     line-height: 1.15;
     font-variant-numeric: proportional-nums;
     font-feature-settings: "pnum" 1, "tnum" 0;
+}
+
+/* Línea de comparación vs año anterior */
+.data-vs {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-light);
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+    flex-wrap: wrap;
+}
+.data-vs .vs-ant {
+    opacity: 0.85;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-medium);
+}
+.data-vs .vs-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-weight: 700;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.01em;
+}
+.data-vs .vs-delta.up   {
+    color: var(--success-color);
+    background: rgba(16,185,129,0.1);
+}
+.data-vs .vs-delta.down {
+    color: var(--danger-color);
+    background: rgba(239,68,68,0.1);
+}
+.data-vs .vs-delta.flat {
+    color: var(--warning-color);
+    background: rgba(251,191,36,0.1);
 }
 
 /* Progress Section */
@@ -480,6 +524,80 @@
     font-variant-numeric: tabular-nums;
 }
 
+/* ── Sub-tabs del comparativo ─────────────────────────────────────────── */
+.comp-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 12px 16px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.comp-tab {
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-medium);
+    border: none;
+    background: transparent;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    margin-bottom: -1px;
+}
+.comp-tab:hover { color: var(--text-dark); }
+.comp-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+.comp-panel { display: none; }
+.comp-panel.active { display: block; }
+
+/* Tabla de variación */
+.var-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin: 4px 0;
+}
+.var-table th {
+    color: var(--text-light);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 10px;
+    padding: 10px 14px;
+    text-align: right;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.var-table th:first-child { text-align: left; }
+.var-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    color: var(--text-medium);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+.var-table td:first-child {
+    text-align: left;
+    font-weight: 700;
+    color: var(--text-dark);
+    font-size: 11px;
+}
+.var-table tr:last-child td { border-bottom: none; }
+.var-table tr:hover td { background: rgba(255,255,255,0.02); }
+.var-delta { font-weight: 800; }
+.var-delta.up   { color: var(--success-color); }
+.var-delta.down { color: var(--danger-color); }
+.var-delta.flat { color: var(--warning-color); }
+
+[data-theme="light"] .comp-tabs { border-bottom-color: rgba(0,0,0,0.08); }
+[data-theme="light"] .var-table th { border-bottom-color: rgba(0,0,0,0.08); }
+[data-theme="light"] .var-table td { border-bottom-color: rgba(0,0,0,0.04); }
+[data-theme="light"] .var-table tr:hover td { background: rgba(0,0,0,0.02); }
+
 /* Tooltip */
 .tooltip {
     position: relative;
@@ -496,13 +614,13 @@
 #global-tooltip {
     position: fixed;
     z-index: 99999;
-    max-width: 240px;
-    padding: 7px 12px;
+    max-width: 280px;
+    padding: 9px 13px;
     background: #1a1d27;
     color: #e2e8f0;
     font-size: 12px;
     font-weight: 500;
-    line-height: 1.4;
+    line-height: 1.6;
     border-radius: 6px;
     border: 1px solid rgba(255,255,255,0.12);
     box-shadow: 0 8px 24px rgba(0,0,0,0.5);
@@ -599,6 +717,16 @@
     margin-left: 5px;
     font-size: 14px;
 }
+
+/* Gestión anual — valor más prominente */
+#dia-gestion, #mes-gestion, #año-gestion {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+}
+#dia-gestion.positive, #mes-gestion.positive, #año-gestion.positive { color: var(--success-color); }
+#dia-gestion.negative, #mes-gestion.negative, #año-gestion.negative { color: var(--danger-color); }
+#dia-gestion.neutral,  #mes-gestion.neutral,  #año-gestion.neutral  { color: var(--warning-color); }
 
 /* Data description under data-item (trends) */
 .data-description {
