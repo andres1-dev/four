@@ -54,29 +54,29 @@ function mostrarModalProyeccion() {
         <div class="modal-stats-grid">
             <div class="modal-stat-card">
                 <div class="modal-stat-label">Proyección Conservadora</div>
-                <div class="modal-stat-value" style="color: var(--primary-color)">$${fmtModal(proyeccionConservadora)}</div>
+                <div class="modal-stat-value" style="color: var(--primary-color)">${fmtModal(proyeccionConservadora)}</div>
                 <div class="modal-stat-sub">${pctVsMeta}% de la meta mensual</div>
             </div>
             <div class="modal-stat-card ${diferenciaMeta >= 0 ? '' : 'warning'}">
                 <div class="modal-stat-label">${diferenciaMeta >= 0 ? 'Excedente' : 'Faltante'} Proyectado</div>
                 <div class="modal-stat-value" style="color: ${diferenciaMeta >= 0 ? 'var(--success-color)' : 'var(--warning-color)'}">
-                    ${diferenciaMeta >= 0 ? '+' : ''}$${fmtModal(diferenciaMeta)}
+                    ${diferenciaMeta >= 0 ? '+' : ''}${fmtModal(diferenciaMeta)}
                 </div>
-                <div class="modal-stat-sub">vs Meta: $${fmtModal(metaTotal)}</div>
+                <div class="modal-stat-sub">vs Meta: ${fmtModal(metaTotal)}</div>
             </div>
         </div>
 
         <div class="formula-box-modal">
             <span class="formula-label">1. Proyección por Tendencia</span>
             <code>proyTendencia = ultimaTendencia × diasHabilesTotales</code><br>
-            <code>= ${fmtModal(ultimaTendencia)} × ${diasHabilesTotales} = <strong>$${fmtModal(proyeccionTendencia)}</strong></code>
+            <code>= ${fmtModal(ultimaTendencia)} × ${diasHabilesTotales} = <strong>${fmtModal(proyeccionTendencia)}</strong></code>
             <p>Usa el último valor de la línea de tendencia (regresión lineal) y lo multiplica por el total de días hábiles del mes.</p>
         </div>
 
         <div class="formula-box-modal">
             <span class="formula-label">2. Proyección por Promedio Móvil</span>
             <code>proyMovil = promedioMovil × diasHabilesTotales</code><br>
-            <code>= ${fmtModal(promedioMovil)} × ${diasHabilesTotales} = <strong>$${fmtModal(proyeccionMovil)}</strong></code>
+            <code>= ${fmtModal(promedioMovil)} × ${diasHabilesTotales} = <strong>${fmtModal(proyeccionMovil)}</strong></code>
             <p>Usa el promedio de los últimos 7 días hábiles y lo multiplica por el total de días hábiles del mes.</p>
         </div>
 
@@ -84,7 +84,7 @@ function mostrarModalProyeccion() {
             <span class="formula-label" style="color: var(--primary-color)">3. Proyección Conservadora (Resultado Final)</span>
             <code>proyConservadora = (proyTendencia + proyMovil) / 2</code><br>
             <code>= (${fmtModal(proyeccionTendencia)} + ${fmtModal(proyeccionMovil)}) / 2</code><br>
-            <code>= <strong style="color: var(--primary-color); font-size: 16px">$${fmtModal(proyeccionConservadora)}</strong></code>
+            <code>= <strong style="color: var(--primary-color); font-size: 16px">${fmtModal(proyeccionConservadora)}</strong></code>
             <p>Promedia ambas proyecciones para obtener una estimación equilibrada que considera tanto la tendencia general como el comportamiento reciente.</p>
         </div>
 
@@ -107,11 +107,11 @@ function mostrarModalProyeccion() {
             <tbody>
                 <tr>
                     <td>Ingreso acumulado</td>
-                    <td class="num highlight-cell">$${fmtModal(ingresosAcumulados)}</td>
+                    <td class="num highlight-cell">${fmtModal(ingresosAcumulados)}</td>
                 </tr>
                 <tr>
                     <td>Meta mensual</td>
-                    <td class="num">$${fmtModal(metaTotal)}</td>
+                    <td class="num">${fmtModal(metaTotal)}</td>
                 </tr>
                 <tr>
                     <td>Días hábiles totales</td>
@@ -119,7 +119,7 @@ function mostrarModalProyeccion() {
                 </tr>
                 <tr style="border-top: 2px solid rgba(255,255,255,0.1)">
                     <td><strong>Proyección conservadora</strong></td>
-                    <td class="num highlight-cell" style="color: var(--primary-color)"><strong>$${fmtModal(proyeccionConservadora)}</strong></td>
+                    <td class="num highlight-cell" style="color: var(--primary-color)"><strong>${fmtModal(proyeccionConservadora)}</strong></td>
                 </tr>
                 <tr>
                     <td>% vs Meta</td>
@@ -266,16 +266,16 @@ function mostrarModalDiasHabiles() {
                         <tr>
                             <td class="highlight-cell">${d.Fecha} <span class="day-badge-modal weekend">FIN DE SEMANA</span></td>
                             <td style="text-transform: capitalize">${d.Dia}</td>
-                            <td class="num highlight-cell">$${fmtModal(d.Ingreso)}</td>
-                            <td class="num">$${fmtModal(d.Meta)}</td>
+                            <td class="num highlight-cell">${fmtModal(d.Ingreso)}</td>
+                            <td class="num">${fmtModal(d.Meta)}</td>
                         </tr>
                     `).join('')}
                 </tbody>
                 <tfoot>
                     <tr style="border-top: 2px solid rgba(255,255,255,0.1)">
                         <td colspan="2"><strong>Total</strong></td>
-                        <td class="num highlight-cell"><strong>$${fmtModal(sabDomTrabajados.reduce((s, d) => s + d.Ingreso, 0))}</strong></td>
-                        <td class="num">$${fmtModal(sabDomTrabajados.reduce((s, d) => s + d.Meta, 0))}</td>
+                        <td class="num highlight-cell"><strong>${fmtModal(sabDomTrabajados.reduce((s, d) => s + d.Ingreso, 0))}</strong></td>
+                        <td class="num">${fmtModal(sabDomTrabajados.reduce((s, d) => s + d.Meta, 0))}</td>
                     </tr>
                 </tfoot>
             </table>
@@ -390,7 +390,7 @@ function mostrarModalPromedioMovil() {
         <div class="modal-stats-grid" style="grid-template-columns: repeat(3, 1fr);">
             <div class="modal-stat-card">
                 <div class="modal-stat-label">Promedio Móvil 7d</div>
-                <div class="modal-stat-value" style="color: var(--primary-color)">$${fmtModal(promedioMovil)}</div>
+                <div class="modal-stat-value" style="color: var(--primary-color)">${fmtModal(promedioMovil)}</div>
                 <div class="modal-stat-sub">Últimos 7 días hábiles</div>
             </div>
             <div class="modal-stat-card">
@@ -413,7 +413,7 @@ function mostrarModalPromedioMovil() {
             <span class="formula-label">Cálculo del Promedio Móvil</span>
             <code>promedioMovil = Σ(últimos 7 ingresos) / 7</code><br>
             <code>= (${ultimos7.map(d => fmtModal(d.Ingreso)).join(' + ')}) / 7</code><br>
-            <code>= <strong>$${fmtModal(promedioMovil)}</strong></code>
+            <code>= <strong>${fmtModal(promedioMovil)}</strong></code>
         </div>
 
         <table class="modal-data-table">
@@ -449,9 +449,9 @@ function mostrarModalPromedioMovil() {
                                 ${esFinDeSemana ? '<span class="day-badge-modal weekend">FIN DE SEMANA</span>' : ''}
                             </td>
                             <td style="text-transform: capitalize">${d.Dia}</td>
-                            <td class="num highlight-cell">$${fmtModal(d.Ingreso)}</td>
+                            <td class="num highlight-cell">${fmtModal(d.Ingreso)}</td>
                             <td class="num" style="color: ${colorPct}">${pct}%</td>
-                            <td class="num" style="color: ${colorPct}">${diff >= 0 ? '+' : ''}$${fmtModal(diff)}</td>
+                            <td class="num" style="color: ${colorPct}">${diff >= 0 ? '+' : ''}${fmtModal(diff)}</td>
                             <td style="font-size: 10px;">
                                 ${esUltimos7 
                                     ? '<span style="color: var(--primary-color); font-weight: 700;">✓ EN CÁLCULO</span>' 
@@ -464,7 +464,7 @@ function mostrarModalPromedioMovil() {
             <tfoot>
                 <tr style="border-top: 2px solid rgba(255,255,255,0.1)">
                     <td colspan="2"><strong>Promedio Móvil (últimos 7)</strong></td>
-                    <td class="num highlight-cell" style="color: var(--primary-color)"><strong>$${fmtModal(promedioMovil)}</strong></td>
+                    <td class="num highlight-cell" style="color: var(--primary-color)"><strong>${fmtModal(promedioMovil)}</strong></td>
                     <td colspan="3" style="font-size: 11px; color: var(--text-light);">
                         ${sabDomTrabajados.length > 0 
                             ? `Incluye ${sabDomTrabajados.length} fin${sabDomTrabajados.length > 1 ? 'es' : ''} de semana trabajado${sabDomTrabajados.length > 1 ? 's' : ''}`

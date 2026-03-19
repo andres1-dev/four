@@ -1,6 +1,6 @@
 // Service Worker — Network Only, sin cache
 // Incrementar este número fuerza que las PWAs instaladas descarten el SW anterior
-const SW_VERSION = 'v31';
+const SW_VERSION = 'v32';
 
 // Al instalar: activar de inmediato sin esperar
 self.addEventListener('install', () => {
