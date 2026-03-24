@@ -1,0 +1,58 @@
+/* ============================================
+   ACTIVITY BAR
+   ============================================ */
+
+.activity-bar {
+    width: 48px;
+    background-color: var(--sidebar);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 10px 0;
+}
+
+.activity-icons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.activity-icon {
+    width: 48px;
+    height: 48px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: color 0.2s ease;
+}
+
+.activity-icon:hover {
+    color: var(--text);
+}
+
+.activity-icon.active {
+    color: var(--text);
+}
+
+.activity-icon.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2px;
+    height: 24px;
+    background-color: var(--primary);
+}
+
+.activity-bottom {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
