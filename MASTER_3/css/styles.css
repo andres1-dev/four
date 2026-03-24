@@ -1,0 +1,44 @@
+/* ============================================
+   PROCESADOR CSV - SISTEMA DE ESTILOS
+   Archivo principal de integración
+   ============================================ */
+
+/* 1. Base — Fundamentos del sistema */
+@import url('base/variables.css');
+@import url('base/reset.css');
+
+/* 2. Layout — Estructura principal de la aplicación */
+@import url('layout/activity-bar.css');
+@import url('layout/sidebar.css');
+@import url('layout/editor.css');
+@import url('layout/tabs.css');
+
+/* 3. Components — Componentes UI reutilizables */
+@import url('components/buttons.css');
+@import url('components/forms.css');
+@import url('components/modals.css');
+@import url('components/status-bar.css');
+@import url('components/panels.css');
+
+/* 4. Utilities — Utilidades y helpers */
+@import url('utilities/scrollbars.css');
+@import url('utilities/empty-states.css');
+@import url('utilities/notifications.css');
+@import url('utilities/icons.css');
+@import url('utilities/helpers.css');
+@import url('utilities/responsive.css');
+
+/* 5. Modules — Módulos de negocio (business logic) */
+@import url('modules/distribution/layout.css');
+@import url('modules/distribution/empresas.css');
+@import url('modules/distribution/mayoristas.css');
+@import url('modules/distribution/tables.css');
+@import url('modules/distribution/filters.css');
+@import url('modules/distribution/responsive.css');
+@import url('modules/transfers.css');
+@import url('modules/printing/printing.css');
+@import url('modules/op-editor.css');
+@import url('modules/json-editor.css');
+@import url('modules/orders.css');
+
+
