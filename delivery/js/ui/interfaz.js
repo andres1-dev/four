@@ -407,13 +407,13 @@ function initUIListeners() {
                 const btnAdminHeader = document.getElementById('openUserAdminBtn');
 
                 if (navAdmin) {
-                    if (currentUser.rol === 'ADMIN') navAdmin.style.display = 'flex';
+                    if (currentUser.rol === 'ADMIN' || currentUser.rol === 'OWNER') navAdmin.style.display = 'flex';
                     else navAdmin.style.display = 'none';
                 }
 
                 if (btnAdminHeader) {
                     const adminDivider = document.getElementById('adminDivider');
-                    if (currentUser.rol === 'ADMIN') {
+                    if (currentUser.rol === 'ADMIN' || currentUser.rol === 'OWNER') {
                         btnAdminHeader.style.display = 'flex';
                         if (adminDivider) adminDivider.style.display = 'block';
                     } else {

@@ -1,8 +1,42 @@
-// Módulo de Administración de Usuarios (Solo Admin)
+// Módulo de Administración de Usuarios (Solo Admin y Owner)
+
+// Jerarquía de roles (de mayor a menor)
+const ROLE_HIERARCHY = {
+    'OWNER': 5,
+    'ADMIN': 4,
+    'MODERATOR': 3,
+    'USER': 2,
+    'DELIVERY': 2, // Mismo nivel que USER
+    'GUEST': 1
+};
+
+// Obtener nivel jerárquico de un rol
+function getRoleLevel(role) {
+    return ROLE_HIERARCHY[role.toUpperCase()] || 0;
+}
+
+// Verificar si puede gestionar un rol
+function canManageRole(managerRole, targetRole) {
+    return getRoleLevel(managerRole) > getRoleLevel(targetRole);
+}
+
+// Obtener roles que puede asignar el usuario actual
+function getAssignableRoles(currentRole) {
+    const currentLevel = getRoleLevel(currentRole);
+    const assignable = [];
+    
+    for (const [role, level] of Object.entries(ROLE_HIERARCHY)) {
+        if (level < currentLevel && role !== 'DELIVERY') { // DELIVERY no se asigna manualmente
+            assignable.push(role);
+        }
+    }
+    
+    return assignable.sort((a, b) => getRoleLevel(b) - getRoleLevel(a));
+}
 
 async function openUserAdmin() {
-    // Verificar permisos
-    if (!currentUser || currentUser.rol !== 'ADMIN') {
+    // Verificar permisos (ADMIN y OWNER)
+    if (!currentUser || (currentUser.rol !== 'ADMIN' && currentUser.rol !== 'OWNER')) {
         alert("Acceso denegado. Solo administradores.");
         return;
     }
@@ -29,12 +63,22 @@ async function loadUsersList() {
 
     try {
         // Cargar usuarios directamente desde Sheets
-        const users = await obtenerUsuariosDeSheets();
+        let users = await obtenerUsuariosDeSheets();
+        
+        // FILTRAR POR JERARQUÍA: Solo mostrar usuarios de nivel inferior
+        const currentLevel = getRoleLevel(currentUser.rol);
+        users = users.filter(u => {
+            const userLevel = getRoleLevel(u.rol);
+            // Solo mostrar usuarios de nivel estrictamente inferior
+            return userLevel < currentLevel;
+        });
+        
+        console.log(`Usuarios filtrados para ${currentUser.rol}: ${users.length} visibles`);
         
         if (users && users.length > 0) {
             renderUserTable(users);
         } else {
-            listContainer.innerHTML = '<div class="empty-state">No hay usuarios registrados.</div>';
+            listContainer.innerHTML = '<div class="empty-state">No hay usuarios registrados en tu nivel de acceso.</div>';
         }
 
     } catch (error) {
@@ -57,7 +101,9 @@ function renderUserTable(users) {
         let roleIcon = '';
         const role = user.rol.toUpperCase();
 
-        if (role === 'ADMIN') {
+        if (role === 'OWNER') {
+            roleIcon = '<i class="fa-solid fa-crown"></i>';
+        } else if (role === 'ADMIN') {
             roleIcon = '<i class="fa-solid fa-user-shield"></i>';
         } else if (role === 'MODERATOR') {
             roleIcon = '<i class="fa-solid fa-user-gear"></i>';
@@ -111,20 +157,56 @@ function openCreateUserModal() {
     document.getElementById('userForm').reset();
     document.getElementById('userFormTitle').textContent = "Nuevo Usuario";
     document.getElementById('userId').readOnly = false;
+    
+    // Actualizar opciones de roles según jerarquía
+    updateRoleOptions();
+    
     document.getElementById('userModalOverlay').style.display = 'flex';
+}
+
+// Actualizar opciones de roles disponibles según jerarquía
+function updateRoleOptions() {
+    const roleSelect = document.getElementById('userRole');
+    if (!roleSelect) return;
+    
+    const assignableRoles = getAssignableRoles(currentUser.rol);
+    
+    // Limpiar opciones actuales
+    roleSelect.innerHTML = '';
+    
+    // Agregar solo roles que puede asignar
+    assignableRoles.forEach(role => {
+        const option = document.createElement('option');
+        option.value = role;
+        option.textContent = role.charAt(0) + role.slice(1).toLowerCase();
+        roleSelect.appendChild(option);
+    });
+    
+    console.log(`Roles asignables para ${currentUser.rol}:`, assignableRoles);
 }
 
 function editUser(userId) {
     const user = window.currentUsersList.find(u => u.id === userId);
     if (!user) return;
+    
+    // Verificar que puede editar este usuario (jerarquía)
+    if (!canManageRole(currentUser.rol, user.rol)) {
+        alert('No tienes permisos para editar este usuario.');
+        return;
+    }
 
     document.getElementById('userId').value = user.id;
     document.getElementById('userId').readOnly = true; // No permitir cambiar ID al editar
     document.getElementById('userName').value = user.nombre;
-    document.getElementById('userRole').value = user.rol;
     document.getElementById('userEmail').value = user.email || '';
     document.getElementById('userPhone').value = user.phone || '';
     document.getElementById('userPassword').value = user.password; // Mostrar contraseña actual (seguridad baja pero solicitado)
+
+    // Actualizar opciones de roles según jerarquía
+    updateRoleOptions();
+    
+    // Seleccionar el rol actual del usuario
+    document.getElementById('userRole').value = user.rol;
 
     document.getElementById('userFormTitle').textContent = "Editar Usuario";
     document.getElementById('userModalOverlay').style.display = 'flex';
@@ -150,6 +232,14 @@ async function saveUser(e) {
         phone: document.getElementById('userPhone').value.trim(),
         password: document.getElementById('userPassword').value.trim()
     };
+
+    // VALIDACIÓN DE JERARQUÍA: No puede asignar roles iguales o superiores
+    if (!canManageRole(currentUser.rol, userData.rol)) {
+        alert(`No puedes asignar el rol ${userData.rol}. Solo puedes asignar roles inferiores a ${currentUser.rol}.`);
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
+        return;
+    }
 
     console.log('Guardando usuario:', userData);
 
@@ -186,6 +276,19 @@ async function saveUser(e) {
 }
 
 async function deleteUser(userId, userName) {
+    // Buscar el usuario para verificar jerarquía
+    const user = window.currentUsersList.find(u => u.id === userId);
+    if (!user) {
+        alert('Usuario no encontrado.');
+        return;
+    }
+    
+    // Verificar que puede eliminar este usuario (jerarquía)
+    if (!canManageRole(currentUser.rol, user.rol)) {
+        alert('No tienes permisos para eliminar este usuario.');
+        return;
+    }
+    
     if (!confirm(`¿Estás seguro de eliminar al usuario ${userName}?`)) return;
 
     console.log('Eliminando usuario:', userId);

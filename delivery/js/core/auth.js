@@ -74,7 +74,7 @@ function applyRolePermissions() {
     if (!currentUser) return;
 
     // Remove old classes
-    document.body.classList.remove('role-admin', 'role-moderator', 'role-user', 'role-guest', 'role-delivery');
+    document.body.classList.remove('role-owner', 'role-admin', 'role-moderator', 'role-user', 'role-guest', 'role-delivery');
 
     // Add new class based on role (normalized to lowercase)
     const roleClass = `role-${currentUser.rol.toLowerCase()}`;
@@ -89,11 +89,11 @@ function applyRolePermissions() {
 }
 
 function updateDeleteButtonsVisibility() {
-    const isAdmin = currentUser && currentUser.rol === 'ADMIN';
+    const isAdminOrOwner = currentUser && (currentUser.rol === 'ADMIN' || currentUser.rol === 'OWNER');
     const deleteBtns = document.querySelectorAll('.btn-delete');
 
     deleteBtns.forEach(btn => {
-        if (!isAdmin) {
+        if (!isAdminOrOwner) {
             btn.style.display = 'none';
         } else {
             btn.style.display = 'flex';
