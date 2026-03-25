@@ -14,11 +14,23 @@ function initAuth() {
 function checkSession() {
     try {
         const storedUser = localStorage.getItem(AUTH_KEY);
+        const lastActivity = parseInt(localStorage.getItem(CONFIG.ACTIVITY_KEY) || '0');
+        const now = Date.now();
 
         if (storedUser) {
+            // Verificar expiración por tiempo (Seguridad agresiva inicial)
+            if (lastActivity > 0 && (now - lastActivity > CONFIG.SESSION_TIMEOUT_MS)) {
+                console.warn("Sesión expirada detectada en checkSession: ", (now - lastActivity) / 1000, "segundos de inactividad");
+                logout();
+                return;
+            }
+
             currentUser = JSON.parse(storedUser);
             window.currentUser = currentUser;
             console.log("Sesión restaurada para:", currentUser.nombre);
+
+            // Actualizar tiempo de actividad al restaurar sesión
+            updateActivityTime();
 
             // Mostrar app
             showApp();
@@ -56,6 +68,9 @@ function showApp() {
         }
 
         if (barcodeInput) barcodeInput.focus();
+
+        // Iniciar monitor de inactividad
+        initInactivityMonitoring();
     }
 }
 
@@ -67,6 +82,72 @@ function logout() {
     localStorage.removeItem(CONFIG.ACTIVITY_KEY);
     sessionStorage.removeItem('token');
     window.location.replace('./login.html');
+}
+
+// --- LOGICA DE INACTIVIDAD ---
+
+function updateActivityTime() {
+    localStorage.setItem(CONFIG.ACTIVITY_KEY, Date.now().toString());
+}
+
+let inactivityInterval = null;
+
+function initInactivityMonitoring() {
+    if (inactivityInterval) return; // Ya iniciado
+
+    // Actualizar timestamp al iniciar por si acaso
+    updateActivityTime();
+
+    // Eventos que reinician el contador
+    const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
+
+    // Usar throttle para no escribir en localStorage constantemente
+    let lastUpdateStr = 0;
+
+    const recordActivity = () => {
+        const now = Date.now();
+        if (now - lastUpdateStr > 5000) { // Actualizar máximo cada 5 segundos
+            updateActivityTime();
+            lastUpdateStr = now;
+        }
+    };
+
+    activityEvents.forEach(evt => {
+        window.addEventListener(evt, recordActivity, { passive: true });
+    });
+
+    // --- SEGURIDAD AGRESIVA: RESUME CHECK ---
+    // Verificar inactividad apenas la app vuelva a primer plano
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            console.log("App volvió a primer plano. Verificando inactividad...");
+            checkInactivity();
+        }
+    });
+
+    // También al enfocar la ventana
+    window.addEventListener('focus', () => {
+        console.log("Ventana enfocada. Verificando inactividad...");
+        checkInactivity();
+    });
+
+    // Chequear inactividad periódicamente cada 2 segundos (monitoreo agresivo)
+    inactivityInterval = setInterval(checkInactivity, 2000);
+}
+
+function checkInactivity() {
+    const lastActivity = parseInt(localStorage.getItem(CONFIG.ACTIVITY_KEY) || '0');
+    const now = Date.now();
+    const timeout = (window.CONFIG && window.CONFIG.SESSION_TIMEOUT_MS) ? window.CONFIG.SESSION_TIMEOUT_MS : 60000;
+
+    // Si no hay user, nada que chequear
+    if (!localStorage.getItem(AUTH_KEY)) return;
+
+    // Si ha pasado el tiempo límite
+    if (now - lastActivity > timeout) {
+        console.error("DEBUG: Inactividad crítica detectada. Logout inmediato.");
+        logout();
+    }
 }
 
 // Aplicar permisos según rol

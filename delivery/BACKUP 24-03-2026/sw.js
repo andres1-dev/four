@@ -1,12 +1,5 @@
 // Service Worker para App - Versión optimizada para PWA
-
-// Configuración inline (no usar importScripts con módulos ES6)
-const CONFIG = {
-    APP_NAME: "DeepScope",
-    APP_SHORT_NAME: "DeepScope",
-    APP_DESCRIPTION: "Professional QR Delivery System",
-    APP_VERSION: "7.3.14"
-};
+importScripts('js/core/config.js');
 
 // CORREGIDO: Eliminadas notificaciones duplicadas
 const CACHE_NAME = `${CONFIG.APP_NAME}-v15.1`; // Updated icons for Android compatibility
@@ -34,7 +27,6 @@ const RELATIVE_ASSETS = [
   'js/core/audio.js',
   'js/core/auth_check.js',
   'js/core/auth.js',
-  'js/core/auth_sheets.js',
   'js/core/main_logic.js',
   'js/core/app_init.js',
   /* JS UI */

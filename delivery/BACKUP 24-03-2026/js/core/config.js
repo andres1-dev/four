@@ -14,13 +14,11 @@ const CONFIG = {
         INSTAGRAM: "https://www.instagram.com/eltemplodelamoda/",
         WHATSAPP: "https://wa.me/573168007979"
     },
-    // Configuración de Sesión - DESACTIVADA (solo logout manual)
-    SESSION_TIMEOUT_MS: Infinity, // Sin timeout automático
-    ACTIVITY_KEY: 'last_activity_timestamp',
-    
-    // Configuración de Usuarios (Google Sheets)
-    USERS_SPREADSHEET_ID: "1VaPBwgRu1QWhmsV_Qgf7cgraSxiAWRX6-wBEyUlGoJw",
-    USERS_SHEET_NAME: "USERS"
+    // Configuración de Sesión
+    //SESSION_TIMEOUT_MS: 60 * 60 * 1000, // 1 hora de inactividad
+    //SESSION_TIMEOUT_MS: 60 * 1000, // 1 minuto de inactividad (para pruebas)
+    SESSION_TIMEOUT_MS: 20 * 60 * 1000, // 20 minutos de inactividad
+    ACTIVITY_KEY: 'last_activity_timestamp'
 };
 
 // Asegurar que CONFIG sea accesible globalmente en todos los scripts

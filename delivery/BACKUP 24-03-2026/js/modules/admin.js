@@ -28,13 +28,21 @@ async function loadUsersList() {
     listContainer.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Cargando usuarios...</div>';
 
     try {
-        // Cargar usuarios directamente desde Sheets
-        const users = await obtenerUsuariosDeSheets();
-        
-        if (users && users.length > 0) {
-            renderUserTable(users);
+        const formData = new FormData();
+        formData.append('action', 'getUsers');
+        formData.append('token', sessionStorage.getItem('token') || '');
+
+        const response = await fetch(API_URL_POST, {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            renderUserTable(result.users);
         } else {
-            listContainer.innerHTML = '<div class="empty-state">No hay usuarios registrados.</div>';
+            listContainer.innerHTML = `<div class="error-msg">${result.message}</div>`;
         }
 
     } catch (error) {
@@ -151,14 +159,11 @@ async function saveUser(e) {
         password: document.getElementById('userPassword').value.trim()
     };
 
-    console.log('Guardando usuario:', userData);
-
     try {
         const formData = new FormData();
         formData.append('action', 'saveUser');
         formData.append('userData', JSON.stringify(userData));
-
-        console.log('Enviando a:', API_URL_POST);
+        formData.append('token', sessionStorage.getItem('token') || '');
 
         const response = await fetch(API_URL_POST, {
             method: 'POST',
@@ -166,7 +171,6 @@ async function saveUser(e) {
         });
 
         const result = await response.json();
-        console.log('Respuesta del servidor:', result);
 
         if (result.success) {
             alert("Usuario guardado correctamente");
@@ -178,7 +182,7 @@ async function saveUser(e) {
 
     } catch (error) {
         console.error("Error guardando usuario:", error);
-        alert("Error de conexión: " + error.message);
+        alert("Error de conexión");
     } finally {
         saveBtn.disabled = false;
         saveBtn.innerHTML = originalText;
@@ -188,14 +192,11 @@ async function saveUser(e) {
 async function deleteUser(userId, userName) {
     if (!confirm(`¿Estás seguro de eliminar al usuario ${userName}?`)) return;
 
-    console.log('Eliminando usuario:', userId);
-
     try {
         const formData = new FormData();
         formData.append('action', 'deleteUser');
         formData.append('id', userId);
-
-        console.log('Enviando a:', API_URL_POST);
+        formData.append('token', sessionStorage.getItem('token') || '');
 
         const response = await fetch(API_URL_POST, {
             method: 'POST',
@@ -203,10 +204,8 @@ async function deleteUser(userId, userName) {
         });
 
         const result = await response.json();
-        console.log('Respuesta del servidor:', result);
 
         if (result.success) {
-            alert("Usuario eliminado correctamente");
             loadUsersList();
         } else {
             alert("Error al eliminar: " + result.message);
@@ -214,7 +213,7 @@ async function deleteUser(userId, userName) {
 
     } catch (error) {
         console.error("Error eliminando usuario:", error);
-        alert("Error de conexión: " + error.message);
+        alert("Error de conexión");
     }
 }
 

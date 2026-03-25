@@ -333,10 +333,9 @@
         </div>
     </div>
 
-    <!-- Cargar módulo de autenticación con Sheets -->
-    <script src="./js/core/auth_sheets.js"></script>
-
     <script>
+        const API_URL = API_URL_POST;
+
         const loginForm = document.getElementById('loginForm');
         const submitBtn = document.getElementById('submitBtn');
         const biometricBtn = document.getElementById('biometricBtn');
@@ -450,9 +449,16 @@
             spinner.style.display = 'block';
 
             try {
-                // Usar autenticación con Sheets
-                const result = await loginBiometricoSheets(userId);
-                
+                const formData = new FormData();
+                formData.append('action', 'biometricLogin');
+                formData.append('id', userId);
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
                 if (result.success) {
                     processLogin(result);
                 } else {
@@ -470,13 +476,18 @@
         function processLogin(result) {
             console.log("Procesando login exitoso...");
 
-            // Guardar datos de usuario
+            // 1. Inicializar timestamp de actividad PRIMERO que nada
+            const activityKey = (typeof CONFIG !== 'undefined' && CONFIG.ACTIVITY_KEY) ? CONFIG.ACTIVITY_KEY : 'last_activity_timestamp';
+            localStorage.setItem(activityKey, Date.now().toString());
+
+            // 2. Guardar datos de usuario
             localStorage.setItem('user', JSON.stringify(result.user));
+            if (result.token) sessionStorage.setItem('token', result.token);
             if (result.apiKey) localStorage.setItem('apiKey', result.apiKey);
 
             console.log("Sesión preparada. Redirigiendo...");
 
-            // Pequeño delay para asegurar escritura en disco antes del salto
+            // 3. Pequeño delay para asegurar escritura en disco antes del salto
             setTimeout(() => {
                 window.location.href = './index.html';
             }, 100);
@@ -495,8 +506,17 @@
             const password = passwordInput.value.trim();
 
             try {
-                // Usar autenticación con Sheets
-                const result = await verificarCredencialesSheets(id, password);
+                const formData = new FormData();
+                formData.append('action', 'login');
+                formData.append('id', id);
+                formData.append('password', password);
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
 
                 if (result.success) {
                     // El login fue exitoso, vamos a ver si podemos ofrecer biometría
@@ -517,7 +537,7 @@
             }
         });
 
-        // Recuperación de contraseña (simplificada)
+        // Recuperación
         document.getElementById('recoverLink').addEventListener('click', async (e) => {
             e.preventDefault();
             const id = userIdInput.value.trim();
@@ -528,17 +548,30 @@
             }
 
             const originalText = document.getElementById('recoverLink').innerText;
-            document.getElementById('recoverLink').innerText = 'Verificando...';
+            document.getElementById('recoverLink').innerText = 'Enviando...';
 
             try {
-                // Verificar si el usuario existe en Sheets
-                const result = await recuperarContrasenaSheets(id);
-                
-                if (result.success) {
-                    alert(`Usuario encontrado: ${result.user.nombre}\nEmail: ${result.user.email}\n\nContacta al administrador para restablecer tu contraseña.`);
-                } else {
-                    alert(result.message);
-                }
+                const formData = new FormData();
+                formData.append('action', 'recover');
+                formData.append('id', id);
+
+                // Metadatos dinámicos completos para la plantilla de correo
+                const currentPath = window.location.pathname;
+                const basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+                const baseUrl = window.location.origin + basePath;
+
+                formData.append('appName', CONFIG.APP_NAME);
+                formData.append('appDescription', CONFIG.APP_DESCRIPTION);
+                formData.append('appLogo', `${baseUrl}icons/icon.svg`);
+                formData.append('appColor', getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#2563EB');
+                formData.append('supportEmail', 'soporte@' + CONFIG.APP_NAME.toLowerCase() + '.com');
+                formData.append('footerCredits', CONFIG.FOOTER_CREDITS);
+                formData.append('templateUrl', `${baseUrl}email_template.html`);
+                formData.append('resetBaseUrl', `${baseUrl}reset.html`);
+
+                const response = await fetch(API_URL, { method: 'POST', body: formData });
+                const result = await response.json();
+                alert(result.message);
             } catch (error) {
                 alert('Error de conexión');
             } finally {
@@ -551,13 +584,23 @@
             errorDiv.style.display = 'flex';
         }
 
-        // Verificar si ya hay sesión activa
+        // Verificar si ya hay sesión pero cuidando la inactividad
         (function () {
             const user = localStorage.getItem('user');
+            const lastActivity = parseInt(localStorage.getItem(CONFIG.ACTIVITY_KEY) || '0');
+            const now = Date.now();
+            const timeout = CONFIG.SESSION_TIMEOUT_MS;
 
             if (user) {
-                // Ya hay sesión, redirigir a la app
-                window.location.href = './index.html';
+                if (lastActivity > 0 && (now - lastActivity > timeout)) {
+                    console.log("Sesión previa expirada por inactividad. Limpiando...");
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('apiKey');
+                    localStorage.removeItem(CONFIG.ACTIVITY_KEY);
+                    sessionStorage.removeItem('token');
+                } else {
+                    window.location.href = './index.html';
+                }
             }
         })();
     </script>
