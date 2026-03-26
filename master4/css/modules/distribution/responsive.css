@@ -1,0 +1,50 @@
+/* ============================================
+   DISTRIBUTION MODULE - RESPONSIVE
+   Media queries para adaptación móvil
+   ============================================ */
+
+/* Tablet y móvil */
+@media (max-width: 768px) {
+    .distribution-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .search-section {
+        flex-direction: column;
+    }
+
+    .search-input {
+        width: 100%;
+    }
+
+    .search-btn {
+        width: 100%;
+    }
+
+    .distribution-module table {
+        font-size: 11px;
+        min-width: 600px;
+    }
+
+    .distribution-module th,
+    .distribution-module td {
+        padding: 8px 10px;
+    }
+
+    .filter-modal-content {
+        max-width: 90%;
+        margin: 20px;
+    }
+
+    .filter-options {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-modal-footer {
+        flex-direction: column;
+    }
+
+    .filter-modal-footer button {
+        width: 100%;
+    }
+}
