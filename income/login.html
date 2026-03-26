@@ -771,13 +771,15 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
             return;
         }
 
-        // ── Validar sesión activa y device — todo desde los datos ya leídos (sin GAS) ──
+        // ── Validar sesión activa y device — ADMIN tiene acceso multiplataforma ──
+        const userRole         = String(match[4] || 'USER').trim().toUpperCase();
+        const isAdmin          = userRole === 'ADMIN';
         const registeredDevice = String(match[7] || '').trim();
         const isActivo         = String(match[8] || '').trim() === '1';
         const myDevice         = getDeviceId();
 
-        // Si hay sesión activa en otro dispositivo → rechazar
-        if (isActivo && registeredDevice && registeredDevice !== myDevice) {
+        // Si NO es ADMIN y hay sesión activa en otro dispositivo → rechazar
+        if (!isAdmin && isActivo && registeredDevice && registeredDevice !== myDevice) {
             showError('Esta cuenta tiene una sesión activa en otro dispositivo.');
             return;
         }

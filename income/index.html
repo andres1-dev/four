@@ -492,23 +492,27 @@
                     return;
                 }
                 // Validar device contra GAS en background (no bloquea el render)
-                var GAS_URL   = 'https://script.google.com/macros/s/AKfycbzFkQsoAMCfnkoBHSTMMx4evKkAkwkBVlCu3eHIMVcam41GR2Q1_9YffhJSf8SeOC3_/exec';
-                var deviceId  = localStorage.getItem('tdm_device_id');
-                if (s.id && deviceId && GAS_URL) {
-                    var params = 'action=check_device&id_usuario=' + encodeURIComponent(String(s.usuario)) + '&id_device=' + encodeURIComponent(deviceId);
-                    fetch(GAS_URL, {
-                        method:  'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body:    params
-                    })
-                    .then(function(r) { return r.json(); })
-                    .then(function(data) {
-                        if (data && data.ok && data.allowed === false) {
-                            sessionStorage.removeItem('tdm_session');
-                            window.location.replace('login.html?reason=device');
-                        }
-                    })
-                    .catch(function() {}); // si falla el GAS, no expulsar
+                // ADMIN tiene acceso multiplataforma, no valida dispositivo
+                var isAdmin = s.rol && String(s.rol).toUpperCase() === 'ADMIN';
+                if (!isAdmin) {
+                    var GAS_URL   = 'https://script.google.com/macros/s/AKfycbzFkQsoAMCfnkoBHSTMMx4evKkAkwkBVlCu3eHIMVcam41GR2Q1_9YffhJSf8SeOC3_/exec';
+                    var deviceId  = localStorage.getItem('tdm_device_id');
+                    if (s.id && deviceId && GAS_URL) {
+                        var params = 'action=check_device&id_usuario=' + encodeURIComponent(String(s.usuario)) + '&id_device=' + encodeURIComponent(deviceId);
+                        fetch(GAS_URL, {
+                            method:  'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body:    params
+                        })
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            if (data && data.ok && data.allowed === false) {
+                                sessionStorage.removeItem('tdm_session');
+                                window.location.replace('login.html?reason=device');
+                            }
+                        })
+                        .catch(function() {}); // si falla el GAS, no expulsar
+                    }
                 }
             } catch(_) {
                 window.location.replace('login.html');
