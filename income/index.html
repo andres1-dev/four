@@ -538,7 +538,7 @@
     <!-- Loading Overlay — arranca activo para evitar flash del dashboard -->
     <div id="loadingOverlay" class="loading-overlay active">
         <div class="loading-core">
-            <img id="loadingLogo" class="loading-tdm-logo" src="logo/LOGO-ORIGINAL.svg" alt="TDM" width="110" height="110">
+            <img id="loadingLogo" class="loading-tdm-logo" src="logo/LOGO-ORIGINAL.svg" alt="TDM" width="80" height="80">
         </div>
         <div class="loading-brand">GRUPO <span class="tdm-bold">TDM</span></div>
         <div class="loading-progress">
@@ -550,7 +550,7 @@
     <div class="dashboard-header">
         <div class="header-brand">
             <div class="header-tdm-logo">
-                <img id="headerLogo" class="header-logo-inner" src="logo/LOGO-ORIGINAL.svg" alt="TDM" width="48" height="48">
+                <img id="headerLogo" class="header-logo-inner" src="logo/LOGO-ORIGINAL.svg" alt="TDM" width="42" height="42">
             </div>
             <h1 class="dashboard-title">
                 GRUPO <span style="font-weight:700;margin-left:-0.35em">TDM</span>
@@ -562,8 +562,8 @@
         <div class="date-selector-container">
             <div class="header-btn-group">
                 <div class="social-links">
-                    <button id="logoutBtn" class="theme-toggle-btn" title="Cerrar sesión" aria-label="Cerrar sesión" style="color:#f87171;">
-                        <i class="fas fa-sign-out-alt"></i>
+                    <button id="profileBtn" class="theme-toggle-btn" title="Perfil de usuario" aria-label="Perfil de usuario">
+                        <i class="fas fa-user-circle"></i>
                     </button>
                 </div>
                 <div class="btn-group-divider"></div>
@@ -1224,22 +1224,161 @@
     <script src="js/pwa/sw_init.js"></script>
     <script src="js/utils/particles.js"></script>
 
-    <!-- Logout -->
+    <!-- Profile Panel Script -->
     <script>
-        (function() {
-            var GAS_URL = 'https://script.google.com/macros/s/AKfycbzFkQsoAMCfnkoBHSTMMx4evKkAkwkBVlCu3eHIMVcam41GR2Q1_9YffhJSf8SeOC3_/exec';
-            var btn = document.getElementById('logoutBtn');
+        (function initProfilePanel() {
+            var btn = document.getElementById('profileBtn');
             if (!btn) return;
-            btn.addEventListener('click', function() {
-                if (!confirm('¿Cerrar sesión?')) return;
-                var s = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
-                sessionStorage.removeItem('tdm_session');
-                if (s && s.usuario) {
-                    // sendBeacon garantiza el envío aunque la página navegue — no bloquea
-                    var body = 'action=logout&id_usuario=' + encodeURIComponent(s.usuario);
-                    navigator.sendBeacon(GAS_URL, new Blob([body], { type: 'application/x-www-form-urlencoded' }));
+
+            var GAS_URL = 'https://script.google.com/macros/s/AKfycbzFkQsoAMCfnkoBHSTMMx4evKkAkwkBVlCu3eHIMVcam41GR2Q1_9YffhJSf8SeOC3_/exec';
+
+            // Configuración de roles con íconos y colores
+            var roleConfig = {
+                'ADMIN': { icon: 'fa-crown', color: '#f59e0b', label: 'Administrador' },
+                'USER': { icon: 'fa-user', color: '#6366f1', label: 'Usuario' },
+                'COORDINADOR': { icon: 'fa-user-tie', color: '#8b5cf6', label: 'Coordinador' },
+                'SUPERVISOR': { icon: 'fa-user-shield', color: '#10b981', label: 'Supervisor' },
+                'OPERADOR': { icon: 'fa-user-gear', color: '#3b82f6', label: 'Operador' },
+                'ANALISTA': { icon: 'fa-chart-line', color: '#06b6d4', label: 'Analista' },
+                'GERENTE': { icon: 'fa-briefcase', color: '#ec4899', label: 'Gerente' }
+            };
+
+            // Crear panel
+            var panel = document.createElement('div');
+            panel.id = 'profilePanel';
+            panel.className = 'profile-panel';
+            panel.setAttribute('role', 'menu');
+            panel.setAttribute('aria-hidden', 'true');
+            document.body.appendChild(panel);
+
+            // Cargar datos del usuario
+            function loadUserData() {
+                try {
+                    var session = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
+                    if (!session) return { nombre: '-', usuario: '-', rol: 'USER', correo: '-' };
+                    return {
+                        nombre: session.nombre || '-',
+                        usuario: session.usuario || '-',
+                        rol: (session.rol || 'USER').toUpperCase(),
+                        correo: session.correo || '-'
+                    };
+                } catch(e) {
+                    return { nombre: '-', usuario: '-', rol: 'USER', correo: '-' };
                 }
-                window.location.replace('login.html');
+            }
+
+            // Obtener configuración del rol
+            function getRoleConfig(rol) {
+                return roleConfig[rol] || roleConfig['USER'];
+            }
+
+            // Renderizar panel
+            function renderPanel() {
+                var data = loadUserData();
+                var config = getRoleConfig(data.rol);
+                
+                panel.innerHTML = `
+                    <div class="profile-header">
+                        <div class="profile-avatar" style="background: ${config.color}20; border-color: ${config.color}50;">
+                            <i class="fas ${config.icon}" style="color: ${config.color};"></i>
+                        </div>
+                        <div class="profile-header-info">
+                            <div class="profile-name">${data.nombre}</div>
+                            <div class="profile-role-badge" style="color: ${config.color};">
+                                <span style="background: ${config.color};"></span>
+                                ${config.label}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="profile-body">
+                        <div class="profile-info-item">
+                            <span class="profile-info-label">Usuario</span>
+                            <span class="profile-info-value">${data.usuario}</span>
+                        </div>
+                        <div class="profile-info-item">
+                            <span class="profile-info-label">Correo</span>
+                            <span class="profile-info-value">${data.correo}</span>
+                        </div>
+                    </div>
+                    <div class="profile-divider"></div>
+                    <button class="profile-logout" id="profileLogoutBtn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Cerrar Sesión</span>
+                    </button>
+                `;
+
+                // Agregar evento de logout
+                var logoutBtn = panel.querySelector('#profileLogoutBtn');
+                if (logoutBtn) {
+                    logoutBtn.addEventListener('click', function() {
+                        closePanel();
+                        if (!confirm('¿Cerrar sesión?')) return;
+                        var s = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
+                        sessionStorage.removeItem('tdm_session');
+                        if (s && s.usuario) {
+                            var body = 'action=logout&id_usuario=' + encodeURIComponent(s.usuario);
+                            navigator.sendBeacon(GAS_URL, new Blob([body], { type: 'application/x-www-form-urlencoded' }));
+                        }
+                        window.location.replace('login.html');
+                    });
+                }
+            }
+
+            // Posicionar panel
+            function positionPanel() {
+                var rect = btn.getBoundingClientRect();
+                var pw = panel.offsetWidth || 280;
+                var ph = panel.offsetHeight || 250;
+                var margin = 8;
+                var vw = window.innerWidth;
+                var vh = window.innerHeight;
+
+                // Alineado a la izquierda del botón
+                var left = rect.left;
+                var top = rect.bottom + margin;
+                if (left + pw > vw - margin) left = vw - pw - margin;
+                if (left < margin) left = margin;
+                if (top + ph > vh - margin) top = rect.top - ph - margin;
+
+                panel.style.left = left + 'px';
+                panel.style.top = top + 'px';
+            }
+
+            // Cerrar panel
+            function closePanel() {
+                panel.classList.remove('open');
+                panel.setAttribute('aria-hidden', 'true');
+            }
+
+            // Abrir/cerrar panel
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var opening = !panel.classList.contains('open');
+                if (opening) {
+                    renderPanel();
+                    panel.style.visibility = 'hidden';
+                    panel.classList.add('open');
+                    positionPanel();
+                    panel.style.visibility = '';
+                } else {
+                    closePanel();
+                }
+                panel.setAttribute('aria-hidden', String(!opening));
+            });
+
+            // Cerrar al hacer clic fuera
+            document.addEventListener('click', function(e) {
+                if (!panel.contains(e.target) && e.target !== btn) closePanel();
+            });
+
+            // Cerrar con Escape
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') closePanel();
+            });
+
+            // Reposicionar al cambiar tamaño de ventana
+            window.addEventListener('resize', function() {
+                if (panel.classList.contains('open')) positionPanel();
             });
         })();
     </script>
