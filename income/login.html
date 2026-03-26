@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Acceso — Grupo TDM</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="icon" href="logo/LOGO-ORIGINAL.svg" type="image/svg+xml">
+    <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Bebas+Neue&display=block">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --bg: #0f1117;
+            --card-bg: rgba(255,255,255,0.04);
+            --border: rgba(255,255,255,0.08);
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --error: #f87171;
+            --success: #34d399;
+            --input-bg: rgba(255,255,255,0.06);
+            --input-border: rgba(255,255,255,0.12);
+            --input-focus: rgba(99,102,241,0.4);
+        }
+        [data-theme="light"] {
+            --bg: #f1f5f9;
+            --card-bg: #ffffff;
+            --border: rgba(0,0,0,0.08);
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --input-bg: #f8fafc;
+            --input-border: #e2e8f0;
+            --input-focus: rgba(99,102,241,0.25);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Particles */
+        #particlesCanvas {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Theme toggle */
+        .theme-btn {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            z-index: 100;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.2s;
+            backdrop-filter: blur(10px);
+        }
+        .theme-btn:hover { color: var(--text); border-color: var(--primary); }
+
+        /* Card */
+        .login-card {
+            position: relative;
+            z-index: 10;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 48px 44px;
+            width: 100%;
+            max-width: 420px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 32px 80px rgba(0,0,0,0.4);
+            animation: slideUp 0.4s cubic-bezier(0.16,1,0.3,1);
+        }
+        [data-theme="light"] .login-card {
+            box-shadow: 0 32px 80px rgba(0,0,0,0.1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Logo */
+        .logo-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 36px;
+        }
+        .login-logo {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 16px;
+            animation: logoBreath 3s ease-in-out infinite;
+        }
+        @keyframes logoBreath {
+            0%, 100% { transform: scale(0.97); }
+            50%       { transform: scale(1.03); }
+        }
+
+        .logo-title {
+            font-family: 'Raleway', 'Plus Jakarta Sans', sans-serif;
+            font-size: 22px;
+            font-weight: 300;
+            letter-spacing: 0.15em;
+            color: var(--text);
+        }
+        .logo-title span { 
+            font-weight: 700;
+            margin-left: -0.35em;
+            color: var(--text);
+        }
+        .logo-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            letter-spacing: 0.04em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .info-icon-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            transition: all 0.2s;
+            opacity: 0.6;
+        }
+        .info-icon-btn:hover {
+            color: var(--primary);
+            opacity: 1;
+            transform: scale(1.15);
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        .input-wrap {
+            position: relative;
+        }
+        .input-wrap > i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 14px;
+            pointer-events: none;
+            transition: color 0.2s;
+            z-index: 1;
+        }
+        .form-input {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            border-radius: 10px;
+            padding: 13px 44px 13px 40px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .form-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--input-focus);
+        }
+        .input-wrap:focus-within > i { color: var(--primary); }
+
+        .toggle-pass {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 44px;
+            background: none;
+            border: none;
+            border-radius: 0 10px 10px 0;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+            padding: 0;
+        }
+        .toggle-pass:hover { color: var(--primary); }
+
+        /* Error */
+        .error-msg {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            background: rgba(248,113,113,0.1);
+            border: 1px solid rgba(248,113,113,0.25);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+            color: var(--error);
+            margin-bottom: 18px;
+            animation: shake 0.3s ease;
+        }
+        .error-msg.show { display: flex; }
+        @keyframes shake {
+            0%,100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+
+        /* Submit */
+        .btn-login {
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none;
+            border-radius: 10px;
+            padding: 14px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            letter-spacing: 0.02em;
+            margin-top: 8px;
+        }
+        .btn-login:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(99,102,241,0.4);
+        }
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-login .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            display: none;
+        }
+        .btn-login.loading .spinner { display: block; }
+        .btn-login.loading .btn-text { display: none; }
+
+        /* Footer */
+        .login-footer {
+            text-align: center;
+            margin-top: 28px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* Lockout */
+        .lockout-bar {
+            display: none;
+            background: rgba(248,113,113,0.08);
+            border: 1px solid rgba(248,113,113,0.2);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 12px;
+            color: var(--error);
+            text-align: center;
+            margin-bottom: 18px;
+        }
+        .lockout-bar.show { display: block; }
+
+        @media (max-width: 480px) {
+            .login-card { padding: 36px 24px; margin: 16px; }
+        }
+
+        /* Info Modal */
+        .info-modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            animation: fadeIn 0.2s ease;
+        }
+        .info-modal.show { display: flex; align-items: center; justify-content: center; }
+        
+        .info-modal-content {
+            background: var(--card-bg);
+            margin: 20px;
+            padding: 0;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 85vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.6);
+            animation: slideUp 0.3s ease;
+            backdrop-filter: blur(20px);
+        }
+        
+        .info-modal-header {
+            padding: 24px 28px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(99,102,241,0.05) 0%, transparent 100%);
+        }
+        
+        .info-modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .info-modal-title i {
+            color: var(--primary);
+            font-size: 20px;
+        }
+        
+        .info-modal-close {
+            color: var(--text-muted);
+            font-size: 28px;
+            font-weight: 300;
+            cursor: pointer;
+            transition: all 0.2s;
+            line-height: 1;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+        }
+        .info-modal-close:hover {
+            color: var(--text);
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .info-modal-body {
+            padding: 28px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .info-modal-body p {
+            font-size: 13px;
+            line-height: 1.8;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            text-align: justify;
+        }
+        
+        .info-modal-body p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .info-modal-body b,
+        .info-modal-body strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+        
+        .info-highlight {
+            background: rgba(99,102,241,0.08);
+            border-left: 3px solid var(--primary);
+            padding: 16px 18px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .info-highlight p {
+            margin-bottom: 0;
+            font-size: 12px;
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        [data-theme="light"] .info-modal-content {
+            background: #ffffff;
+            border-color: rgba(0,0,0,0.1);
+            box-shadow: 0 25px 80px rgba(0,0,0,0.15);
+        }
+        [data-theme="light"] .info-modal-header {
+            border-bottom-color: rgba(0,0,0,0.08);
+            background: linear-gradient(135deg, rgba(79,70,229,0.04) 0%, transparent 100%);
+        }
+        [data-theme="light"] .info-modal-close:hover {
+            background: rgba(0,0,0,0.05);
+        }
+        [data-theme="light"] .info-highlight {
+            background: rgba(79,70,229,0.06);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 480px) {
+            .info-modal-content { margin: 10px; max-height: 90vh; }
+            .info-modal-header { padding: 18px 20px; }
+            .info-modal-body { padding: 20px; }
+            .info-modal-title { font-size: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="particlesCanvas"></canvas>
+
+<!-- Info Modal -->
+<div id="infoModal" class="info-modal">
+    <div class="info-modal-content">
+        <div class="info-modal-header">
+            <h2 class="info-modal-title">
+                <i class="fas fa-shield-halved"></i>
+                Acceso Restringido
+            </h2>
+            <span class="info-modal-close" id="closeModal">&times;</span>
+        </div>
+        <div class="info-modal-body">
+            <p>Desde el <b>20 de noviembre de 2025</b>, no se ha registrado ningún pago correspondiente a la cuota mensual de <b>$55.00 USD</b> acordada. A pesar de ello, la infraestructura permanece íntegra bajo la custodia directa del desarrollador, quien ha sostenido la operación con sus propios recursos como un acto de responsabilidad profesional y compromiso con la continuidad del servicio.</p>
+            
+            <p>La plataforma <b>no ha sido suspendida</b>. Ha transitado a un estado de <b>control interno</b>: los activos permanecen activos y protegidos, pero han dejado de estar disponibles para el acceso público del grupo empresarial. Esta decisión preserva la integridad del sistema y garantiza que ningún dato quede expuesto en ausencia de un respaldo institucional formal.</p>
+            
+            <p>Es importante reconocer que el valor de este servicio trasciende cualquier lista de costos externos. Reside en las <b>horas de diagnóstico, en las decisiones de arquitectura, en las estrategias de optimización</b> que permiten operar con herramientas de nivel empresarial sin incurrir en licencias comerciales. La gestión tecnológica profesional exige criterio, experiencia y aprendizaje continuo; reducirla a un proceso de instrucciones simples sería ignorar la profundidad técnica que sostiene cada funcionalidad activa.</p>
+            
+            <div class="info-highlight">
+                <p><i class="fas fa-info-circle"></i> La cuota vigente cubre únicamente el mantenimiento preventivo del ecosistema actual. El desarrollo de nuevas aplicaciones, módulos o integraciones constituye un servicio de ingeniería distinto, con su propia valoración y alcance contractual.</p>
+            </div>
+            
+            <p>Formalizar esta distinción no es una limitación, sino la base de una <b>relación profesional sostenible y justa para ambas partes.</b></p>
+        </div>
+    </div>
+</div>
+
+<button class="theme-btn" id="themeBtn" title="Cambiar tema" aria-label="Cambiar tema">
+    <i class="fas fa-moon" id="themeIcon"></i>
+</button>
+
+<div class="login-card">
+    <div class="logo-wrap">
+        <img id="logoImg" class="login-logo" src="logo/LOGO-ORIGINAL.svg" alt="TDM" width="100" height="100">
+        <div class="logo-title">GRUPO <span>TDM</span></div>
+        <div class="logo-sub">
+            Acceso Restringido
+            <button id="infoBtn" class="info-icon-btn" title="¿Por qué acceso restringido?" aria-label="Información sobre acceso restringido">
+                <i class="fas fa-info-circle"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="lockout-bar" id="lockoutBar">
+        <i class="fas fa-lock"></i> Cuenta bloqueada temporalmente. Intenta en <span id="lockoutTimer">--</span>s
+    </div>
+
+    <div class="error-msg" id="errorMsg">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="errorText">Usuario o contraseña incorrectos.</span>
+    </div>
+
+    <form id="loginForm" autocomplete="off" novalidate>
+        <div class="form-group">
+            <label class="form-label" for="usuario">Usuario</label>
+            <div class="input-wrap">
+                <i class="fas fa-user"></i>
+                <input
+                    type="text"
+                    id="usuario"
+                    class="form-input"
+                    placeholder="Ingresa tu usuario"
+                    autocomplete="username"
+                    spellcheck="false"
+                    required
+                >
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="contrasena">Contraseña</label>
+            <div class="input-wrap">
+                <i class="fas fa-lock"></i>
+                <input
+                    type="password"
+                    id="contrasena"
+                    class="form-input"
+                    placeholder="Ingresa tu contraseña"
+                    autocomplete="current-password"
+                    required
+                >
+                <button type="button" class="toggle-pass" id="togglePass" aria-label="Mostrar contraseña">
+                    <i class="fas fa-eye" id="eyeIcon"></i>
+                </button>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-login" id="loginBtn">
+            <div class="spinner"></div>
+            <span class="btn-text"><i class="fas fa-sign-in-alt"></i> Ingresar</span>
+        </button>
+    </form>
+
+    <div class="login-footer">
+        &copy; 2026 Andrés Mendoza
+    </div>
+</div>
+
+<script>
+// ─── Config ───────────────────────────────────────────────────────────────────
+const API_KEY        = 'AIzaSyCrTSddJcCaJCqQ_Cr_PC2zt-eVZAihC38';
+const SPREADSHEET_ID = '133NiyjNApZGkEFs4jUvpJ9So-cSEzRVeW2FblwOCrjI';
+const LOGIN_RANGE    = 'LOGIN!A2:I';  // A=USUARIO B=NOMBRE C=CORREO D=TELEFONO E=ROL F=CONTRASEÑA G=TIMESTAMP H=ID_DEVICE I=ACTIVO
+const GAS_URL        = 'https://script.google.com/macros/s/AKfycbzFkQsoAMCfnkoBHSTMMx4evKkAkwkBVlCu3eHIMVcam41GR2Q1_9YffhJSf8SeOC3_/exec';
+const SESSION_KEY    = 'tdm_session';
+const MAX_ATTEMPTS   = 5;
+const LOCKOUT_MS     = 5 * 60 * 1000;        // 5 minutos
+
+// ─── Redirect si ya hay sesión válida ─────────────────────────────────────────
+(function checkSession() {
+    try {
+        const s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
+        if (s && s.usuario && s.ts && (Date.now() - s.ts) < 8 * 60 * 60 * 1000) {
+            window.location.replace('index.html');
+        }
+    } catch(_) {}
+})();
+
+// ─── Theme ────────────────────────────────────────────────────────────────────
+const html      = document.documentElement;
+const themeBtn  = document.getElementById('themeBtn');
+const themeIcon = document.getElementById('themeIcon');
+const logoImg   = document.getElementById('logoImg');
+
+function applyTheme(t) {
+    html.setAttribute('data-theme', t);
+    themeIcon.className = t === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
+    logoImg.src = 'logo/LOGO-ORIGINAL.svg';
+    localStorage.setItem('theme', t);
+}
+applyTheme(localStorage.getItem('theme') || 'dark');
+themeBtn.addEventListener('click', () => {
+    applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+});
+
+// ─── Toggle password ──────────────────────────────────────────────────────────
+document.getElementById('togglePass').addEventListener('click', function() {
+    const inp = document.getElementById('contrasena');
+    const ico = document.getElementById('eyeIcon');
+    if (inp.type === 'password') {
+        inp.type = 'text';
+        ico.className = 'fas fa-eye-slash';
+    } else {
+        inp.type = 'password';
+        ico.className = 'fas fa-eye';
+    }
+});
+
+// ─── Lockout helpers ──────────────────────────────────────────────────────────
+function getAttempts() {
+    try { return JSON.parse(localStorage.getItem('tdm_attempts') || '{"count":0,"ts":0}'); }
+    catch(_) { return { count: 0, ts: 0 }; }
+}
+function setAttempts(obj) { localStorage.setItem('tdm_attempts', JSON.stringify(obj)); }
+function clearAttempts()  { localStorage.removeItem('tdm_attempts'); }
+
+let lockoutInterval = null;
+
+function checkLockout() {
+    const a = getAttempts();
+    if (a.count >= MAX_ATTEMPTS) {
+        const elapsed = Date.now() - a.ts;
+        if (elapsed < LOCKOUT_MS) {
+            startLockoutUI(Math.ceil((LOCKOUT_MS - elapsed) / 1000));
+            return true;
+        } else {
+            clearAttempts();
+        }
+    }
+    return false;
+}
+
+function startLockoutUI(seconds) {
+    const bar   = document.getElementById('lockoutBar');
+    const timer = document.getElementById('lockoutTimer');
+    const btn   = document.getElementById('loginBtn');
+    bar.classList.add('show');
+    btn.disabled = true;
+    let remaining = seconds;
+    timer.textContent = remaining;
+    clearInterval(lockoutInterval);
+    lockoutInterval = setInterval(() => {
+        remaining--;
+        timer.textContent = remaining;
+        if (remaining <= 0) {
+            clearInterval(lockoutInterval);
+            bar.classList.remove('show');
+            btn.disabled = false;
+            clearAttempts();
+        }
+    }, 1000);
+}
+
+function registerFailedAttempt() {
+    const a = getAttempts();
+    a.count = (a.count || 0) + 1;
+    a.ts    = Date.now();
+    setAttempts(a);
+    if (a.count >= MAX_ATTEMPTS) {
+        startLockoutUI(Math.ceil(LOCKOUT_MS / 1000));
+    }
+}
+
+// ─── Sheets GET ───────────────────────────────────────────────────────────────
+async function fetchLoginSheet() {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(LOGIN_RANGE)}?key=${API_KEY}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Sheets error ${res.status}`);
+    const json = await res.json();
+    return json.values || [];
+}
+
+// ─── Device ID — fingerprint ligero persistido en localStorage ───────────────
+function getDeviceId() {
+    const KEY = 'tdm_device_id';
+    let id = localStorage.getItem(KEY);
+    if (!id) {
+        // Genera un ID basado en características del dispositivo + random
+        const nav = navigator;
+        const raw = [
+            nav.userAgent,
+            nav.language,
+            screen.width + 'x' + screen.height,
+            screen.colorDepth,
+            new Date().getTimezoneOffset(),
+            Math.random().toString(36).slice(2)
+        ].join('|');
+        // Hash simple (djb2)
+        let hash = 5381;
+        for (let i = 0; i < raw.length; i++) {
+            hash = ((hash << 5) + hash) ^ raw.charCodeAt(i);
+        }
+        id = 'DEV-' + Math.abs(hash).toString(36).toUpperCase() + '-' + Date.now().toString(36).toUpperCase();
+        localStorage.setItem(KEY, id);
+    }
+    return id;
+}
+
+// ─── GAS fire & forget con sendBeacon — no bloquea, garantiza envío ─────────
+function fireAndForget(params) {
+    if (!GAS_URL) return;
+    var body = new URLSearchParams(params).toString();
+    navigator.sendBeacon(GAS_URL, new Blob([body], { type: 'application/x-www-form-urlencoded' }));
+}
+
+// ─── Normalizar texto para comparación ───────────────────────────────────────
+function norm(s) { return String(s || '').trim().toLowerCase(); }
+
+// ─── Login ────────────────────────────────────────────────────────────────────
+function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    document.getElementById('errorText').textContent = msg;
+    el.classList.remove('show');
+    void el.offsetWidth; // reflow para re-trigger animación
+    el.classList.add('show');
+}
+
+function hideError() {
+    document.getElementById('errorMsg').classList.remove('show');
+}
+
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    hideError();
+
+    if (checkLockout()) return;
+
+    const usuario   = document.getElementById('usuario').value.trim();
+    const password  = document.getElementById('contrasena').value;
+
+    if (!usuario || !password) {
+        showError('Completa todos los campos.');
+        return;
+    }
+
+    const btn = document.getElementById('loginBtn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    try {
+        const rows = await fetchLoginSheet();
+
+        // col[0]=USUARIO | col[1]=NOMBRE | col[2]=CORREO | col[3]=TELEFONO | col[4]=ROL | col[5]=CONTRASEÑA | col[6]=TIMESTAMP | col[7]=ID_DEVICE | col[8]=ACTIVO
+        const match = rows.find(row => {
+            const rowUsuario = norm(row[0]);
+            const rowPass    = String(row[5] || '').trim();
+            return rowUsuario === norm(usuario) && rowPass === password;
+        });
+
+        if (!match) {
+            registerFailedAttempt();
+            const a = getAttempts();
+            const left = MAX_ATTEMPTS - a.count;
+            if (left > 0) {
+                showError(`Usuario o contraseña incorrectos. Intentos restantes: ${left}`);
+            }
+            return;
+        }
+
+        // ── Validar sesión activa y device — todo desde los datos ya leídos (sin GAS) ──
+        const registeredDevice = String(match[7] || '').trim();
+        const isActivo         = String(match[8] || '').trim() === '1';
+        const myDevice         = getDeviceId();
+
+        // Si hay sesión activa en otro dispositivo → rechazar
+        if (isActivo && registeredDevice && registeredDevice !== myDevice) {
+            showError('Esta cuenta tiene una sesión activa en otro dispositivo.');
+            return;
+        }
+
+        // Login exitoso
+        clearAttempts();
+
+        const session = {
+            usuario:   match[0] || '',
+            nombre:    match[1] || '',
+            correo:    match[2] || '',
+            telefono:  match[3] || '',
+            rol:       match[4] || 'USER',
+            id_device: myDevice,
+            ts:        Date.now()
+        };
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+
+        // GAS fire & forget — no bloqueamos el redirect
+        fireAndForget({ action: 'register_login', id_usuario: match[0], timestamp: new Date().toISOString(), id_device: myDevice });
+
+        btn.innerHTML = '<i class="fas fa-check"></i> Acceso concedido';
+        btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+        setTimeout(() => window.location.replace('index.html'), 500);
+
+    } catch (err) {
+        console.error(err);
+        showError('Error de conexión. Verifica tu red e intenta de nuevo.');
+    } finally {
+        if (!document.getElementById('loginBtn').style.background.includes('10b981')) {
+            btn.classList.remove('loading');
+            btn.disabled = checkLockout();
+        }
+    }
+});
+
+// Verificar lockout al cargar
+checkLockout();
+
+// ─── Info Modal ───────────────────────────────────────────────────────────────
+(function initInfoModal() {
+    const modal = document.getElementById('infoModal');
+    const btn   = document.getElementById('infoBtn');
+    const close = document.getElementById('closeModal');
+
+    if (!modal || !btn || !close) return;
+
+    btn.addEventListener('click', e => {
+        e.preventDefault();
+        modal.classList.add('show');
+    });
+
+    close.addEventListener('click', () => {
+        modal.classList.remove('show');
+    });
+
+    modal.addEventListener('click', e => {
+        if (e.target === modal) modal.classList.remove('show');
+    });
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && modal.classList.contains('show')) {
+            modal.classList.remove('show');
+        }
+    });
+})();
+
+// ─── Particles ────────────────────────────────────────────────────────────────
+(function initParticles() {
+    const canvas = document.getElementById('particlesCanvas');
+    const ctx    = canvas.getContext('2d');
+    let W, H, particles = [];
+
+    function resize() {
+        W = canvas.width  = window.innerWidth;
+        H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    function rand(min, max) { return Math.random() * (max - min) + min; }
+
+    function createParticle() {
+        return {
+            x: rand(0, W), y: rand(0, H),
+            r: rand(1, 2.5),
+            vx: rand(-0.3, 0.3), vy: rand(-0.3, 0.3),
+            alpha: rand(0.1, 0.5)
+        };
+    }
+
+    for (let i = 0; i < 60; i++) particles.push(createParticle());
+
+    function draw() {
+        ctx.clearRect(0, 0, W, H);
+        const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+        particles.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fillStyle = isDark
+                ? `rgba(99,102,241,${p.alpha})`
+                : `rgba(79,70,229,${p.alpha * 0.6})`;
+            ctx.fill();
+            p.x += p.vx; p.y += p.vy;
+            if (p.x < 0 || p.x > W) p.vx *= -1;
+            if (p.y < 0 || p.y > H) p.vy *= -1;
+        });
+        requestAnimationFrame(draw);
+    }
+    draw();
+})();
+</script>
+</body>
+</html>

@@ -733,8 +733,8 @@ async function generarReporteCompleto(targetDate) {
         themeLabel.textContent = theme === 'light' ? 'Modo oscuro' : 'Modo claro';
         updateThemeColor();
         if (typeof particlesReinit === 'function') particlesReinit();
-        // Swap logo SVG files for crisp vector rendering at any size
-        const logoInnerSrc = theme === 'light' ? 'icons/logo-inner-light.svg' : 'icons/logo-inner-dark.svg';
+        // Use LOGO-ORIGINAL.svg for all themes
+        const logoInnerSrc = 'logo/LOGO-ORIGINAL.svg';
         const headerLogo  = document.getElementById('headerLogo');
         const loadingLogo = document.getElementById('loadingLogo');
         if (headerLogo)  headerLogo.src  = logoInnerSrc;

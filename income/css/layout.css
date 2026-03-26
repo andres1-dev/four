@@ -47,94 +47,25 @@
     display: block;
 }
 
-/* ── TDM SVG logo (theme-aware) ── */
+/* ── TDM SVG logo header ── */
 .header-tdm-logo {
     flex-shrink: 0;
-    position: relative;
-    width: 36px;
-    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-[data-theme="light"] .header-tdm-logo {
-    width: 52px;
-    height: 52px;
-}
-
-/* Círculo base permanente — dark mode */
-.header-ring-base {
-    position: absolute;
-    width: 48px; height: 48px;
-    border-radius: 50%;
-    border: 3.5px solid rgba(224,85,96,0.85);
-    box-shadow: none;
-    animation: ringExpandHeader 2.4s ease-out infinite;
-}
-
-@keyframes ringExpandHeader {
-    0%   { transform: scale(1);   opacity: 0.9; }
-    100% { transform: scale(2.0); opacity: 0; }
-}
-
-/* Ondas expansivas — dark mode */
-.header-pulse-ring {
-    position: absolute;
-    width: 48px; height: 48px;
-    border-radius: 50%;
-    background: transparent;
-    border: 2px solid rgba(224,85,96,0.5);
-    box-shadow: none;
-    animation: ringExpandHeader 2.4s ease-out infinite;
-}
-
-/* Light mode — sin aro */
-[data-theme="light"] .header-ring-base,
-[data-theme="light"] .header-pulse-ring {
-    display: none;
-}
-
-.hr1 { animation-delay: 0s; }
-.hr2 { animation-delay: 1s; }
-.hr3 { animation-delay: 2s; }
-
-@keyframes headerPulse {
-    0%   { transform: scale(1);   opacity: 0.6; filter: blur(0px); }
-    100% { transform: scale(2.2); opacity: 0;   filter: blur(5px); }
-}
+.header-ring-base,
+.header-ring-inner,
+.header-pulse-ring { display: none; }
 
 .header-logo-inner {
-    position: relative;
-    z-index: 2;
     display: block;
-    animation: none;
-    width: 36px;
-    height: 36px;
+    width: 48px;
+    height: 48px;
 }
 
-[data-theme="light"] .header-logo-inner {
-    width: 44px;
-    height: 44px;
-}
-
-/* Light mode — aro visible, sin ondas, sin movimiento */
-[data-theme="light"] .header-ring-base {
-    display: block;
-    position: absolute;
-    width: 48px; height: 48px;
-    border-radius: 50%;
-    box-shadow: none;
-    border: 3.5px solid rgba(210,23,35,0.85);
-    animation: none;
-}
-[data-theme="light"] .header-pulse-ring {
-    display: none;
-}
-[data-theme="light"] .header-logo-inner {
-    filter: none;
-    animation: none;
-}
+[data-theme="light"] .header-logo-inner { filter: none; animation: none; }
 
 .dashboard-title i {
     font-size: 14px;
@@ -416,36 +347,14 @@
         gap: var(--spacing-xs);
     }
 
-    /* Dark mobile: logo + aro un poco más grandes que PC */
-    .header-logo-inner {
-        width: 46px;
-        height: 46px;
-    }
+    /* logo responsive — el anillo usa inset:0 así que solo ajustamos el contenedor */
     .header-tdm-logo {
-        width: 62px;
-        height: 62px;
+        width: 52px;
+        height: 52px;
     }
-    .header-ring-base {
-        width: 62px;
-        height: 62px;
-    }
-    .header-pulse-ring {
-        width: 62px;
-        height: 62px;
-    }
-
-    /* Light mobile: misma disposición que PC pero más grande */
-    [data-theme="light"] .header-logo-inner {
-        width: 54px;
-        height: 54px;
-    }
-    [data-theme="light"] .header-tdm-logo {
-        width: 62px;
-        height: 62px;
-    }
-    [data-theme="light"] .header-ring-base {
-        width: 62px;
-        height: 62px;
+    .header-logo-inner {
+        width: 34px;
+        height: 34px;
     }
 }
 .update-btn,
@@ -787,17 +696,13 @@
     }
 
     .header-tdm-logo {
-        width: 64px;
-        height: 64px;
+        width: 56px;
+        height: 56px;
     }
 
-    .hr1 { width: 64px; height: 64px; }
-    .hr2 { width: 52px; height: 52px; }
-    .hr3 { width: 40px; height: 40px; }
-
     .header-logo-inner {
-        width: 44px;
-        height: 44px;
+        width: 38px;
+        height: 38px;
     }
 
     .dashboard-title {
