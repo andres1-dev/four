@@ -175,9 +175,22 @@ const BIOMETRY = {
                 <path d="M8.66,27.74a14.14,14.14,0,0,1-1.56-.09.76.76,0,1,1,.17-1.52c2.49.28,4.45-.16,5.84-1.32a6.37,6.37,0,0,0,2.12-4.53.75.75,0,0,1,.82-.71.78.78,0,0,1,.72.81A7.89,7.89,0,0,1,14.09,26,8.2,8.2,0,0,1,8.66,27.74Z"/>
             </svg>`,
 
-            // Key Original (Security Key Style)
-            key: `<svg width="50" height="50" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12.3212 10.6852L4 19L6 21M7 16L9 18M20 7.5C20 9.98528 17.9853 12 15.5 12C13.0147 12 11 9.98528 11 7.5C11 5.01472 13.0147 3 15.5 3C17.9853 3 20 5.01472 20 7.5Z"/>
+            // Key Original (Numeric Keypad Style)
+            key: `<svg width="50" height="50" viewBox="0 0 24 24" fill="currentColor">
+                <!-- Fila 1 -->
+                <circle cx="7" cy="6.5" r="1.2"/>
+                <circle cx="12" cy="6.5" r="1.2"/>
+                <circle cx="17" cy="6.5" r="1.2"/>
+                <!-- Fila 2 -->
+                <circle cx="7" cy="11" r="1.2"/>
+                <circle cx="12" cy="11" r="1.2"/>
+                <circle cx="17" cy="11" r="1.2"/>
+                <!-- Fila 3 -->
+                <circle cx="7" cy="15.5" r="1.2"/>
+                <circle cx="12" cy="15.5" r="1.2"/>
+                <circle cx="17" cy="15.5" r="1.2"/>
+                <!-- 0 (más separado) -->
+                <circle cx="12" cy="20.5" r="1.2"/>
             </svg>`,
 
             generic: `<svg width="50" height="50" viewBox="0 0 24 24" fill="currentColor">
