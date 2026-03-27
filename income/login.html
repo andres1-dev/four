@@ -1091,9 +1091,13 @@ async function triggerBiometricAuth() {
         biometricBtn.disabled = true;
         biometricBtn.classList.add('authenticating');
 
-        // Timeout de seguridad para Face ID (60 segundos)
+        // Detectar iOS para ajustar timeout
+        const isIOS = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+        const timeoutMs = isIOS ? 90000 : 60000;
+
+        // Timeout de seguridad
         const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('TIMEOUT')), 60000);
+            setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs);
         });
 
         // Disparar autenticación del dispositivo
@@ -1109,8 +1113,8 @@ async function triggerBiometricAuth() {
                     type: 'public-key', 
                     transports: ['internal'] 
                 }],
-                userVerification: 'required',
-                timeout: 60000  // 60 segundos de timeout
+                userVerification: 'preferred',  // Cambiar a "preferred" para iOS
+                timeout: timeoutMs
             }
         });
 

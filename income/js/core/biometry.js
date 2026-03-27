@@ -22,6 +22,9 @@ const BIOMETRY = {
                 throw new Error("Debe estar autenticado para registrar biometría.");
             }
 
+            // Detectar iOS
+            const isIOS = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+
             // Reto aleatorio
             const challenge = new Uint8Array(32);
             window.crypto.getRandomValues(challenge);
@@ -41,25 +44,23 @@ const BIOMETRY = {
                     displayName: session.nombre,
                 },
                 pubKeyCredParams: [
-                    { alg: -7, type: "public-key" },   // ES256
+                    { alg: -7, type: "public-key" },   // ES256 (preferido por iOS)
                     { alg: -257, type: "public-key" }  // RS256
                 ],
                 authenticatorSelection: {
                     authenticatorAttachment: "platform",      // Forzar autenticador del dispositivo
-                    userVerification: "required",             // Requerir biometría
+                    userVerification: isIOS ? "preferred" : "required",  // iOS usa "preferred"
                     requireResidentKey: false,                // NO crear passkey residente
                     residentKey: "discouraged"                // Desalentar passkeys en iCloud
                 },
-                timeout: 60000,  // 60 segundos de timeout
-                attestation: "none",
-                extensions: {
-                    credProps: true  // Obtener propiedades de la credencial
-                }
+                timeout: isIOS ? 90000 : 60000,  // iOS necesita más tiempo
+                attestation: "none"
             };
 
-            // Crear timeout manual adicional por si el navegador no respeta el timeout
+            // Crear timeout manual adicional
+            const timeoutMs = isIOS ? 95000 : 65000;
             const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('REGISTRATION_TIMEOUT')), 65000);
+                setTimeout(() => reject(new Error('REGISTRATION_TIMEOUT')), timeoutMs);
             });
 
             const credentialPromise = navigator.credentials.create({
