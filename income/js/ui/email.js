@@ -23,12 +23,7 @@ async function sendEmailReport(silent = false) {
     function removeSilentToast() {
         if (toastEl) {
             toastEl.classList.remove('visible');
-            setTimeout(() => { 
-                if (toastEl && toastEl.parentNode) {
-                    toastEl.remove(); 
-                }
-                toastEl = null; 
-            }, 200);
+            setTimeout(() => { toastEl?.remove(); toastEl = null; }, 200);
         }
     }
 
@@ -49,38 +44,21 @@ async function sendEmailReport(silent = false) {
         const result = await sendEmail(emailContent);
         
         if (result.success) {
-            if (silent) { 
-                showSilentToast('Correo enviado', 'done'); 
-                setTimeout(removeSilentToast, 2000); 
-            } else {
-                alert('Correo enviado exitosamente');
-            }
+            if (silent) { showSilentToast('Correo enviado', 'done'); setTimeout(removeSilentToast, 2000); }
+            else alert('Correo enviado exitosamente');
         } else {
-            if (silent) { 
-                showSilentToast('Error al enviar', 'error'); 
-                setTimeout(removeSilentToast, 2000); 
-            } else {
-                alert('Error al enviar el correo: ' + (result.message || 'Error desconocido'));
-            }
+            if (silent) { showSilentToast('Error al enviar', 'error'); setTimeout(removeSilentToast, 2000); }
+            else alert('Error al enviar el correo: ' + (result.message || 'Error desconocido'));
         }
 
     } catch (e) {
         console.error("Error al enviar email:", e);
-        if (silent) { 
-            showSilentToast('Error al enviar', 'error'); 
-            setTimeout(removeSilentToast, 2000); 
-        } else {
-            alert("Error al enviar el correo electrónico.");
-        }
+        if (silent) { showSilentToast('Error al enviar', 'error'); setTimeout(removeSilentToast, 2000); }
+        else alert("Error al enviar el correo electrónico.");
     } finally {
         if (emailBtn) emailBtn.style.pointerEvents = 'auto';
-        if (!silent && loadingOverlay) {
-            loadingOverlay.classList.remove('active');
-        }
-        // Asegurar que el toast se elimine en caso de que no se haya eliminado
-        if (silent) {
-            setTimeout(removeSilentToast, 3000);
-        }
+        if (!silent && loadingOverlay) loadingOverlay.classList.remove('active');
+        else removeSilentToast();
     }
 }
 

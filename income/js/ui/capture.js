@@ -27,12 +27,7 @@ async function captureAndDownloadCards(silent = false) {
     function removeToast() {
         if (toastEl) {
             toastEl.classList.remove('visible');
-            setTimeout(() => { 
-                if (toastEl && toastEl.parentNode) {
-                    toastEl.remove(); 
-                }
-                toastEl = null; 
-            }, 200);
+            setTimeout(() => { toastEl?.remove(); toastEl = null; }, 200);
         }
     }
 
@@ -248,25 +243,13 @@ async function captureAndDownloadCards(silent = false) {
         
         // 8. Generar mensaje y abrir WhatsApp
         if (!silent && loadingText) loadingText.textContent = "Abriendo WhatsApp...";
-        else updateToast('Abriendo WhatsApp...', 'done');
-        
+        else updateToast('Abriendo WhatsApp...');
         const whatsappText = generateWhatsAppMessage();
         openWhatsAppWithText(whatsappText);
-        
-        // 9. Esperar un momento y luego cerrar el toast
-        if (silent) {
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            removeToast();
-        }
 
     } catch (e) {
         console.error("Capture error:", e);
-        if (silent) {
-            updateToast('Error al generar', 'error');
-            setTimeout(removeToast, 2000);
-        } else {
-            alert("Error al generar el informe visual.");
-        }
+        alert("Error al generar el informe visual.");
     } finally {
         // Limpiar y restaurar
         if (tempContainer) {
@@ -315,8 +298,7 @@ async function captureAndDownloadCards(silent = false) {
                 setTimeout(() => loadingOverlay.classList.remove('active', 'closing'), 400);
             }
         } else {
-            // Asegurar que el toast se elimine en caso de que no se haya eliminado
-            setTimeout(removeToast, 3000);
+            removeToast();
         }
     }
 }
