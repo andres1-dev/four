@@ -93,6 +93,7 @@ function actualizarTendenciaUI(analisisDiario, actual, anterior) {
             globalTrend = 'neutral';
         }
         
+        console.log(`📊 Pendiente regresión: ${pendiente.toFixed(2)} → Tendencia: ${globalTrend}`);
         updateTrendIndicator();
     }
 }
@@ -494,7 +495,9 @@ function poblarDatosAnalisisAvanzado(analisisDiario, actual, metaTotalMes) {
             }
         };
 
+        console.log('✅ Datos de análisis avanzado poblados correctamente');
     } catch (error) {
+        console.error('❌ Error en poblarDatosAnalisisAvanzado:', error);
         // No lanzar el error para no romper el flujo
     }
 }

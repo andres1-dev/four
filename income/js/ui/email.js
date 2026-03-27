@@ -328,15 +328,19 @@ function generateEmailContent() {
         formData.append('subject', emailContent.subject);
         formData.append('body', emailContent.body);
         
+        console.log('Enviando email...');
+        
         const response = await fetch('https://script.google.com/macros/s/AKfycbz6sUS28Xza02Kjwg-Eez1TPn4BBj2XcZGF8gKxEHr4Fsxz4eqYoQYHCqx5NWaOP1OR8g/exec', {
             method: 'POST',
             body: formData
         });
         
         const result = await response.json();
+        console.log('Respuesta del servidor:', result);
         
         return result;
     } catch (error) {
+        console.error('Error al enviar email:', error);
         return { success: false, message: error.message };
     }
 }*/
@@ -382,15 +386,22 @@ async function sendEmail(emailContent) {
         formData.append('subject', emailContent.subject);
         formData.append('body', emailContent.body);
         
+        console.log('Enviando email...');
+        console.log('TO:', formData.get('to'));
+        console.log('CC:', formData.get('cc'));
+        console.log('BCC:', formData.get('bcc'));
+        
         const response = await fetch('https://script.google.com/macros/s/AKfycbz6sUS28Xza02Kjwg-Eez1TPn4BBj2XcZGF8gKxEHr4Fsxz4eqYoQYHCqx5NWaOP1OR8g/exec', {
             method: 'POST',
             body: formData
         });
         
         const result = await response.json();
+        console.log('Respuesta del servidor:', result);
         
         return result;
     } catch (error) {
+        console.error('Error al enviar email:', error);
         return { success: false, message: error.message };
     }
 }

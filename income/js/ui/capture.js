@@ -236,6 +236,8 @@ async function captureAndDownloadCards(silent = false) {
         const blob = await new Promise(resolve => {
             canvas.toBlob(resolve, 'image/png');
         });
+        
+        console.log('Imagen generada - Tamaño:', blob.size, 'bytes');
 
         // 6. Crear archivo y descargar
         const fileName = `Informe_Ingresos_${formatDate(new Date()).replace(/\//g, '-')}.png`;
@@ -460,6 +462,7 @@ function downloadImage(blob, fileName) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    console.log('✓ Imagen descargada:', fileName);
 }
 
 // Función para abrir WhatsApp solo con texto
@@ -471,6 +474,8 @@ function openWhatsAppWithText(message) {
     // Detectar si estamos en iOS
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
+
+    console.log('Abriendo WhatsApp - iOS:', isIOS, 'PWA:', isInStandaloneMode);
 
     if (isIOS && isInStandaloneMode) {
         // En iOS PWA, usar window.open es más confiable

@@ -1014,6 +1014,7 @@ async function initBiometricUI() {
             const isHealthy = await BIOMETRY.verifyCredentialHealth();
             
             if (!isHealthy) {
+                console.warn("Credencial biométrica corrupta, limpiando...");
                 BIOMETRY.remove();
                 // Mostrar campos manuales
                 document.getElementById('manualFields').classList.remove('hidden');
@@ -1050,6 +1051,7 @@ async function initBiometricUI() {
             }, 500);
         }
     } catch (err) {
+        console.error("Error inicializando UI biométrica:", err);
         // En caso de error, mostrar campos manuales
         document.getElementById('manualFields').classList.remove('hidden');
         document.getElementById('usuario').disabled = false;
@@ -1066,6 +1068,7 @@ const MAX_BIOMETRIC_ATTEMPTS = 3;
 async function triggerBiometricAuth() {
     // Prevenir múltiples llamadas simultáneas
     if (biometricAuthInProgress) {
+        console.log("Autenticación biométrica ya en progreso, ignorando...");
         return;
     }
 
@@ -1115,10 +1118,12 @@ async function triggerBiometricAuth() {
         const assertion = await Promise.race([authPromise, timeoutPromise]);
 
         if (assertion) {
+            console.log("✓ Validación biométrica exitosa");
             biometricAuthAttempts = 0; // Resetear contador de intentos
             await performBiometricLogin(usuario);
         }
     } catch (err) {
+        console.error("Biometric Login Error:", err);
         
         // Resetear estado del botón
         biometricBtn.classList.remove('authenticating');
@@ -1169,7 +1174,7 @@ document.getElementById('biometricBtn').addEventListener('click', function() {
     if (!biometricAuthInProgress) {
         triggerBiometricAuth();
     } else {
-        // Autenticación ya en progreso
+        console.log("Autenticación ya en progreso, por favor espere...");
     }
 });
 
@@ -1243,11 +1248,13 @@ async function performBiometricLogin(usuario) {
             btn.innerHTML = '<i class="fas fa-check"></i> Acceso concedido';
             setTimeout(() => window.location.replace('index.html'), 300);
         }).catch(err => {
+            console.warn('Error precargando datos:', err);
             btn.innerHTML = '<i class="fas fa-check"></i> Acceso concedido';
             setTimeout(() => window.location.replace('index.html'), 300);
         });
 
     } catch (err) {
+        console.error(err);
         showError('Error de conexión. Verifica tu red e intenta de nuevo.');
         // Resetear estado biométrico en caso de error
         biometricBtn.classList.remove('authenticating');
@@ -1347,6 +1354,7 @@ async function offerBiometricRegistration(userName) {
                     }, 1500);
                 }
             } catch (err) {
+                console.error('Error registrando biometría:', err);
                 activateBtn.innerHTML = 'Error';
                 activateBtn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
                 setTimeout(() => {
@@ -1474,11 +1482,13 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
             btn.innerHTML = '<i class="fas fa-check"></i> Acceso concedido';
             setTimeout(() => window.location.replace('index.html'), 300);
         }).catch(err => {
+            console.warn('Error precargando datos, continuando sin precarga:', err);
             btn.innerHTML = '<i class="fas fa-check"></i> Acceso concedido';
             setTimeout(() => window.location.replace('index.html'), 300);
         });
 
     } catch (err) {
+        console.error(err);
         showError('Error de conexión. Verifica tu red e intenta de nuevo.');
     } finally {
         if (!document.getElementById('loginBtn').style.background.includes('10b981')) {
@@ -1534,8 +1544,10 @@ async function preloadAppData() {
         };
         
         sessionStorage.setItem('tdm_preload_data', JSON.stringify(preloadData));
+        console.log('✓ Datos precargados exitosamente');
         
     } catch (err) {
+        console.warn('Error en precarga de datos:', err);
         throw err;
     }
 }
@@ -1552,6 +1564,7 @@ setInterval(() => {
     if (biometricAuthInProgress) {
         const biometricBtn = document.getElementById('biometricBtn');
         if (biometricBtn && biometricBtn.classList.contains('authenticating')) {
+            console.warn("Watchdog: Autenticación biométrica parece estar colgada, reseteando...");
             biometricAuthInProgress = false;
             biometricBtn.classList.remove('authenticating');
             biometricBtn.disabled = false;
