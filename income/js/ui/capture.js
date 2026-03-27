@@ -246,6 +246,16 @@ async function captureAndDownloadCards(silent = false) {
         else updateToast('Abriendo WhatsApp...');
         const whatsappText = generateWhatsAppMessage();
         openWhatsAppWithText(whatsappText);
+        
+        // Esperar un momento y cerrar el overlay/toast
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        if (!silent && loadingOverlay) {
+            loadingOverlay.classList.add('closing');
+            setTimeout(() => loadingOverlay.classList.remove('active', 'closing'), 400);
+        } else {
+            removeToast();
+        }
 
     } catch (e) {
         console.error("Capture error:", e);

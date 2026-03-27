@@ -362,8 +362,9 @@
         .btn-biometric svg {
             width: 56px;
             height: 56px;
-            color: #6b7280;
-            filter: drop-shadow(0 2px 8px rgba(0,0,0,0.15));
+            color: var(--text-muted);
+            opacity: 0.6;
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.1));
             animation: biometricPulse 2s ease-in-out infinite;
         }
         
@@ -614,7 +615,7 @@
 
         .biometric-offer-icon {
             margin: 0 auto 24px;
-            color: var(--primary);
+            color: var(--text-muted);
             position: relative;
             width: 80px;
             height: 80px;
@@ -629,7 +630,8 @@
         .biometric-offer-icon svg {
             width: 48px;
             height: 48px;
-            filter: drop-shadow(0 4px 12px rgba(220,38,38,0.4));
+            opacity: 0.7;
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.1));
         }
 
         .biometric-offer-content h3 {
