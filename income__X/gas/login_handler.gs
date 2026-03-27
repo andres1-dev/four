@@ -108,7 +108,7 @@ function _logout(body) {
 
 /**
  * check_device — verifica si el dispositivo coincide con el registrado
- * OWNER y ADMIN tienen acceso multiplataforma (siempre retorna allowed: true)
+ * ADMIN tiene acceso multiplataforma (siempre retorna allowed: true)
  */
 function _checkDevice(body) {
   var id_usuario = String(body.id_usuario || '').trim();
@@ -133,8 +133,8 @@ function _checkDevice(body) {
     var registeredDevice = String(values[0][3] || '').trim();
     var isActivo         = String(values[0][4] || '0').trim() === '1';
 
-    // OWNER y ADMIN tienen acceso multiplataforma
-    if (rol === 'OWNER' || rol === 'ADMIN') {
+    // ADMIN tiene acceso multiplataforma
+    if (rol === 'ADMIN') {
       return _json({ ok: true, allowed: true, multiplatform: true });
     }
 

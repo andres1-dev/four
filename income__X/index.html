@@ -541,14 +541,12 @@
 
     <!-- Loading Overlay — arranca activo para evitar flash del dashboard -->
     <div id="loadingOverlay" class="loading-overlay active">
-        <div class="welcome-container">
-            <div class="welcome-logo-wrapper">
-                <img id="loadingLogo" class="welcome-logo" src="logo/LOGO-ORIGINAL.svg" alt="TDM">
-            </div>
-            <div class="welcome-text" style="display: none;">
-                <div class="welcome-greeting">Bienvenido</div>
-                <div class="welcome-username" id="welcomeUsername"></div>
-            </div>
+        <div class="loading-core">
+            <img id="loadingLogo" class="loading-tdm-logo" src="logo/LOGO-ORIGINAL.svg" alt="TDM" width="80" height="80">
+        </div>
+        <div class="loading-brand">GRUPO <span class="tdm-bold">TDM</span></div>
+        <div class="loading-progress">
+            <div id="loadingProgress" class="loading-progress-bar"></div>
         </div>
     </div>
 
@@ -1215,7 +1213,6 @@
 
     <!-- Local Scripts (Load in order of dependency) -->
     <script src="js/config/constants.js"></script>
-    <script src="js/core/biometry.js"></script>
     <script src="js/utils/date_utils.js"></script>
     <script src="js/utils/formatters.js"></script>
     <script src="js/api/google_sheets.js"></script>
@@ -1241,7 +1238,6 @@
 
             // Configuración de roles con íconos y colores
             var roleConfig = {
-                'OWNER': { icon: 'fa-code', color: '#dc2626', label: 'Propietario' },
                 'ADMIN': { icon: 'fa-crown', color: '#f59e0b', label: 'Administrador' },
                 'USER': { icon: 'fa-user', color: '#6366f1', label: 'Usuario' },
                 'COORDINADOR': { icon: 'fa-user-tie', color: '#8b5cf6', label: 'Coordinador' },
@@ -1285,20 +1281,6 @@
                 var data = loadUserData();
                 var config = getRoleConfig(data.rol);
                 
-                // Verificar si hay biometría registrada
-                var hasBiometry = false;
-                if (typeof BIOMETRY !== 'undefined' && BIOMETRY.isRegistered()) {
-                    hasBiometry = true;
-                }
-                
-                var biometrySection = hasBiometry ? `
-                    <div class="profile-divider"></div>
-                    <button class="profile-action-btn" id="profileBiometricBtn">
-                        <i class="fas fa-fingerprint"></i>
-                        <span>Desactivar biometría</span>
-                    </button>
-                ` : '';
-                
                 panel.innerHTML = `
                     <div class="profile-header">
                         <div class="profile-avatar" style="background: ${config.color}20; border-color: ${config.color}50;">
@@ -1322,30 +1304,12 @@
                             <span class="profile-info-value">${data.correo}</span>
                         </div>
                     </div>
-                    ${biometrySection}
                     <div class="profile-divider"></div>
                     <button class="profile-logout" id="profileLogoutBtn">
                         <i class="fas fa-sign-out-alt"></i>
                         <span>Cerrar Sesión</span>
                     </button>
                 `;
-
-                // Agregar evento de biometría
-                var biometricBtn = panel.querySelector('#profileBiometricBtn');
-                if (biometricBtn) {
-                    biometricBtn.addEventListener('click', function() {
-                        closePanel();
-                        if (typeof BIOMETRY === 'undefined') {
-                            alert('Biometría no disponible');
-                            return;
-                        }
-                        
-                        if (confirm('¿Desea desactivar la autenticación biométrica? Deberá activarla nuevamente desde el login.')) {
-                            BIOMETRY.remove();
-                            alert('Biometría desactivada correctamente');
-                        }
-                    });
-                }
 
                 // Agregar evento de logout
                 var logoutBtn = panel.querySelector('#profileLogoutBtn');
@@ -1354,12 +1318,7 @@
                         closePanel();
                         if (!confirm('¿Cerrar sesión?')) return;
                         var s = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
-                        
-                        // Limpiar sessionStorage y localStorage
                         sessionStorage.removeItem('tdm_session');
-                        sessionStorage.removeItem('tdm_preload_data');
-                        localStorage.removeItem('tdm_user_name');
-                        
                         if (s && s.usuario) {
                             var body = 'action=logout&id_usuario=' + encodeURIComponent(s.usuario);
                             navigator.sendBeacon(GAS_URL, new Blob([body], { type: 'application/x-www-form-urlencoded' }));
@@ -1400,10 +1359,6 @@
                 e.stopPropagation();
                 var opening = !panel.classList.contains('open');
                 if (opening) {
-                    // Cerrar otros paneles antes de abrir este
-                    window.closeAllPanels('profile');
-                    window.activePanels.profile = panel;
-                    
                     renderPanel();
                     panel.style.visibility = 'hidden';
                     panel.classList.add('open');
@@ -1429,51 +1384,6 @@
             window.addEventListener('resize', function() {
                 if (panel.classList.contains('open')) positionPanel();
             });
-        })();
-
-        // ─── Control de visibilidad basado en rol OWNER ───────────────────────────
-        // Ya no es necesario, la lógica está en el panel de configuración
-        
-        function openUsersManagementModal() {
-            alert('Módulo de Gestión de Usuarios\n\nEsta funcionalidad estará disponible próximamente.\n\nPermitirá:\n- Ver lista de usuarios\n- Crear nuevos usuarios\n- Editar roles y permisos\n- Activar/desactivar usuarios\n- Gestionar dispositivos autorizados');
-        }
-
-        // ─── Cargar nombre de usuario en pantalla de bienvenida ──────────────────
-        (function loadWelcomeUsername() {
-            try {
-                // Verificar si es la primera carga después del login
-                var showWelcome = sessionStorage.getItem('tdm_show_welcome') === 'true';
-                
-                if (showWelcome) {
-                    // Intentar obtener de localStorage primero (persistente)
-                    var userName = localStorage.getItem('tdm_user_name');
-                    
-                    // Si no existe en localStorage, obtener de sessionStorage
-                    if (!userName) {
-                        var session = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
-                        if (session && session.nombre) {
-                            userName = session.nombre;
-                            // Guardar en localStorage para persistencia
-                            localStorage.setItem('tdm_user_name', userName);
-                        }
-                    }
-                    
-                    // Solo mostrar si hay nombre válido
-                    if (userName && userName.trim()) {
-                        var welcomeText = document.querySelector('.welcome-text');
-                        var welcomeUsername = document.getElementById('welcomeUsername');
-                        
-                        if (welcomeText) welcomeText.style.display = 'flex';
-                        if (welcomeUsername) welcomeUsername.textContent = userName;
-                    }
-                    
-                    // Marcar que ya se mostró la bienvenida
-                    sessionStorage.removeItem('tdm_show_welcome');
-                }
-                // Si no es la primera carga, solo mostrar el logo (sin texto ni loader)
-            } catch(e) {
-                console.error('Error cargando nombre de usuario:', e);
-            }
         })();
     </script>
 

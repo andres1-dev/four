@@ -1,683 +1,501 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>404 — Auditoría de Infraestructura</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Página No Encontrada | GitHub</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100;300;400;600;900&family=JetBrains+Mono:wght@300;400;700&display=swap');
-
-        :root {
-            --bg: #000;
-            --surface: #0d0d0d;
-            --surface-2: #111;
-            --border: rgba(255, 255, 255, 0.07);
-            --border-bright: rgba(255, 255, 255, 0.14);
-            --text: #f5f5f7;
-            --muted: #555;
-            --accent: #00d2ff;
-            --red: #ff4545;
-        }
-
-        *,
-        *::before,
-        *::after {
+        * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        }
+
+        :root {
+            --github-black: #0d1117;
+            --github-gray: #161b22;
+            --github-border: #30363d;
+            --github-text: #f0f6fc;
+            --github-text-secondary: #8b949e;
+            --github-blue: #58a6ff;
+            --github-green: #3fb950;
+            --github-purple: #bc8cff;
+            --game-orange: #f78166;
         }
 
         body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: 'Outfit', sans-serif;
-            font-weight: 300;
+            background: var(--github-black);
+            color: var(--github-text);
             min-height: 100vh;
-            overflow-x: hidden;
-            padding: 28px 22px 60px;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-
-        /* ── Global Bold ── */
-        b,
-        strong {
-            font-weight: 600;
-            color: #ffffff;
-            letter-spacing: -0.01em;
-        }
-
-        /* ── Grid bg ── */
-        body::before {
-            content: '';
-            position: fixed;
-            inset: 0;
-            background-image:
-                linear-gradient(var(--border) 1px, transparent 1px),
-                linear-gradient(90deg, var(--border) 1px, transparent 1px);
-            background-size: 48px 48px;
-            mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 100%);
-            z-index: 0;
-            pointer-events: none;
-        }
-
-        .wrap {
-            position: relative;
-            z-index: 1;
-            max-width: 560px;
-            margin: 0 auto;
-        }
-
-        /* ═══════════════ HEADER ═══════════════ */
-        header {
-            text-align: center;
-            padding: 50px 0 60px;
-            position: relative;
-        }
-
-        /* Radial glow behind the 404 */
-        header::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 360px;
-            height: 200px;
-            background: radial-gradient(ellipse, rgba(0, 210, 255, 0.08) 0%, transparent 70%);
-            pointer-events: none;
-        }
-
-        .gh-mark {
-            font-size: 2.8rem;
-            color: rgba(255, 255, 255, 0.85);
-            margin-bottom: 18px;
-            display: inline-block;
-            filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.12));
-        }
-
-        .code-404 {
-            font-family: 'Outfit', sans-serif;
-            font-size: clamp(5rem, 22vw, 9.5rem);
-            font-weight: 900;
-            letter-spacing: -0.06em;
-            line-height: 1;
-            color: #fff;
-            /* subtle text-shadow glow */
-            text-shadow:
-                0 0 60px rgba(0, 210, 255, 0.15),
-                0 0 120px rgba(0, 210, 255, 0.06);
-        }
-
-        /* ── Divider ── */
-        .divider {
             display: flex;
             align-items: center;
-            gap: 14px;
-            margin: 0 0 40px;
-        }
-
-        .divider span {
-            flex: 1;
-            height: 1px;
-            background: var(--border-bright);
-        }
-
-        .divider em {
-            font-family: 'JetBrains Mono', monospace;
-            font-style: normal;
-            font-size: 0.6rem;
-            color: var(--accent);
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            white-space: nowrap;
-        }
-
-        /* ═══════════════ PAYMENT BANNER ═══════════════ */
-        .payment-banner {
-            border: 1px solid var(--border-bright);
-            border-radius: 14px;
-            padding: 24px 22px;
-            margin-bottom: 28px;
-            background: linear-gradient(135deg, rgba(0, 210, 255, 0.04) 0%, transparent 60%);
-            position: relative;
+            justify-content: center;
             overflow: hidden;
+            position: relative;
         }
 
-        .payment-banner::before {
-            content: '';
+        .github-grid {
             position: absolute;
             top: 0;
             left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--accent), transparent);
-            opacity: 0.5;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(var(--github-border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--github-border) 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.03;
+            z-index: -1;
         }
 
-        .pb-tag {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.58rem;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 2.5px;
-            display: block;
-            margin-bottom: 8px;
+        .container {
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            z-index: 10;
+            padding: 2rem;
         }
 
-        .pb-date {
-            font-size: 1.05rem;
-            font-weight: 700;
-            color: var(--accent);
+        .github-logo {
+            margin-bottom: 2rem;
         }
 
-        .pb-desc {
-            font-size: 0.85rem;
-            color: #909090;
-            margin-top: 14px;
-            line-height: 1.75;
-            font-weight: 300;
+        .github-logo svg {
+            width: 70px;
+            height: 70px;
+            fill: var(--github-text);
+            opacity: 0.9;
         }
 
-        /* ═══════════════ STATS ═══════════════ */
-        .stats-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 28px;
-        }
-
-        .stat {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 22px 20px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .stat::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--accent), transparent);
-            opacity: 0.25;
-        }
-
-        .stat-lbl {
-            font-size: 0.55rem;
-            font-weight: 700;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            display: block;
-            margin-bottom: 8px;
-        }
-
-        .stat-num {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1.9rem;
-            font-weight: 700;
-            color: #fff;
-            line-height: 1;
-            display: block;
-        }
-
-        .stat-sub {
-            font-size: 0.62rem;
-            color: var(--accent);
+        .error-code {
+            font-size: 4.5rem;
             font-weight: 600;
-            text-transform: uppercase;
-            margin-top: 6px;
-            display: block;
+            color: var(--github-text);
+            margin-bottom: 1rem;
+            letter-spacing: -2px;
         }
 
-        /* ═══════════════ INFO BOX ═══════════════ */
-        .info-box {
-            border-left: 2px solid rgba(255, 255, 255, 0.2);
-            padding: 26px 24px;
-            margin-bottom: 24px;
-            background: rgba(255, 255, 255, 0.015);
-            border-radius: 0 12px 12px 0;
+        .error-title {
+            font-size: 1.4rem;
+            color: var(--github-text);
+            margin-bottom: 1.5rem;
+            font-weight: 400;
         }
 
-        .info-box p {
-            font-size: 0.88rem;
-            font-weight: 300;
-            color: #909090;
-            line-height: 1.85;
-            text-align: justify;
+        .error-description {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: var(--github-text-secondary);
+            margin-bottom: 2rem;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
-        .info-box p+p {
-            margin-top: 14px;
+        .whatsapp-icon {
+            color: var(--github-blue);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            margin-left: 5px;
         }
 
-        /* ═══════════════ RIGHTS / FAIRNESS ═══════════════ */
-        .rights-box {
-            border: 1px solid rgba(255, 69, 69, 0.15);
-            border-radius: 14px;
-            padding: 24px 22px;
-            margin-bottom: 36px;
-            background: rgba(255, 69, 69, 0.03);
+        .whatsapp-icon:hover {
+            color: #4d94e6;
+            transform: translateY(-1px);
         }
 
-        .rb-title {
-            font-size: 0.65rem;
-            font-weight: 700;
-            color: var(--red);
-            text-transform: uppercase;
-            letter-spacing: 2.5px;
-            display: block;
-            margin-bottom: 14px;
-        }
-
-        .rb-text {
-            font-size: 0.86rem;
-            font-weight: 300;
-            color: #909090;
-            line-height: 1.75;
-        }
-
-        /* ═══════════════ SERVICE CARDS ═══════════════ */
-        .cards {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 56px;
-        }
-
-        .card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            overflow: hidden;
-            transition: border-color 0.3s;
-        }
-
-        .card-head {
-            padding: 18px 22px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .ch-left {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .ch-icon {
-            width: 36px;
-            height: 36px;
+        .mini-game {
             border-radius: 8px;
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--muted);
-            font-size: 0.95rem;
-            flex-shrink: 0;
-            transition: color 0.3s;
-        }
-
-        .ch-title {
-            font-size: 0.92rem;
-            font-weight: 500;
-            color: var(--text);
-        }
-
-        .ch-arrow {
-            font-size: 9px;
-            color: var(--muted);
-            transition: transform 0.35s, color 0.3s;
-        }
-
-        .card-body {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.55s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .cb-inner {
-            padding: 6px 22px 26px;
-            border-top: 1px solid var(--border);
-        }
-
-        .cb-tag {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.55rem;
-            color: var(--accent);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            display: block;
-            margin: 18px 0 10px;
-        }
-
-        .cb-text {
-            font-size: 0.84rem;
-            font-weight: 300;
-            color: #909090;
-            line-height: 1.75;
-        }
-
-        .cost-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1px;
-            background: var(--border);
-            border-radius: 8px;
-            overflow: hidden;
-            margin-top: 18px;
-        }
-
-        .cg-cell {
-            background: #080808;
-            padding: 14px;
             text-align: center;
         }
 
-        .cg-lbl {
-            font-size: 0.52rem;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            display: block;
-            margin-bottom: 4px;
-        }
-
-        .cg-val {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            font-weight: 700;
-            color: #fff;
-        }
-
-        /* Active state */
-        .card.open {
-            border-color: rgba(0, 210, 255, 0.3);
-        }
-
-        .card.open .card-body {
-            max-height: 500px;
-        }
-
-        .card.open .ch-arrow {
-            transform: rotate(180deg);
-            color: var(--accent);
-        }
-
-        .card.open .ch-icon {
-            color: var(--accent);
-            border-color: rgba(0, 210, 255, 0.2);
-        }
-
-        /* ═══════════════ FOOTER CTA ═══════════════ */
-        footer {
-            border-top: 1px solid var(--border);
-            padding-top: 40px;
-        }
-
-        .cta {
+        .game-title {
+            color: var(--github-text);
+            font-size: 1rem;
+            margin-bottom: 1rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 14px;
-            width: 100%;
-            padding: 20px;
-            background: #fff;
-            color: #000;
-            font-weight: 900;
-            font-size: 0.95rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            text-decoration: none;
-            border-radius: 12px;
-            transition: opacity 0.2s, transform 0.2s;
-            box-shadow: 0 0 40px rgba(255, 255, 255, 0.05);
+            gap: 0.5rem;
         }
 
-        .cta:active {
-            opacity: 0.85;
-            transform: scale(0.99);
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            max-width: 200px;
+            margin: 0 auto 1rem;
         }
 
-        .cta i {
+        .game-cell {
+            aspect-ratio: 1;
+            background: var(--github-black);
+            border: 2px solid var(--github-border);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
             font-size: 1.2rem;
+            font-weight: bold;
+            transition: all 0.2s ease;
         }
 
-        .legal {
-            font-size: 0.6rem;
-            color: #2c2c2c;
-            margin-top: 28px;
-            line-height: 1.6;
-            text-align: left;
+        .game-cell:hover {
+            border-color: var(--github-blue);
+            background: rgba(88, 166, 255, 0.1);
         }
 
-        /* ── Entrance animations ── */
-        @keyframes fadeUp {
-            from {
-                opacity: 0;
-                transform: translateY(16px);
+        .game-cell.x {
+            color: var(--github-blue);
+        }
+
+        .game-cell.o {
+            color: var(--game-orange);
+        }
+
+        .game-status {
+            color: var(--github-text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            min-height: 20px;
+        }
+
+        .game-controls {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .game-btn {
+            padding: 0.5rem 1rem;
+            background: var(--github-border);
+            border: 1px solid var(--github-border);
+            border-radius: 4px;
+            color: var(--github-text);
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+        }
+
+        .game-btn:hover {
+            background: var(--github-blue);
+            border-color: var(--github-blue);
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin: 2rem 0 0.5rem 0; /* Reducido aún más el margen inferior */
+        }
+
+        .github-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+            padding: 0.9rem 1.5rem;
+            background: var(--github-gray);
+            border: 1px solid var(--github-border);
+            color: var(--github-text);
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .github-button:hover {
+            background: rgba(88, 166, 255, 0.1);
+            border-color: var(--github-blue);
+            transform: translateY(-1px);
+        }
+
+        .github-button.primary {
+            background: var(--github-blue);
+            border-color: var(--github-blue);
+            color: white;
+            font-weight: 500;
+        }
+
+        .github-button.primary:hover {
+            background: #4d94e6;
+            transform: translateY(-1px);
+        }
+
+        .branch-text {
+            color: var(--github-text-secondary);
+            font-size: 0.85rem;
+            margin-top: 1rem;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+
+        .footer {
+            margin-top: 1rem; /* Reducido aún más de 1.5rem a 1rem */
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--github-border);
+            color: var(--github-text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .footer-links a {
+            color: var(--github-text-secondary);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--github-blue);
+        }
+
+        .floating-element {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: var(--github-text-secondary);
+            border-radius: 50%;
+            opacity: 0.1;
+            animation: float 8s infinite linear;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
             }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
+            100% {
+                transform: translateY(-100px) rotate(360deg);
             }
         }
 
-        .wrap>* {
-            animation: fadeUp 0.6s ease both;
-        }
-
-        header {
-            animation-delay: 0s;
-        }
-
-        .divider {
-            animation-delay: 0.05s;
-        }
-
-        .payment-banner {
-            animation-delay: 0.1s;
-        }
-
-        .stats-row {
-            animation-delay: 0.15s;
-        }
-
-        .info-box {
-            animation-delay: 0.2s;
-        }
-
-        .rights-box {
-            animation-delay: 0.25s;
-        }
-
-        .cards {
-            animation-delay: 0.3s;
-        }
-
-        footer {
-            animation-delay: 0.35s;
-        }
-
-        @media (min-width: 600px) {
-            .wrap {
-                padding: 50px 0;
+        /* Responsive */
+        @media (max-width: 480px) {
+            .error-code {
+                font-size: 3.5rem;
             }
+            
+            .error-title {
+                font-size: 1.2rem;
+            }
+            
+            .github-logo svg {
+                width: 60px;
+                height: 60px;
+            }
+            
+            .footer-links {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .mini-game {
+                padding: 1rem;
+            }
+        }
+
+        .win-animation {
+            animation: winPulse 0.6s ease-in-out;
+        }
+
+        @keyframes winPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
     </style>
 </head>
-
 <body>
-    <div class="wrap">
-
-        <header>
-            <i class="fab fa-github gh-mark"></i>
-            <div class="code-404">404</div>
-        </header>
-
-        <div class="divider">
-            <span></span>
-            <em>Continuidad de Servicios Tecnológicos</em>
-            <span></span>
-        </div>
-
-        <!-- Unified Audit + Rights Box -->
-        <div class="info-box">
-            <p>Desde el <b>20 de noviembre de 2025</b>, no se ha registrado ningún pago correspondiente a la cuota
-                mensual de <b>$55.00 USD</b> acordada. A pesar de ello, la infraestructura permanece íntegra bajo la
-                custodia directa del desarrollador, quien ha sostenido la operación con sus propios recursos como un
-                acto de responsabilidad profesional y compromiso con la continuidad del servicio.</p>
-            <p>La plataforma <b>no ha sido suspendida</b>. Ha transitado a un estado de <b>control interno</b>: los
-                activos permanecen activos y protegidos, pero han dejado de estar disponibles para el acceso público del
-                grupo empresarial. Esta decisión preserva la integridad del sistema y garantiza que ningún dato quede
-                expuesto en ausencia de un respaldo institucional formal.</p>
-            <p>Es importante reconocer que el valor de este servicio trasciende cualquier lista de costos externos.
-                Reside en las <b>horas de diagnóstico, en las decisiones de arquitectura, en las estrategias de
-                    optimización</b> que permiten operar con herramientas de nivel empresarial sin incurrir en licencias
-                comerciales. La gestión tecnológica profesional exige criterio, experiencia y aprendizaje continuo;
-                reducirla a un proceso de instrucciones simples sería ignorar la profundidad técnica que sostiene cada
-                funcionalidad activa.</p>
-            <p>En consecuencia, la cuota vigente cubre únicamente el <b>mantenimiento preventivo del ecosistema
-                    actual</b>. El desarrollo de nuevas aplicaciones, módulos o integraciones constituye un servicio de
-                ingeniería distinto, con su propia valoración y alcance contractual. Formalizar esta distinción no es
-                una limitación, sino la base de una <b>relación profesional sostenible y justa para ambas partes.</b>
-            </p>
-        </div>
-
-        <!-- Service Cards -->
-        <div class="cards">
-
-            <div class="card">
-                <div class="card-head" onclick="toggle(this)">
-                    <div class="ch-left">
-                        <div class="ch-icon"><i class="fas fa-hdd"></i></div>
-                        <span class="ch-title">Infraestructura Google Drive (2TB)</span>
-                    </div>
-                    <i class="fas fa-chevron-down ch-arrow"></i>
-                </div>
-                <div class="card-body">
-                    <div class="cb-inner">
-                        <span class="cb-tag">Análisis de Almacenamiento</span>
-                        <p class="cb-text">Custodia de <b>2TB de evidencias y bitácoras operativas</b>. Evita costos de
-                            hardware NAS físico y garantiza disponibilidad global sin inversión institucional en
-                            infraestructura propia.</p>
-                        <div class="cost-grid">
-                            <div class="cg-cell"><span class="cg-lbl">Mercado</span><span
-                                    class="cg-val">$19.99/mo</span></div>
-                            <div class="cg-cell"><span class="cg-lbl">Empresa paga</span><span
-                                    class="cg-val">$0.00</span></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-head" onclick="toggle(this)">
-                    <div class="ch-left">
-                        <div class="ch-icon"><i class="fas fa-microchip"></i></div>
-                        <span class="ch-title">Subsidio de Credenciales & APIs</span>
-                    </div>
-                    <i class="fas fa-chevron-down ch-arrow"></i>
-                </div>
-                <div class="card-body">
-                    <div class="cb-inner">
-                        <span class="cb-tag">Interconexión Crítica</span>
-                        <p class="cb-text">El flujo de datos (Sheets/Drive API) opera mediante <b>credenciales
-                                personales del desarrollador</b>, evitando cuotas comerciales de Google Cloud que
-                            podrían triplicar los costos operativos.</p>
-                        <div class="cost-grid">
-                            <div class="cg-cell"><span class="cg-lbl">Ahorro API</span><span
-                                    class="cg-val">$120/mo</span></div>
-                            <div class="cg-cell"><span class="cg-lbl">Financiado por</span><span class="cg-val">Dev.
-                                    propio</span></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-head" onclick="toggle(this)">
-                    <div class="ch-left">
-                        <div class="ch-icon"><i class="fas fa-globe"></i></div>
-                        <span class="ch-title">Hosting GitHub & Seguridad SSL</span>
-                    </div>
-                    <i class="fas fa-chevron-down ch-arrow"></i>
-                </div>
-                <div class="card-body">
-                    <div class="cb-inner">
-                        <span class="cb-tag">Despliegue Web Enterprise</span>
-                        <p class="cb-text">PWAs desplegadas en <b>GitHub Enterprise</b> con seguridad SSL de nivel
-                            bancario. Elimina la necesidad de proveedores convencionales como Hostinger o VPS
-                            corporativos de alto costo.</p>
-                        <div class="cost-grid">
-                            <div class="cg-cell"><span class="cg-lbl">Ahorro Hosting</span><span
-                                    class="cg-val">$25/mo</span></div>
-                            <div class="cg-cell"><span class="cg-lbl">Certificado SSL</span><span
-                                    class="cg-val">Bonificado</span></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-head" onclick="toggle(this)">
-                    <div class="ch-left">
-                        <div class="ch-icon"><i class="fas fa-brain"></i></div>
-                        <span class="ch-title">Automatización Apps Script Engine</span>
-                    </div>
-                    <i class="fas fa-chevron-down ch-arrow"></i>
-                </div>
-                <div class="card-body">
-                    <div class="cb-inner">
-                        <span class="cb-tag">Google Cloud Console</span>
-                        <p class="cb-text">Gestión de <b>biometría, triggers y automatización</b> de reportes mediante
-                            Google Cloud Console. El soporte técnico de este nivel vale en el mercado más de <b>8
-                                veces</b> el fee mensual actual.</p>
-                        <div class="cost-grid">
-                            <div class="cg-cell"><span class="cg-lbl">Valor mercado</span><span
-                                    class="cg-val">$350/mo</span></div>
-                            <div class="cg-cell"><span class="cg-lbl">Relación real</span><span class="cg-val">1 :
-                                    8</span></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-
-        <footer>
-            <a class="cta" href="https://wa.me/573168007979" target="_blank">
-                <i class="fab fa-whatsapp"></i> Contactar para Reactivación
-            </a>
-            <p class="legal">* Informe emitido para transparentar el subsidio operativo del desarrollador. La custodia
-                de datos permanece bajo cifrado profesional durante este periodo de revisión.</p>
-        </footer>
-
+    <div class="github-grid"></div>
+    
+    <!-- Elementos flotantes minimalistas -->
+    <div class="floating-elements">
+        <div class="floating-element" style="left: 10%; animation-delay: 0s;"></div>
+        <div class="floating-element" style="left: 20%; animation-delay: 1s;"></div>
+        <div class="floating-element" style="left: 30%; animation-delay: 2s;"></div>
+        <div class="floating-element" style="left: 40%; animation-delay: 3s;"></div>
+        <div class="floating-element" style="left: 50%; animation-delay: 4s;"></div>
+        <div class="floating-element" style="left: 60%; animation-delay: 5s;"></div>
+        <div class="floating-element" style="left: 70%; animation-delay: 6s;"></div>
+        <div class="floating-element" style="left: 80%; animation-delay: 7s;"></div>
     </div>
+
+    <div class="container">
+        <div class="github-logo">
+            <svg viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+            </svg>
+        </div>
+
+        <div class="error-code">404</div>
+        <h1 class="error-title">Página no encontrada</h1>
+        
+        <p class="error-description">
+            La página que buscas no existe o ha sido movida. 
+            Mientras tanto, puedes jugar o contactar al desarrollador.
+            <a href="https://wa.me/573168007979" class="whatsapp-icon" target="_blank">
+                <i class="fab fa-whatsapp"></i>
+            </a>
+        </p>
+
+        <!-- Mini Juego: Tres en Raya -->
+        <div class="mini-game">
+            <div class="game-title">
+                <i class="fas fa-gamepad"></i>
+                <span>Mini Juego</span>
+            </div>
+            
+            <div class="game-board" id="gameBoard">
+                <div class="game-cell" data-cell="0"></div>
+                <div class="game-cell" data-cell="1"></div>
+                <div class="game-cell" data-cell="2"></div>
+                <div class="game-cell" data-cell="3"></div>
+                <div class="game-cell" data-cell="4"></div>
+                <div class="game-cell" data-cell="5"></div>
+                <div class="game-cell" data-cell="6"></div>
+                <div class="game-cell" data-cell="7"></div>
+                <div class="game-cell" data-cell="8"></div>
+            </div>
+            
+            <div class="game-status" id="gameStatus">
+                Turno del jugador X
+            </div>
+            
+            <div class="game-controls">
+                <button class="game-btn" onclick="resetGame()">
+                    <i class="fas fa-redo"></i> Reiniciar
+                </button>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <!-- Botón de WhatsApp eliminado según la solicitud -->
+        </div>
+
+        <div class="footer">
+            <p>GitHub &copy; 2025</p>
+            <div class="footer-links">
+                <a href="https://docs.github.com">Documentación</a>
+                <a href="https://github.com/pricing">Precios</a>
+                <a href="https://github.com/enterprise">Empresa</a>
+                <a href="https://github.com/security">Seguridad</a>
+            </div>
+        </div>
+    </div>
+
     <script>
-        function toggle(head) {
-            const card = head.closest('.card');
-            const isOpen = card.classList.contains('open');
-            document.querySelectorAll('.card.open').forEach(c => c.classList.remove('open'));
-            if (!isOpen) card.classList.add('open');
+        // Variables del juego
+        let currentPlayer = 'X';
+        let gameBoard = ['', '', '', '', '', '', '', '', ''];
+        let gameActive = true;
+
+        // Combinaciones ganadoras
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Filas
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columnas
+            [0, 4, 8], [2, 4, 6] // Diagonales
+        ];
+
+        // Inicializar el juego
+        function initGame() {
+            const cells = document.querySelectorAll('.game-cell');
+            cells.forEach(cell => {
+                cell.addEventListener('click', handleCellClick);
+                cell.textContent = '';
+                cell.className = 'game-cell';
+            });
+            updateGameStatus(`Turno del jugador ${currentPlayer}`);
         }
-        // Start first card open
-        document.querySelector('.card').classList.add('open');
+
+        // Manejar clic en celda
+        function handleCellClick(e) {
+            const cell = e.target;
+            const cellIndex = parseInt(cell.getAttribute('data-cell'));
+
+            if (gameBoard[cellIndex] !== '' || !gameActive) {
+                return;
+            }
+
+            // Realizar jugada
+            gameBoard[cellIndex] = currentPlayer;
+            cell.textContent = currentPlayer;
+            cell.classList.add(currentPlayer.toLowerCase());
+
+            // Verificar resultado
+            checkResult();
+        }
+
+        // Verificar resultado del juego
+        function checkResult() {
+            let roundWon = false;
+
+            for (let i = 0; i < winningConditions.length; i++) {
+                const [a, b, c] = winningConditions[i];
+                if (gameBoard[a] && gameBoard[a] === gameBoard[b] && gameBoard[a] === gameBoard[c]) {
+                    roundWon = true;
+                    break;
+                }
+            }
+
+            if (roundWon) {
+                updateGameStatus(`¡Jugador ${currentPlayer} gana!`);
+                gameActive = false;
+                document.getElementById('gameBoard').classList.add('win-animation');
+                return;
+            }
+
+            // Verificar empate
+            const roundDraw = !gameBoard.includes('');
+            if (roundDraw) {
+                updateGameStatus('¡Empate!');
+                gameActive = false;
+                return;
+            }
+
+            // Cambiar jugador
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            updateGameStatus(`Turno del jugador ${currentPlayer}`);
+        }
+
+        // Actualizar estado del juego
+        function updateGameStatus(message) {
+            document.getElementById('gameStatus').textContent = message;
+        }
+
+        // Reiniciar juego
+        function resetGame() {
+            gameBoard = ['', '', '', '', '', '', '', '', ''];
+            gameActive = true;
+            currentPlayer = 'X';
+            document.getElementById('gameBoard').classList.remove('win-animation');
+            initGame();
+        }
+
+        // Crear elementos flotantes
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.querySelector('.floating-elements');
+            
+            for (let i = 0; i < 15; i++) {
+                const element = document.createElement('div');
+                element.className = 'floating-element';
+                
+                // Posición y animación aleatorias
+                element.style.left = Math.random() * 100 + '%';
+                element.style.animationDelay = Math.random() * 8 + 's';
+                element.style.animationDuration = (Math.random() * 10 + 8) + 's';
+                
+                container.appendChild(element);
+            }
+
+            // Inicializar el juego
+            initGame();
+        });
     </script>
 </body>
-
 </html>

@@ -74,39 +74,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 });
 
-// ─── Sistema de gestión de paneles ────────────────────────────────────────────
-window.activePanels = {
-    profile: null,
-    settings: null,
-    proveedor: null,
-    datePicker: null
-};
-
-window.closeAllPanels = function(except) {
-    // Cerrar panel de perfil
-    if (except !== 'profile' && window.activePanels.profile) {
-        window.activePanels.profile.classList.remove('open');
-        window.activePanels.profile.setAttribute('aria-hidden', 'true');
-    }
-    
-    // Cerrar panel de configuración
-    if (except !== 'settings' && window.activePanels.settings) {
-        window.activePanels.settings.classList.remove('open');
-        window.activePanels.settings.setAttribute('aria-hidden', 'true');
-    }
-    
-    // Cerrar panel de proveedor
-    if (except !== 'proveedor' && window.activePanels.proveedor) {
-        window.activePanels.proveedor.classList.remove('open');
-        window.activePanels.proveedor.setAttribute('aria-hidden', 'true');
-    }
-    
-    // Cerrar flatpickr
-    if (except !== 'datePicker' && window._datePicker) {
-        window._datePicker.close();
-    }
-};
-
 function initDatePicker() {
     const updateBtn = document.getElementById('updateReportBtn');
     const dateIconBtn = document.getElementById('dateIconBtn');
@@ -135,10 +102,6 @@ function initDatePicker() {
                 shorthand: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],
                 longhand:  ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
             }
-        },
-        onOpen: function() {
-            // Cerrar otros paneles cuando se abre el date picker
-            window.closeAllPanels('datePicker');
         },
         onReady(_, __, instance) {
             const cal = instance.calendarContainer;
@@ -328,10 +291,6 @@ function initProveedorFilter() {
             e.stopPropagation();
             const opening = !panel.classList.contains('open');
             if (opening) {
-                // Cerrar otros paneles antes de abrir este
-                window.closeAllPanels('proveedor');
-                window.activePanels.proveedor = panel;
-                
                 panel.style.visibility = 'hidden';
                 panel.classList.add('open');
                 positionProveedorPanel();
@@ -478,10 +437,6 @@ async function updateReportWithDate(newDate, forceReload = false, silent = false
     const loadingText = document.getElementById('loadingText');
     const loadingProgress = document.getElementById('loadingProgress');
 
-    // Verificar si hay datos precargados
-    const hasPreloadedData = checkPreloadedData();
-    const skipLoadingScreen = hasPreloadedData && !forceReload && consolidatedData.length === 0;
-
     // Toast para modo silencioso
     let toastEl = null;
     function showSilentToast(msg, state = 'loading') {
@@ -504,12 +459,11 @@ async function updateReportWithDate(newDate, forceReload = false, silent = false
     }
 
     try {
-        // Solo mostrar pantalla de carga si no hay datos precargados
-        if (!silent && !skipLoadingScreen) {
+        if (!silent) {
             if (loadingOverlay) loadingOverlay.classList.add('active');
             if (loadingText) loadingText.textContent = "Actualizando datos...";
             if (loadingProgress) loadingProgress.style.width = '10%';
-        } else if (silent) {
+        } else {
             showSilentToast('Actualizando datos...');
         }
 
@@ -525,10 +479,10 @@ async function updateReportWithDate(newDate, forceReload = false, silent = false
         cargarDatosAño();
         cargarDatosTendencia();
 
-        if (!silent && !skipLoadingScreen) {
+        if (!silent) {
             if (loadingProgress) loadingProgress.style.width = '100%';
             await new Promise(r => setTimeout(r, 300));
-        } else if (silent) {
+        } else {
             showSilentToast('Datos actualizados', 'done');
             setTimeout(removeSilentToast, 1500);
         }
@@ -536,7 +490,7 @@ async function updateReportWithDate(newDate, forceReload = false, silent = false
         console.error("Update error:", error);
         if (silent) { showSilentToast('Error al actualizar', 'error'); setTimeout(removeSilentToast, 2000); }
     } finally {
-        if (!silent && !skipLoadingScreen && loadingOverlay) {
+        if (!silent && loadingOverlay) {
             loadingOverlay.classList.add('closing');
             setTimeout(() => {
                 loadingOverlay.classList.remove('active', 'closing');
@@ -564,27 +518,6 @@ async function cargarDatosIniciales() {
     } catch (error) {
         console.error("Initial load error:", error);
         throw error;
-    }
-}
-
-// Helper para verificar si hay datos precargados disponibles
-function checkPreloadedData() {
-    try {
-        const preloadStr = sessionStorage.getItem('tdm_preload_data');
-        if (!preloadStr) return false;
-        
-        const preload = JSON.parse(preloadStr);
-        const age = Date.now() - (preload.timestamp || 0);
-        
-        // Datos válidos por 5 minutos
-        if (age > 5 * 60 * 1000) {
-            sessionStorage.removeItem('tdm_preload_data');
-            return false;
-        }
-        
-        return !!(preload.income && preload.budget);
-    } catch (e) {
-        return false;
     }
 }
 
@@ -642,19 +575,7 @@ async function generarReporteCompleto(targetDate) {
     panel.className = 'settings-panel';
     panel.setAttribute('role', 'menu');
     panel.setAttribute('aria-hidden', 'true');
-    
-    // Verificar si el usuario es OWNER
-    let isOwner = false;
-    try {
-        const session = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
-        if (session) {
-            const userRole = (session.rol || 'USER').toUpperCase();
-            isOwner = userRole === 'OWNER';
-        }
-    } catch(e) {}
-    
-    // Construir HTML del panel - solo incluir botones de comunicación si es OWNER
-    let panelHTML = `
+    panel.innerHTML = `
         <button class="settings-item" id="settingsUpdateBtn">
             <i class="fas fa-sync-alt"></i><span>Actualizar datos</span>
         </button>
@@ -669,13 +590,6 @@ async function generarReporteCompleto(targetDate) {
         <div class="settings-divider"></div>
         <button class="settings-item" id="settingsSolidBtn">
             <i class="fas fa-droplet" id="solidIcon"></i><span id="solidLabel">Modo sólido</span>
-        </button>`;
-    
-    if (isOwner) {
-        panelHTML += `
-        <div class="settings-divider"></div>
-        <button class="settings-item" id="usersBtn">
-            <i class="fas fa-users-cog"></i><span>Gestión de Usuarios</span>
         </button>
         <div class="settings-divider"></div>
         <button class="settings-item" id="whatsappBtn">
@@ -684,9 +598,6 @@ async function generarReporteCompleto(targetDate) {
         <button class="settings-item" id="emailBtn">
             <i class="fas fa-envelope"></i><span>Enviar Email</span>
         </button>`;
-    }
-    
-    panel.innerHTML = panelHTML;
     document.body.appendChild(panel);
 
     const updateBtn  = panel.querySelector('#settingsUpdateBtn');
@@ -699,9 +610,7 @@ async function generarReporteCompleto(targetDate) {
     const solidBtn   = panel.querySelector('#settingsSolidBtn');
     const solidIcon  = panel.querySelector('#solidIcon');
     const solidLabel = panel.querySelector('#solidLabel');
-    const usersBtn   = panel.querySelector('#usersBtn');
     const waBtn      = panel.querySelector('#whatsappBtn');
-    const emBtn      = panel.querySelector('#emailBtn');
 
     // ── Posicionar saliendo del botón, ajustando si se sale de pantalla ──────
     function positionPanel() {
@@ -733,10 +642,6 @@ async function generarReporteCompleto(targetDate) {
         e.stopPropagation();
         const opening = !panel.classList.contains('open');
         if (opening) {
-            // Cerrar otros paneles antes de abrir este
-            window.closeAllPanels('settings');
-            window.activePanels.settings = panel;
-            
             // Mostrar brevemente para medir ancho antes de posicionar
             panel.style.visibility = 'hidden';
             panel.classList.add('open');
@@ -760,6 +665,7 @@ async function generarReporteCompleto(targetDate) {
         if (panel.classList.contains('open')) positionPanel();
     });
 
+    const emBtn      = panel.querySelector('#emailBtn');
     updateBtn.addEventListener('click', () => {
         closePanel();
         const icon = updateBtn.querySelector('i');
@@ -864,38 +770,29 @@ async function generarReporteCompleto(targetDate) {
         closePanel();
     });
 
-    // ── Gestión de Usuarios (solo si existe - OWNER) ─────────────────────────
-    if (usersBtn) {
-        usersBtn.addEventListener('click', e => {
-            e.preventDefault();
-            closePanel();
-            openUsersManagementModal();
-        });
-    }
-
-    // ── WhatsApp (solo si existe - OWNER) ────────────────────────────────────
-    if (waBtn) {
-        waBtn.addEventListener('click', e => {
-            e.preventDefault();
-            closePanel();
+    // ── WhatsApp ──────────────────────────────────────────────────────────────
+    waBtn.addEventListener('click', e => {
+        e.preventDefault();
+        closePanel();
+        if (checkPassword()) {
             const icon = waBtn.querySelector('i');
             const orig = icon.className;
             icon.className = 'fas fa-spinner fa-spin';
             captureAndDownloadCards(true).finally(() => { icon.className = orig; });
-        });
-    }
+        }
+    });
 
-    // ── Email (solo si existe - OWNER) ───────────────────────────────────────
-    if (emBtn) {
-        emBtn.addEventListener('click', e => {
-            e.preventDefault();
-            closePanel();
+    // ── Email ─────────────────────────────────────────────────────────────────
+    emBtn.addEventListener('click', e => {
+        e.preventDefault();
+        closePanel();
+        if (checkPassword()) {
             const icon = emBtn.querySelector('i');
             const orig = icon.className;
             icon.className = 'fas fa-spinner fa-spin';
             sendEmailReport(true).finally(() => { icon.className = orig; });
-        });
-    }
+        }
+    });
 })();
 
 // ── Loading Stream ────────────────────────────────────────────────────────────

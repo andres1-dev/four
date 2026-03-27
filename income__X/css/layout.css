@@ -965,38 +965,6 @@
     background: rgba(248,113,113,0.08);
 }
 
-.profile-action-btn {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 11px 16px;
-    background: transparent;
-    border: none;
-    color: var(--text-medium);
-    font-size: 13px;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    transition: var(--transition-fast);
-    text-align: left;
-}
-
-.profile-action-btn i {
-    font-size: 14px;
-    width: 16px;
-    text-align: center;
-}
-
-.profile-action-btn:hover {
-    background: rgba(99,102,241,0.1);
-    color: var(--primary-color);
-}
-
-[data-theme="light"] .profile-action-btn:hover {
-    background: rgba(99,102,241,0.08);
-}
-
 
 /* ══════════════════════════════════════════════════════
    FLATPICKR CALENDAR — TEMA CUSTOM

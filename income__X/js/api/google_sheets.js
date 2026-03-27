@@ -185,18 +185,6 @@ function _parseDbRec(rows, ano) {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 async function getAllIncomeData() {
-    // Intentar usar datos precargados
-    const preloadData = getPreloadedData();
-    if (preloadData && preloadData.income) {
-        console.log('✓ Usando datos de ingresos precargados');
-        return [
-            ..._parseMainRows(preloadData.income.main || []),
-            ..._parseRecRows(preloadData.income.rec || [], '2026'),
-            ..._parseRecRows(preloadData.income.rec2024 || [], '2024')
-        ];
-    }
-
-    // Si no hay precarga, cargar normalmente
     const [mainRows, recRows, rec2024Rows] = await Promise.all([
         batchGetRanges(SPREADSHEET_IDS.DATA2,   ['DATA2!S2:S']).then(r => r[0]),
         batchGetRanges(SPREADSHEET_IDS.REC,     ['DataBase!A2:AF']).then(r => r[0]),
@@ -211,18 +199,6 @@ async function getAllIncomeData() {
 }
 
 async function getBudgetData() {
-    // Intentar usar datos precargados
-    const preloadData = getPreloadedData();
-    if (preloadData && preloadData.budget) {
-        console.log('✓ Usando datos de presupuesto precargados');
-        return [
-            ..._parseBudgetSheet(preloadData.budget.y2026 || [], '2026'),
-            ..._parseBudgetSheet(preloadData.budget.y2025 || [], '2025'),
-            ..._parseBudgetSheet(preloadData.budget.y2024 || [], '2024')
-        ];
-    }
-
-    // Si no hay precarga, cargar normalmente
     const [rows2026, rows2025, rows2024] = await batchGetRanges(
         SPREADSHEET_IDS.BUDGETID,
         ['BUDGET2026!A1:K14', 'BUDGET2025!A1:L14', 'BUDGET2024!A1:M14']
@@ -233,28 +209,6 @@ async function getBudgetData() {
         ..._parseBudgetSheet(rows2025, '2025'),
         ..._parseBudgetSheet(rows2024, '2024')
     ];
-}
-
-// ─── Helper para obtener datos precargados ────────────────────────────────────
-function getPreloadedData() {
-    try {
-        const preloadStr = sessionStorage.getItem('tdm_preload_data');
-        if (!preloadStr) return null;
-        
-        const preload = JSON.parse(preloadStr);
-        const age = Date.now() - (preload.timestamp || 0);
-        
-        // Datos válidos por 5 minutos
-        if (age > 5 * 60 * 1000) {
-            sessionStorage.removeItem('tdm_preload_data');
-            return null;
-        }
-        
-        return preload;
-    } catch (e) {
-        console.warn('Error leyendo datos precargados:', e);
-        return null;
-    }
 }
 
 /**
