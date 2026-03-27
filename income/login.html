@@ -1005,46 +1005,85 @@ function norm(s) { return String(s || '').trim().toLowerCase(); }
 async function initBiometricUI() {
     if (typeof BIOMETRY === 'undefined') return;
 
-    const isSupported = await BIOMETRY.isSupported();
-    const isRegistered = BIOMETRY.isRegistered();
+    try {
+        const isSupported = await BIOMETRY.isSupported();
+        const isRegistered = BIOMETRY.isRegistered();
 
-    if (isSupported && isRegistered) {
-        const biometricBtn = document.getElementById('biometricBtn');
-        const biometricIcon = document.getElementById('biometricIcon');
-        const biometricLabel = document.getElementById('biometricLabel');
-        const usePasswordLink = document.getElementById('usePasswordLink');
-        const manualFields = document.getElementById('manualFields');
+        if (isSupported && isRegistered) {
+            // Verificar salud de la credencial antes de usarla
+            const isHealthy = await BIOMETRY.verifyCredentialHealth();
+            
+            if (!isHealthy) {
+                console.warn("Credencial biométrica corrupta, limpiando...");
+                BIOMETRY.remove();
+                // Mostrar campos manuales
+                document.getElementById('manualFields').classList.remove('hidden');
+                document.getElementById('usuario').disabled = false;
+                document.getElementById('contrasena').disabled = false;
+                return;
+            }
 
-        // Configurar icono y texto según el tipo de biometría
-        biometricIcon.innerHTML = BIOMETRY.getSVGForType();
-        biometricLabel.textContent = BIOMETRY.getLabelForType();
+            const biometricBtn = document.getElementById('biometricBtn');
+            const biometricIcon = document.getElementById('biometricIcon');
+            const biometricLabel = document.getElementById('biometricLabel');
+            const usePasswordLink = document.getElementById('usePasswordLink');
+            const manualFields = document.getElementById('manualFields');
 
-        // Mostrar botón biométrico y ocultar campos manuales
-        biometricBtn.classList.add('show');
-        usePasswordLink.classList.add('show');
-        manualFields.classList.add('hidden');
+            // Configurar icono y texto según el tipo de biometría
+            biometricIcon.innerHTML = BIOMETRY.getSVGForType();
+            biometricLabel.textContent = BIOMETRY.getLabelForType();
 
-        // Deshabilitar inputs manuales
-        document.getElementById('usuario').disabled = true;
-        document.getElementById('contrasena').disabled = true;
+            // Mostrar botón biométrico y ocultar campos manuales
+            biometricBtn.classList.add('show');
+            usePasswordLink.classList.add('show');
+            manualFields.classList.add('hidden');
 
-        // Lanzar autenticación automáticamente después de un breve delay
-        setTimeout(() => {
-            triggerBiometricAuth();
-        }, 500);
+            // Deshabilitar inputs manuales
+            document.getElementById('usuario').disabled = true;
+            document.getElementById('contrasena').disabled = true;
+
+            // Lanzar autenticación automáticamente después de un breve delay
+            // Solo si no hay una autenticación en progreso
+            setTimeout(() => {
+                if (!biometricAuthInProgress) {
+                    triggerBiometricAuth();
+                }
+            }, 500);
+        }
+    } catch (err) {
+        console.error("Error inicializando UI biométrica:", err);
+        // En caso de error, mostrar campos manuales
+        document.getElementById('manualFields').classList.remove('hidden');
+        document.getElementById('usuario').disabled = false;
+        document.getElementById('contrasena').disabled = false;
     }
 }
 
+// Variable para controlar si hay una autenticación en progreso
+let biometricAuthInProgress = false;
+let biometricAuthAttempts = 0;
+const MAX_BIOMETRIC_ATTEMPTS = 3;
+
 // Función para disparar autenticación biométrica
 async function triggerBiometricAuth() {
+    // Prevenir múltiples llamadas simultáneas
+    if (biometricAuthInProgress) {
+        console.log("Autenticación biométrica ya en progreso, ignorando...");
+        return;
+    }
+
     const biometricBtn = document.getElementById('biometricBtn');
     
     try {
+        biometricAuthInProgress = true;
+        biometricAuthAttempts++;
+        
         const credentialIdB64 = localStorage.getItem('tdm_biometric_id');
         const usuario = localStorage.getItem('tdm_biometric_user');
 
         if (!credentialIdB64 || !usuario) {
             showError("No se encontró registro biométrico. Use contraseña para iniciar sesión.");
+            biometricAuthInProgress = false;
             return;
         }
 
@@ -1052,12 +1091,17 @@ async function triggerBiometricAuth() {
         biometricBtn.disabled = true;
         biometricBtn.classList.add('authenticating');
 
+        // Timeout de seguridad para Face ID (60 segundos)
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('TIMEOUT')), 60000);
+        });
+
         // Disparar autenticación del dispositivo
         const challenge = new Uint8Array(32);
         window.crypto.getRandomValues(challenge);
         const credentialId = Uint8Array.from(atob(credentialIdB64), c => c.charCodeAt(0));
 
-        const assertion = await navigator.credentials.get({
+        const authPromise = navigator.credentials.get({
             publicKey: {
                 challenge: challenge,
                 allowCredentials: [{ 
@@ -1065,33 +1109,80 @@ async function triggerBiometricAuth() {
                     type: 'public-key', 
                     transports: ['internal'] 
                 }],
-                userVerification: 'required'
+                userVerification: 'required',
+                timeout: 60000  // 60 segundos de timeout
             }
         });
 
+        // Usar Promise.race para manejar timeout
+        const assertion = await Promise.race([authPromise, timeoutPromise]);
+
         if (assertion) {
             console.log("✓ Validación biométrica exitosa");
+            biometricAuthAttempts = 0; // Resetear contador de intentos
             await performBiometricLogin(usuario);
         }
     } catch (err) {
         console.error("Biometric Login Error:", err);
+        
+        // Resetear estado del botón
         biometricBtn.classList.remove('authenticating');
         biometricBtn.disabled = false;
+        biometricAuthInProgress = false;
         
-        if (err.name === 'NotAllowedError') {
-            showError("Autenticación biométrica cancelada.");
+        // Determinar si debemos ofrecer reintentar o cambiar a contraseña
+        const shouldRetry = biometricAuthAttempts < MAX_BIOMETRIC_ATTEMPTS && 
+                           (err.name === 'NotAllowedError' || err.message === 'TIMEOUT');
+        
+        if (err.message === 'TIMEOUT') {
+            if (shouldRetry) {
+                showError(`Tiempo de espera agotado. Intento ${biometricAuthAttempts}/${MAX_BIOMETRIC_ATTEMPTS}. Toque el botón para reintentar.`);
+            } else {
+                showError("Múltiples fallos. Use contraseña para iniciar sesión.");
+                biometricAuthAttempts = 0;
+            }
+        } else if (err.name === 'NotAllowedError') {
+            if (shouldRetry) {
+                showError(`Autenticación cancelada. Intento ${biometricAuthAttempts}/${MAX_BIOMETRIC_ATTEMPTS}. Toque el botón para reintentar.`);
+            } else {
+                showError("Múltiples cancelaciones. Use contraseña para iniciar sesión.");
+                biometricAuthAttempts = 0;
+            }
+        } else if (err.name === 'InvalidStateError') {
+            showError("Error de estado. Intente nuevamente o use contraseña.");
+            // Limpiar credencial corrupta
+            BIOMETRY.remove();
+            biometricAuthAttempts = 0;
+        } else if (err.name === 'NotSupportedError') {
+            showError("Función no soportada. Use contraseña para iniciar sesión.");
+            biometricAuthAttempts = 0;
+        } else if (err.name === 'AbortError') {
+            showError("Operación cancelada. Intente nuevamente.");
         } else {
             showError("Error en autenticación biométrica. Use contraseña.");
+            biometricAuthAttempts = 0;
         }
+    } finally {
+        // Asegurar que siempre se resetee el flag
+        biometricAuthInProgress = false;
     }
 }
 
 // Manejar click en botón biométrico (para reintentar)
-document.getElementById('biometricBtn').addEventListener('click', triggerBiometricAuth);
+document.getElementById('biometricBtn').addEventListener('click', function() {
+    // Solo permitir click si no hay autenticación en progreso
+    if (!biometricAuthInProgress) {
+        triggerBiometricAuth();
+    } else {
+        console.log("Autenticación ya en progreso, por favor espere...");
+    }
+});
 
 // Realizar login biométrico
 async function performBiometricLogin(usuario) {
     const btn = document.getElementById('loginBtn');
+    const biometricBtn = document.getElementById('biometricBtn');
+    
     btn.classList.add('loading');
     btn.disabled = true;
 
@@ -1103,6 +1194,10 @@ async function performBiometricLogin(usuario) {
 
         if (!match) {
             showError('Usuario no encontrado. Contacte al administrador.');
+            // Resetear estado biométrico
+            biometricBtn.classList.remove('authenticating');
+            biometricBtn.disabled = false;
+            biometricAuthInProgress = false;
             return;
         }
 
@@ -1115,6 +1210,10 @@ async function performBiometricLogin(usuario) {
 
         if (!isOwnerOrAdmin && isActivo && registeredDevice && registeredDevice !== myDevice) {
             showError('Esta cuenta tiene una sesión activa en otro dispositivo.');
+            // Resetear estado biométrico
+            biometricBtn.classList.remove('authenticating');
+            biometricBtn.disabled = false;
+            biometricAuthInProgress = false;
             return;
         }
 
@@ -1157,10 +1256,17 @@ async function performBiometricLogin(usuario) {
     } catch (err) {
         console.error(err);
         showError('Error de conexión. Verifica tu red e intenta de nuevo.');
+        // Resetear estado biométrico en caso de error
+        biometricBtn.classList.remove('authenticating');
+        biometricBtn.disabled = false;
+        biometricAuthInProgress = false;
     } finally {
         if (!document.getElementById('loginBtn').style.background.includes('10b981')) {
             btn.classList.remove('loading');
             btn.disabled = checkLockout();
+            // Resetear estado biométrico
+            biometricBtn.classList.remove('authenticating');
+            biometricBtn.disabled = false;
         }
     }
 }
@@ -1173,8 +1279,13 @@ document.getElementById('usePasswordLink').addEventListener('click', function(e)
     const manualFields = document.getElementById('manualFields');
     const usePasswordLink = document.getElementById('usePasswordLink');
 
+    // Cancelar cualquier autenticación biométrica en progreso
+    biometricAuthInProgress = false;
+
     // Ocultar biometría
     biometricBtn.classList.remove('show');
+    biometricBtn.classList.remove('authenticating');
+    biometricBtn.disabled = false;
     usePasswordLink.classList.remove('show');
 
     // Mostrar campos manuales
@@ -1183,6 +1294,9 @@ document.getElementById('usePasswordLink').addEventListener('click', function(e)
     // Habilitar inputs
     document.getElementById('usuario').disabled = false;
     document.getElementById('contrasena').disabled = false;
+
+    // Limpiar cualquier error
+    hideError();
 
     // Focus en usuario
     setTimeout(() => document.getElementById('usuario').focus(), 100);
@@ -1443,6 +1557,21 @@ checkLockout();
 
 // Inicializar UI biométrica
 initBiometricUI();
+
+// Watchdog para detectar si la autenticación biométrica se queda colgada
+// Si después de 65 segundos sigue en progreso, resetear automáticamente
+setInterval(() => {
+    if (biometricAuthInProgress) {
+        const biometricBtn = document.getElementById('biometricBtn');
+        if (biometricBtn && biometricBtn.classList.contains('authenticating')) {
+            console.warn("Watchdog: Autenticación biométrica parece estar colgada, reseteando...");
+            biometricAuthInProgress = false;
+            biometricBtn.classList.remove('authenticating');
+            biometricBtn.disabled = false;
+            showError("La autenticación tardó demasiado. Intente nuevamente o use contraseña.");
+        }
+    }
+}, 65000); // 65 segundos
 
 // ─── Info Modal ───────────────────────────────────────────────────────────────
 (function initInfoModal() {

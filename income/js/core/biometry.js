@@ -50,7 +50,7 @@ const BIOMETRY = {
                     requireResidentKey: false,                // NO crear passkey residente
                     residentKey: "discouraged"                // Desalentar passkeys en iCloud
                 },
-                timeout: 60000,
+                timeout: 120000,  // 2 minutos de timeout (más tiempo para Face ID)
                 attestation: "none",
                 extensions: {
                     credProps: true  // Obtener propiedades de la credencial
@@ -79,6 +79,10 @@ const BIOMETRY = {
                 return { success: false, message: "Ya existe una credencial para este usuario." };
             } else if (error.name === 'NotSupportedError') {
                 return { success: false, message: "Su dispositivo no soporta esta función." };
+            } else if (error.name === 'AbortError') {
+                return { success: false, message: "Operación cancelada. Intente nuevamente." };
+            } else if (error.name === 'TimeoutError') {
+                return { success: false, message: "Tiempo de espera agotado. Intente nuevamente." };
             }
             
             return { success: false, message: error.message };
@@ -99,6 +103,29 @@ const BIOMETRY = {
     // Obtener usuario registrado
     getRegisteredUser() {
         return localStorage.getItem('tdm_biometric_user');
+    },
+
+    // Limpiar estado de autenticación (útil para recuperación de errores)
+    clearAuthState() {
+        // Esta función NO elimina las credenciales, solo limpia estados temporales
+        console.log("Limpiando estado de autenticación biométrica...");
+        // Aquí se pueden agregar más limpiezas si es necesario en el futuro
+        return true;
+    },
+
+    // Verificar salud de la credencial
+    async verifyCredentialHealth() {
+        try {
+            const credentialIdB64 = localStorage.getItem('tdm_biometric_id');
+            if (!credentialIdB64) return false;
+            
+            // Intentar decodificar la credencial
+            const credentialId = Uint8Array.from(atob(credentialIdB64), c => c.charCodeAt(0));
+            return credentialId && credentialId.length > 0;
+        } catch (err) {
+            console.error("Credencial corrupta:", err);
+            return false;
+        }
     },
 
     // Detectar el tipo probable de biometría (Heurística avanzada)
@@ -175,9 +202,28 @@ const BIOMETRY = {
                 <path d="M8.66,27.74a14.14,14.14,0,0,1-1.56-.09.76.76,0,1,1,.17-1.52c2.49.28,4.45-.16,5.84-1.32a6.37,6.37,0,0,0,2.12-4.53.75.75,0,0,1,.82-.71.78.78,0,0,1,.72.81A7.89,7.89,0,0,1,14.09,26,8.2,8.2,0,0,1,8.66,27.74Z"/>
             </svg>`,
 
-            // Key Original (Security Key Style)
-            key: `<svg width="50" height="50" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12.3212 10.6852L4 19L6 21M7 16L9 18M20 7.5C20 9.98528 17.9853 12 15.5 12C13.0147 12 11 9.98528 11 7.5C11 5.01472 13.0147 3 15.5 3C17.9853 3 20 5.01472 20 7.5Z"/>
+            // Key (Numeric Keypad Style - Windows Hello)
+            key: `<svg width="50" height="50" viewBox="0 0 24 24" fill="currentColor">
+                <!-- Rectángulo exterior del teclado -->
+                <rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                
+                <!-- Fila 1: 1, 2, 3 -->
+                <circle cx="7" cy="7" r="1.2"/>
+                <circle cx="12" cy="7" r="1.2"/>
+                <circle cx="17" cy="7" r="1.2"/>
+                
+                <!-- Fila 2: 4, 5, 6 -->
+                <circle cx="7" cy="11.5" r="1.2"/>
+                <circle cx="12" cy="11.5" r="1.2"/>
+                <circle cx="17" cy="11.5" r="1.2"/>
+                
+                <!-- Fila 3: 7, 8, 9 -->
+                <circle cx="7" cy="16" r="1.2"/>
+                <circle cx="12" cy="16" r="1.2"/>
+                <circle cx="17" cy="16" r="1.2"/>
+                
+                <!-- Fila 4: 0 (centrado) -->
+                <circle cx="12" cy="19.5" r="1.2"/>
             </svg>`,
 
             generic: `<svg width="50" height="50" viewBox="0 0 24 24" fill="currentColor">
