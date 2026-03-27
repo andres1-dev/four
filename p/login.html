@@ -300,41 +300,101 @@
         /* Biometric Button */
         .btn-biometric {
             width: 100%;
-            background: transparent;
-            border: 2px dashed var(--border);
-            border-radius: 10px;
-            padding: 20px;
+            background: linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(79,70,229,0.12) 100%);
+            border: 2px solid rgba(99,102,241,0.2);
+            border-radius: 16px;
+            padding: 32px 20px;
             color: var(--primary);
             font-family: inherit;
             font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 12px;
-            margin-bottom: 16px;
+            gap: 16px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
         }
+        
+        .btn-biometric::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, transparent 0%, rgba(99,102,241,0.1) 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .btn-biometric:hover::before {
+            opacity: 1;
+        }
+        
         .btn-biometric.show {
             display: flex;
         }
+        
         .btn-biometric:hover:not(:disabled) {
             border-color: var(--primary);
-            background: rgba(99,102,241,0.05);
+            background: linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(79,70,229,0.18) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(99,102,241,0.25);
         }
+        
         .btn-biometric:disabled {
-            opacity: 0.5;
+            opacity: 0.6;
             cursor: not-allowed;
+            transform: none;
         }
+        
+        .btn-biometric:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        
+        #biometricIcon {
+            position: relative;
+            z-index: 1;
+        }
+        
         .btn-biometric svg {
-            width: 48px;
-            height: 48px;
+            width: 56px;
+            height: 56px;
+            filter: drop-shadow(0 4px 12px rgba(99,102,241,0.3));
+            animation: biometricPulse 2s ease-in-out infinite;
         }
+        
+        @keyframes biometricPulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 0.9;
+            }
+        }
+        
         .btn-biometric .biometric-label {
-            font-size: 14px;
+            font-size: 15px;
             letter-spacing: 0.02em;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .btn-biometric.authenticating {
+            pointer-events: none;
+        }
+        
+        .btn-biometric.authenticating svg {
+            animation: biometricSpin 1s linear infinite;
+        }
+        
+        @keyframes biometricSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         .manual-login-link {
@@ -345,6 +405,7 @@
             color: var(--text-muted);
             cursor: pointer;
             transition: color 0.2s;
+            text-decoration: none;
         }
         .manual-login-link.show {
             display: block;
@@ -548,59 +609,97 @@
         .biometric-offer-content {
             background: var(--card-bg);
             border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 40px 32px;
-            max-width: 400px;
+            border-radius: 24px;
+            padding: 48px 40px;
+            max-width: 440px;
             width: 90%;
             text-align: center;
             box-shadow: 0 25px 80px rgba(0,0,0,0.6);
             animation: slideUp 0.3s ease;
             backdrop-filter: blur(20px);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .biometric-offer-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--primary-dark));
         }
 
         .biometric-offer-icon {
-            margin: 0 auto 20px;
+            margin: 0 auto 24px;
             color: var(--primary);
+            position: relative;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(79,70,229,0.15) 100%);
+            border-radius: 20px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .biometric-offer-icon::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 22px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            opacity: 0.2;
+            z-index: -1;
         }
 
         .biometric-offer-icon svg {
-            width: 64px;
-            height: 64px;
+            width: 48px;
+            height: 48px;
+            filter: drop-shadow(0 4px 12px rgba(99,102,241,0.4));
         }
 
         .biometric-offer-content h3 {
-            font-size: 22px;
+            font-size: 24px;
             font-weight: 700;
             color: var(--text);
             margin: 0 0 12px 0;
+            letter-spacing: -0.02em;
         }
 
         .biometric-offer-content p {
             font-size: 14px;
             color: var(--text-muted);
             margin: 0 0 12px 0;
-            line-height: 1.6;
+            line-height: 1.7;
         }
 
         .biometric-offer-user {
-            font-size: 16px;
+            font-size: 17px;
             font-weight: 600;
-            color: var(--text);
-            margin: 20px 0 24px 0 !important;
+            color: var(--primary);
+            margin: 24px 0 32px 0 !important;
+            padding: 12px 20px;
+            background: rgba(99,102,241,0.08);
+            border-radius: 12px;
+            display: inline-block;
         }
 
         .biometric-offer-buttons {
             display: flex;
             gap: 12px;
-            margin-top: 24px;
+            margin-top: 28px;
         }
 
         .btn-biometric-skip,
         .btn-biometric-activate {
             flex: 1;
-            padding: 12px 20px;
-            border-radius: 10px;
-            font-size: 14px;
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
@@ -617,11 +716,13 @@
         .btn-biometric-skip:hover {
             background: var(--input-border);
             color: var(--text);
+            transform: translateY(-1px);
         }
 
         .btn-biometric-activate {
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             color: #fff;
+            box-shadow: 0 4px 12px rgba(99,102,241,0.3);
         }
 
         .btn-biometric-activate:hover:not(:disabled) {
@@ -633,10 +734,14 @@
             opacity: 0.7;
             cursor: not-allowed;
         }
+        
+        .btn-biometric-activate:active:not(:disabled) {
+            transform: translateY(0);
+        }
 
         @media (max-width: 480px) {
             .biometric-offer-content {
-                padding: 32px 24px;
+                padding: 40px 28px;
             }
             .biometric-offer-buttons {
                 flex-direction: column;
@@ -931,11 +1036,18 @@ async function initBiometricUI() {
         // Deshabilitar inputs manuales
         document.getElementById('usuario').disabled = true;
         document.getElementById('contrasena').disabled = true;
+
+        // Lanzar autenticación automáticamente después de un breve delay
+        setTimeout(() => {
+            triggerBiometricAuth();
+        }, 500);
     }
 }
 
-// Manejar click en botón biométrico
-document.getElementById('biometricBtn').addEventListener('click', async function() {
+// Función para disparar autenticación biométrica
+async function triggerBiometricAuth() {
+    const biometricBtn = document.getElementById('biometricBtn');
+    
     try {
         const credentialIdB64 = localStorage.getItem('tdm_biometric_id');
         const usuario = localStorage.getItem('tdm_biometric_user');
@@ -946,7 +1058,8 @@ document.getElementById('biometricBtn').addEventListener('click', async function
         }
 
         hideError();
-        this.disabled = true;
+        biometricBtn.disabled = true;
+        biometricBtn.classList.add('authenticating');
 
         // Disparar autenticación del dispositivo
         const challenge = new Uint8Array(32);
@@ -971,14 +1084,19 @@ document.getElementById('biometricBtn').addEventListener('click', async function
         }
     } catch (err) {
         console.error("Biometric Login Error:", err);
+        biometricBtn.classList.remove('authenticating');
+        biometricBtn.disabled = false;
+        
         if (err.name === 'NotAllowedError') {
             showError("Autenticación biométrica cancelada.");
         } else {
             showError("Error en autenticación biométrica. Use contraseña.");
         }
-        this.disabled = false;
     }
-});
+}
+
+// Manejar click en botón biométrico (para reintentar)
+document.getElementById('biometricBtn').addEventListener('click', triggerBiometricAuth);
 
 // Realizar login biométrico
 async function performBiometricLogin(usuario) {
