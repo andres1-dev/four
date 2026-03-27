@@ -45,12 +45,16 @@ const BIOMETRY = {
                     { alg: -257, type: "public-key" }  // RS256
                 ],
                 authenticatorSelection: {
-                    authenticatorAttachment: "platform",
-                    userVerification: "required",
-                    residentKey: "preferred"
+                    authenticatorAttachment: "platform",      // Forzar autenticador del dispositivo
+                    userVerification: "required",             // Requerir biometría
+                    requireResidentKey: false,                // NO crear passkey residente
+                    residentKey: "discouraged"                // Desalentar passkeys en iCloud
                 },
                 timeout: 60000,
-                attestation: "none"
+                attestation: "none",
+                extensions: {
+                    credProps: true  // Obtener propiedades de la credencial
+                }
             };
 
             const credential = await navigator.credentials.create({
@@ -67,6 +71,16 @@ const BIOMETRY = {
             }
         } catch (error) {
             console.error("Biometric Registration Error:", error);
+            
+            // Mensajes de error más específicos
+            if (error.name === 'NotAllowedError') {
+                return { success: false, message: "Autenticación cancelada o no autorizada." };
+            } else if (error.name === 'InvalidStateError') {
+                return { success: false, message: "Ya existe una credencial para este usuario." };
+            } else if (error.name === 'NotSupportedError') {
+                return { success: false, message: "Su dispositivo no soporta esta función." };
+            }
+            
             return { success: false, message: error.message };
         }
     },
