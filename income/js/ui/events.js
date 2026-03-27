@@ -85,20 +85,41 @@ window.activePanels = {
 window.closeAllPanels = function(except) {
     // Cerrar panel de perfil
     if (except !== 'profile' && window.activePanels.profile) {
+        // Remover foco antes de ocultar
+        if (document.activeElement && window.activePanels.profile.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
         window.activePanels.profile.classList.remove('open');
         window.activePanels.profile.setAttribute('aria-hidden', 'true');
+        if ('inert' in HTMLElement.prototype) {
+            window.activePanels.profile.inert = true;
+        }
     }
     
     // Cerrar panel de configuración
     if (except !== 'settings' && window.activePanels.settings) {
+        // Remover foco antes de ocultar
+        if (document.activeElement && window.activePanels.settings.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
         window.activePanels.settings.classList.remove('open');
         window.activePanels.settings.setAttribute('aria-hidden', 'true');
+        if ('inert' in HTMLElement.prototype) {
+            window.activePanels.settings.inert = true;
+        }
     }
     
     // Cerrar panel de proveedor
     if (except !== 'proveedor' && window.activePanels.proveedor) {
+        // Remover foco antes de ocultar
+        if (document.activeElement && window.activePanels.proveedor.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
         window.activePanels.proveedor.classList.remove('open');
         window.activePanels.proveedor.setAttribute('aria-hidden', 'true');
+        if ('inert' in HTMLElement.prototype) {
+            window.activePanels.proveedor.inert = true;
+        }
     }
     
     // Cerrar flatpickr
@@ -320,8 +341,15 @@ function initProveedorFilter() {
         }
 
         function closeProveedorPanel() {
+            // Remover foco antes de ocultar
+            if (document.activeElement && panel.contains(document.activeElement)) {
+                document.activeElement.blur();
+            }
             panel.classList.remove('open');
             panel.setAttribute('aria-hidden', 'true');
+            if ('inert' in HTMLElement.prototype) {
+                panel.inert = true;
+            }
         }
 
         btn.addEventListener('click', e => {
@@ -332,6 +360,12 @@ function initProveedorFilter() {
                 window.closeAllPanels('proveedor');
                 window.activePanels.proveedor = panel;
                 
+                // Actualizar aria-hidden ANTES de mostrar
+                panel.setAttribute('aria-hidden', 'false');
+                if ('inert' in HTMLElement.prototype) {
+                    panel.inert = false;
+                }
+                
                 panel.style.visibility = 'hidden';
                 panel.classList.add('open');
                 positionProveedorPanel();
@@ -339,7 +373,6 @@ function initProveedorFilter() {
             } else {
                 closeProveedorPanel();
             }
-            panel.setAttribute('aria-hidden', String(!opening));
         });
 
         document.addEventListener('click', e => {
@@ -725,8 +758,18 @@ async function generarReporteCompleto(targetDate) {
 
     // ── Abrir / cerrar ────────────────────────────────────────────────────────
     function closePanel() {
+        // Remover foco de cualquier elemento dentro del panel antes de ocultarlo
+        if (document.activeElement && panel.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
+        
         panel.classList.remove('open');
         panel.setAttribute('aria-hidden', 'true');
+        
+        // Usar inert si está disponible (mejor que aria-hidden para accesibilidad)
+        if ('inert' in HTMLElement.prototype) {
+            panel.inert = true;
+        }
     }
 
     btn.addEventListener('click', e => {
@@ -737,6 +780,14 @@ async function generarReporteCompleto(targetDate) {
             window.closeAllPanels('settings');
             window.activePanels.settings = panel;
             
+            // Actualizar aria-hidden ANTES de mostrar el panel
+            panel.setAttribute('aria-hidden', 'false');
+            
+            // Remover inert si está disponible
+            if ('inert' in HTMLElement.prototype) {
+                panel.inert = false;
+            }
+            
             // Mostrar brevemente para medir ancho antes de posicionar
             panel.style.visibility = 'hidden';
             panel.classList.add('open');
@@ -745,7 +796,6 @@ async function generarReporteCompleto(targetDate) {
         } else {
             closePanel();
         }
-        panel.setAttribute('aria-hidden', String(!opening));
     });
 
     document.addEventListener('click', e => {

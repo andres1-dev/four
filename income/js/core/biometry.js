@@ -108,7 +108,6 @@ const BIOMETRY = {
     // Limpiar estado de autenticación (útil para recuperación de errores)
     clearAuthState() {
         // Esta función NO elimina las credenciales, solo limpia estados temporales
-        console.log("Limpiando estado de autenticación biométrica...");
         // Aquí se pueden agregar más limpiezas si es necesario en el futuro
         return true;
     },

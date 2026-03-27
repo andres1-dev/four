@@ -27,7 +27,12 @@ async function captureAndDownloadCards(silent = false) {
     function removeToast() {
         if (toastEl) {
             toastEl.classList.remove('visible');
-            setTimeout(() => { toastEl?.remove(); toastEl = null; }, 200);
+            setTimeout(() => { 
+                if (toastEl && toastEl.parentNode) {
+                    toastEl.remove(); 
+                }
+                toastEl = null; 
+            }, 200);
         }
     }
 
@@ -231,8 +236,6 @@ async function captureAndDownloadCards(silent = false) {
         const blob = await new Promise(resolve => {
             canvas.toBlob(resolve, 'image/png');
         });
-        
-        console.log('Imagen generada - Tamaño:', blob.size, 'bytes');
 
         // 6. Crear archivo y descargar
         const fileName = `Informe_Ingresos_${formatDate(new Date()).replace(/\//g, '-')}.png`;
@@ -243,13 +246,25 @@ async function captureAndDownloadCards(silent = false) {
         
         // 8. Generar mensaje y abrir WhatsApp
         if (!silent && loadingText) loadingText.textContent = "Abriendo WhatsApp...";
-        else updateToast('Abriendo WhatsApp...');
+        else updateToast('Abriendo WhatsApp...', 'done');
+        
         const whatsappText = generateWhatsAppMessage();
         openWhatsAppWithText(whatsappText);
+        
+        // 9. Esperar un momento y luego cerrar el toast
+        if (silent) {
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            removeToast();
+        }
 
     } catch (e) {
         console.error("Capture error:", e);
-        alert("Error al generar el informe visual.");
+        if (silent) {
+            updateToast('Error al generar', 'error');
+            setTimeout(removeToast, 2000);
+        } else {
+            alert("Error al generar el informe visual.");
+        }
     } finally {
         // Limpiar y restaurar
         if (tempContainer) {
@@ -298,7 +313,8 @@ async function captureAndDownloadCards(silent = false) {
                 setTimeout(() => loadingOverlay.classList.remove('active', 'closing'), 400);
             }
         } else {
-            removeToast();
+            // Asegurar que el toast se elimine en caso de que no se haya eliminado
+            setTimeout(removeToast, 3000);
         }
     }
 }
@@ -444,7 +460,6 @@ function downloadImage(blob, fileName) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    console.log('✓ Imagen descargada:', fileName);
 }
 
 // Función para abrir WhatsApp solo con texto
@@ -456,8 +471,6 @@ function openWhatsAppWithText(message) {
     // Detectar si estamos en iOS
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
-
-    console.log('Abriendo WhatsApp - iOS:', isIOS, 'PWA:', isInStandaloneMode);
 
     if (isIOS && isInStandaloneMode) {
         // En iOS PWA, usar window.open es más confiable

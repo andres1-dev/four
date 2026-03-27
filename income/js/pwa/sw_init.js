@@ -13,10 +13,10 @@ if ('serviceWorker' in navigator) {
         
         navigator.serviceWorker.register(swPath, { scope: baseUrl })
             .then(reg => {
-                console.log('✅ Service Worker registrado:', reg.scope);
+                // Service Worker registrado exitosamente
             })
             .catch(err => {
-                console.error('❌ Error al registrar Service Worker:', err);
+                // Error al registrar Service Worker
             });
     });
 }
@@ -37,7 +37,6 @@ function showInstallPromotion() {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
-                console.log(`Usuario ${outcome === 'accepted' ? 'aceptó' : 'rechazó'} la instalación`);
                 deferredPrompt = null;
                 installBtn.classList.add('hidden');
             }
@@ -47,7 +46,6 @@ function showInstallPromotion() {
 
 // Detectar cuando la app ya está instalada
 window.addEventListener('appinstalled', () => {
-    console.log('✅ PWA instalada exitosamente');
     deferredPrompt = null;
 });
 
