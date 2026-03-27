@@ -22,9 +22,6 @@ const BIOMETRY = {
                 throw new Error("Debe estar autenticado para registrar biometría.");
             }
 
-            // Detectar iOS
-            const isIOS = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
-
             // Reto aleatorio
             const challenge = new Uint8Array(32);
             window.crypto.getRandomValues(challenge);
@@ -44,31 +41,25 @@ const BIOMETRY = {
                     displayName: session.nombre,
                 },
                 pubKeyCredParams: [
-                    { alg: -7, type: "public-key" },   // ES256 (preferido por iOS)
+                    { alg: -7, type: "public-key" },   // ES256
                     { alg: -257, type: "public-key" }  // RS256
                 ],
                 authenticatorSelection: {
                     authenticatorAttachment: "platform",      // Forzar autenticador del dispositivo
-                    userVerification: isIOS ? "preferred" : "required",  // iOS usa "preferred"
+                    userVerification: "required",             // Requerir biometría
                     requireResidentKey: false,                // NO crear passkey residente
                     residentKey: "discouraged"                // Desalentar passkeys en iCloud
                 },
-                timeout: isIOS ? 90000 : 60000,  // iOS necesita más tiempo
-                attestation: "none"
+                timeout: 60000,
+                attestation: "none",
+                extensions: {
+                    credProps: true  // Obtener propiedades de la credencial
+                }
             };
 
-            // Crear timeout manual adicional
-            const timeoutMs = isIOS ? 95000 : 65000;
-            const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('REGISTRATION_TIMEOUT')), timeoutMs);
-            });
-
-            const credentialPromise = navigator.credentials.create({
+            const credential = await navigator.credentials.create({
                 publicKey: publicKeyCredentialCreationOptions
             });
-
-            // Usar Promise.race para garantizar timeout
-            const credential = await Promise.race([credentialPromise, timeoutPromise]);
 
             if (credential) {
                 // Guardar el ID de la credencial localmente
@@ -77,28 +68,20 @@ const BIOMETRY = {
                 localStorage.setItem('tdm_biometric_user', session.usuario);
 
                 return { success: true, message: "Biometría configurada correctamente." };
-            } else {
-                return { success: false, message: "No se pudo crear la credencial." };
             }
         } catch (error) {
             console.error("Biometric Registration Error:", error);
             
             // Mensajes de error más específicos
-            if (error.message === 'REGISTRATION_TIMEOUT') {
-                return { success: false, message: "Tiempo de espera agotado. Intente nuevamente." };
-            } else if (error.name === 'NotAllowedError') {
+            if (error.name === 'NotAllowedError') {
                 return { success: false, message: "Autenticación cancelada o no autorizada." };
             } else if (error.name === 'InvalidStateError') {
                 return { success: false, message: "Ya existe una credencial para este usuario." };
             } else if (error.name === 'NotSupportedError') {
                 return { success: false, message: "Su dispositivo no soporta esta función." };
-            } else if (error.name === 'AbortError') {
-                return { success: false, message: "Operación cancelada. Intente nuevamente." };
-            } else if (error.name === 'TimeoutError') {
-                return { success: false, message: "Tiempo de espera agotado. Intente nuevamente." };
             }
             
-            return { success: false, message: error.message || "Error desconocido al registrar biometría." };
+            return { success: false, message: error.message };
         }
     },
 
@@ -116,29 +99,6 @@ const BIOMETRY = {
     // Obtener usuario registrado
     getRegisteredUser() {
         return localStorage.getItem('tdm_biometric_user');
-    },
-
-    // Limpiar estado de autenticación (útil para recuperación de errores)
-    clearAuthState() {
-        // Esta función NO elimina las credenciales, solo limpia estados temporales
-        console.log("Limpiando estado de autenticación biométrica...");
-        // Aquí se pueden agregar más limpiezas si es necesario en el futuro
-        return true;
-    },
-
-    // Verificar salud de la credencial
-    async verifyCredentialHealth() {
-        try {
-            const credentialIdB64 = localStorage.getItem('tdm_biometric_id');
-            if (!credentialIdB64) return false;
-            
-            // Intentar decodificar la credencial
-            const credentialId = Uint8Array.from(atob(credentialIdB64), c => c.charCodeAt(0));
-            return credentialId && credentialId.length > 0;
-        } catch (err) {
-            console.error("Credencial corrupta:", err);
-            return false;
-        }
     },
 
     // Detectar el tipo probable de biometría (Heurística avanzada)
@@ -215,25 +175,9 @@ const BIOMETRY = {
                 <path d="M8.66,27.74a14.14,14.14,0,0,1-1.56-.09.76.76,0,1,1,.17-1.52c2.49.28,4.45-.16,5.84-1.32a6.37,6.37,0,0,0,2.12-4.53.75.75,0,0,1,.82-.71.78.78,0,0,1,.72.81A7.89,7.89,0,0,1,14.09,26,8.2,8.2,0,0,1,8.66,27.74Z"/>
             </svg>`,
 
-            // Key (Numeric Keypad Style - Windows Hello)
-            key: `<svg width="50" height="50" viewBox="0 0 24 24" fill="currentColor">
-                <!-- Fila 1 -->
-                <circle cx="7" cy="6.5" r="1.2"/>
-                <circle cx="12" cy="6.5" r="1.2"/>
-                <circle cx="17" cy="6.5" r="1.2"/>
-                
-                <!-- Fila 2 -->
-                <circle cx="7" cy="11" r="1.2"/>
-                <circle cx="12" cy="11" r="1.2"/>
-                <circle cx="17" cy="11" r="1.2"/>
-                
-                <!-- Fila 3 -->
-                <circle cx="7" cy="15.5" r="1.2"/>
-                <circle cx="12" cy="15.5" r="1.2"/>
-                <circle cx="17" cy="15.5" r="1.2"/>
-                
-                <!-- 0 (más separado) -->
-                <circle cx="12" cy="20.5" r="1.2"/>
+            // Key Original (Security Key Style)
+            key: `<svg width="50" height="50" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12.3212 10.6852L4 19L6 21M7 16L9 18M20 7.5C20 9.98528 17.9853 12 15.5 12C13.0147 12 11 9.98528 11 7.5C11 5.01472 13.0147 3 15.5 3C17.9853 3 20 5.01472 20 7.5Z"/>
             </svg>`,
 
             generic: `<svg width="50" height="50" viewBox="0 0 24 24" fill="currentColor">
@@ -249,8 +193,8 @@ const BIOMETRY = {
         switch (type) {
             case 'faceid': return 'Face ID';
             case 'touchid': return 'Touch ID';
-            case 'fingerprint': return 'Huella';
-            case 'key': return 'Key';
+            case 'fingerprint': return 'Huella Digital';
+            case 'key': return 'Windows Hello';
             default: return 'Biometría';
         }
     }
