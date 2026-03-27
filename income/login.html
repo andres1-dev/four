@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Acceso — Grupo TDM</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#2563eb">
+    <meta name="theme-color" content="#dc2626">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -18,8 +18,8 @@
     <script src="js/core/biometry.js"></script>
     <style>
         :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
+            --primary: #dc2626;
+            --primary-dark: #b91c1c;
             --bg: #0f1117;
             --card-bg: rgba(255,255,255,0.04);
             --border: rgba(255,255,255,0.08);
@@ -29,7 +29,7 @@
             --success: #34d399;
             --input-bg: rgba(255,255,255,0.06);
             --input-border: rgba(255,255,255,0.12);
-            --input-focus: rgba(99,102,241,0.4);
+            --input-focus: rgba(220,38,38,0.4);
         }
         [data-theme="light"] {
             --bg: #f1f5f9;
@@ -39,7 +39,7 @@
             --text-muted: #64748b;
             --input-bg: #f8fafc;
             --input-border: #e2e8f0;
-            --input-focus: rgba(99,102,241,0.25);
+            --input-focus: rgba(220,38,38,0.25);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -278,7 +278,7 @@
         }
         .btn-login:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(99,102,241,0.4);
+            box-shadow: 0 8px 24px rgba(220,38,38,0.4);
         }
         .btn-login:disabled {
             opacity: 0.6;
@@ -300,8 +300,8 @@
         /* Biometric Button */
         .btn-biometric {
             width: 100%;
-            background: linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(79,70,229,0.12) 100%);
-            border: 2px solid rgba(99,102,241,0.2);
+            background: transparent;
+            border: 2px solid var(--border);
             border-radius: 16px;
             padding: 32px 20px;
             color: var(--primary);
@@ -324,7 +324,7 @@
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(135deg, transparent 0%, rgba(99,102,241,0.1) 100%);
+            background: linear-gradient(135deg, transparent 0%, rgba(220,38,38,0.05) 100%);
             opacity: 0;
             transition: opacity 0.2s;
         }
@@ -339,9 +339,9 @@
         
         .btn-biometric:hover:not(:disabled) {
             border-color: var(--primary);
-            background: linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(79,70,229,0.18) 100%);
+            background: rgba(220,38,38,0.05);
             transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(99,102,241,0.25);
+            box-shadow: 0 8px 24px rgba(220,38,38,0.15);
         }
         
         .btn-biometric:disabled {
@@ -362,7 +362,7 @@
         .btn-biometric svg {
             width: 56px;
             height: 56px;
-            filter: drop-shadow(0 4px 12px rgba(99,102,241,0.3));
+            filter: drop-shadow(0 4px 12px rgba(220,38,38,0.2));
             animation: biometricPulse 2s ease-in-out infinite;
         }
         
@@ -559,13 +559,13 @@
         }
         [data-theme="light"] .info-modal-header {
             border-bottom-color: rgba(0,0,0,0.08);
-            background: linear-gradient(135deg, rgba(79,70,229,0.04) 0%, transparent 100%);
+            background: linear-gradient(135deg, rgba(220,38,38,0.04) 0%, transparent 100%);
         }
         [data-theme="light"] .info-modal-close:hover {
             background: rgba(0,0,0,0.05);
         }
         [data-theme="light"] .info-highlight {
-            background: rgba(79,70,229,0.06);
+            background: rgba(220,38,38,0.06);
         }
 
         @keyframes fadeIn {
@@ -631,7 +631,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(79,70,229,0.15) 100%);
+            background: transparent;
+            border: 2px solid var(--border);
             border-radius: 20px;
             margin-left: auto;
             margin-right: auto;
@@ -643,14 +644,14 @@
             inset: -2px;
             border-radius: 22px;
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            opacity: 0.2;
+            opacity: 0.1;
             z-index: -1;
         }
 
         .biometric-offer-icon svg {
             width: 48px;
             height: 48px;
-            filter: drop-shadow(0 4px 12px rgba(99,102,241,0.4));
+            filter: drop-shadow(0 4px 12px rgba(220,38,38,0.2));
         }
 
         .biometric-offer-content h3 {
@@ -674,7 +675,7 @@
             color: var(--primary);
             margin: 24px 0 32px 0 !important;
             padding: 12px 20px;
-            background: rgba(99,102,241,0.08);
+            background: rgba(220,38,38,0.08);
             border-radius: 12px;
             display: inline-block;
         }
@@ -713,12 +714,12 @@
         .btn-biometric-activate {
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             color: #fff;
-            box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+            box-shadow: 0 4px 12px rgba(220,38,38,0.3);
         }
 
         .btn-biometric-activate:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(99,102,241,0.4);
+            box-shadow: 0 8px 24px rgba(220,38,38,0.4);
         }
 
         .btn-biometric-activate:disabled {
@@ -1237,13 +1238,12 @@ async function performBiometricLogin(usuario) {
         });
 
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando datos...';
-        btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
 
         preloadAppData().then(() => {
-            btn.innerHTML = '<i class="fas fa-check"></i> Acceso concedido';
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> Acceso concedido';
             setTimeout(() => window.location.replace('index.html'), 300);
         }).catch(err => {
-            btn.innerHTML = '<i class="fas fa-check"></i> Acceso concedido';
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> Acceso concedido';
             setTimeout(() => window.location.replace('index.html'), 300);
         });
 
@@ -1254,7 +1254,7 @@ async function performBiometricLogin(usuario) {
         biometricBtn.disabled = false;
         biometricAuthInProgress = false;
     } finally {
-        if (!document.getElementById('loginBtn').style.background.includes('10b981')) {
+        if (!btn.innerHTML.includes('check-circle')) {
             btn.classList.remove('loading');
             btn.disabled = checkLockout();
             // Resetear estado biométrico
@@ -1332,8 +1332,7 @@ async function offerBiometricRegistration(userName) {
             try {
                 const result = await BIOMETRY.register();
                 if (result.success) {
-                    activateBtn.innerHTML = '<i class="fas fa-check"></i> Activado';
-                    activateBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                    activateBtn.innerHTML = '<i class="fas fa-check-circle"></i> Activado';
                     setTimeout(() => {
                         modal.remove();
                         resolve(true);
@@ -1467,21 +1466,20 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         }
 
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando datos...';
-        btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
         
         // Precargar datos en segundo plano
         preloadAppData().then(() => {
-            btn.innerHTML = '<i class="fas fa-check"></i> Acceso concedido';
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> Acceso concedido';
             setTimeout(() => window.location.replace('index.html'), 300);
         }).catch(err => {
-            btn.innerHTML = '<i class="fas fa-check"></i> Acceso concedido';
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> Acceso concedido';
             setTimeout(() => window.location.replace('index.html'), 300);
         });
 
     } catch (err) {
         showError('Error de conexión. Verifica tu red e intenta de nuevo.');
     } finally {
-        if (!document.getElementById('loginBtn').style.background.includes('10b981')) {
+        if (!btn.innerHTML.includes('check-circle')) {
             btn.classList.remove('loading');
             btn.disabled = checkLockout();
         }
@@ -1621,8 +1619,8 @@ setInterval(() => {
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
             ctx.fillStyle = isDark
-                ? `rgba(99,102,241,${p.alpha})`
-                : `rgba(79,70,229,${p.alpha * 0.6})`;
+                ? `rgba(220,38,38,${p.alpha})`
+                : `rgba(185,28,28,${p.alpha * 0.6})`;
             ctx.fill();
             p.x += p.vx; p.y += p.vy;
             if (p.x < 0 || p.x > W) p.vx *= -1;
