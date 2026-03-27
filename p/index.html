@@ -1,0 +1,1482 @@
+﻿<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ingresos de Marca Propia</title>
+
+    <!-- PWA Metadata -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#080a0f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ingresos MP">
+    <link rel="apple-touch-icon" href="icons/icon-512.png">
+    <link rel="icon" href="logo/LOGO-ORIGINAL.svg" type="image/svg+xml">
+    <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
+
+    <!-- External CSS Libraries -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Bebas+Neue&family=Montserrat:wght@900&family=Raleway:wght@300;400;700&display=block">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+
+    <!-- Local Component Styles -->
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components/cards.css">
+    <link rel="stylesheet" href="css/components/trends.css">
+    <link rel="stylesheet" href="css/components/loading.css">
+    <link rel="stylesheet" href="css/components/pwa.css">
+    <link rel="stylesheet" href="css/components/particles.css">
+    <link rel="stylesheet" href="css/components/footer.css">
+    <link rel="stylesheet" href="css/utils/animations.css">
+
+    <!-- Advanced Analytics Styles -->
+    <style>
+        /* Modal System */
+        .analytics-modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.75);
+            backdrop-filter: blur(6px);
+            animation: fadeIn 0.2s ease;
+        }
+        .analytics-modal-content {
+            background: var(--card-bg);
+            margin: 3% auto;
+            padding: 0;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            width: 92%;
+            max-width: 900px;
+            max-height: 88vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.6);
+            animation: slideUp 0.3s ease;
+        }
+        .analytics-modal-header {
+            padding: 24px 28px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(99,102,241,0.05) 0%, transparent 100%);
+        }
+        .analytics-modal-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            letter-spacing: -0.02em;
+        }
+        .analytics-modal-title i {
+            color: var(--primary-color);
+            font-size: 22px;
+        }
+        .analytics-modal-body {
+            padding: 28px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .analytics-modal-close {
+            color: var(--text-medium);
+            font-size: 32px;
+            font-weight: 300;
+            cursor: pointer;
+            transition: all 0.2s;
+            line-height: 1;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+        .analytics-modal-close:hover {
+            color: var(--text-dark);
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* Info Button */
+        .info-btn-inline {
+            background: transparent;
+            border: 1px solid rgba(99,102,241,0.25);
+            color: var(--primary-color);
+            padding: 7px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            margin-top: 8px;
+        }
+        .info-btn-inline:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+        }
+        .info-btn-inline i {
+            font-size: 11px;
+        }
+
+        /* Formula Box */
+        .formula-box-modal {
+            background: rgba(99,102,241,0.04);
+            border: 1px solid rgba(99,102,241,0.15);
+            border-left: 3px solid var(--primary-color);
+            border-radius: 10px;
+            padding: 18px 20px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+        .formula-box-modal .formula-label {
+            color: var(--primary-color);
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .formula-box-modal code {
+            color: var(--accent-purple);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            background: rgba(0,0,0,0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .formula-box-modal strong {
+            color: var(--text-dark);
+            font-weight: 700;
+        }
+        .formula-box-modal p {
+            margin-top: 10px;
+            color: var(--text-medium);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        /* Data Table in Modal */
+        .modal-data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin: 16px 0;
+        }
+        .modal-data-table th {
+            background: rgba(255,255,255,0.03);
+            color: var(--text-medium);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 11px;
+            padding: 12px 14px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .modal-data-table td {
+            padding: 11px 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            color: var(--text-medium);
+        }
+        .modal-data-table tr:hover td {
+            background: rgba(255,255,255,0.02);
+        }
+        .modal-data-table .num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .modal-data-table .highlight-cell {
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        /* Badge Styles */
+        .day-badge-modal {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        .day-badge-modal.weekend {
+            background: rgba(251,191,36,0.15);
+            color: var(--warning-color);
+        }
+        .day-badge-modal.extra {
+            background: rgba(139,92,246,0.15);
+            color: var(--accent-purple);
+        }
+
+        /* Stats Grid in Modal */
+        .modal-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+            margin: 20px 0;
+        }
+        .modal-stat-card {
+            background: rgba(99,102,241,0.05);
+            padding: 16px;
+            border-radius: 10px;
+            border-left: 3px solid var(--primary-color);
+        }
+        .modal-stat-card.warning {
+            background: rgba(251,191,36,0.05);
+            border-left-color: var(--warning-color);
+        }
+        .modal-stat-label {
+            color: var(--text-medium);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .modal-stat-value {
+            color: var(--text-dark);
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+        .modal-stat-sub {
+            color: var(--text-light);
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        /* Alert Box */
+        .alert-box-modal {
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin: 16px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        .alert-box-modal.info {
+            background: rgba(99,102,241,0.1);
+            border-left: 3px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+        .alert-box-modal.warning {
+            background: rgba(251,191,36,0.1);
+            border-left: 3px solid var(--warning-color);
+            color: var(--warning-color);
+        }
+        .alert-box-modal i {
+            font-size: 16px;
+            margin-top: 2px;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Quitar negrita de tarjetas específicas de tendencia */
+        #tendencia-pendiente,
+        #tendencia-promedio-movil {
+            font-weight: 600 !important;
+        }
+
+        /* ══════════════════════════════════════════════════════
+           ADAPTACIÓN DE MODALES A DIFERENTES TEMAS
+           ══════════════════════════════════════════════════════ */
+
+        /* MODO LIGHT */
+        [data-theme="light"] .analytics-modal {
+            background-color: rgba(0,0,0,0.4);
+        }
+        [data-theme="light"] .analytics-modal-content {
+            background: #ffffff;
+            border-color: rgba(0,0,0,0.1);
+            box-shadow: 0 25px 80px rgba(0,0,0,0.15);
+        }
+        [data-theme="light"] .analytics-modal-header {
+            border-bottom-color: rgba(0,0,0,0.08);
+            background: linear-gradient(135deg, rgba(79,70,229,0.04) 0%, transparent 100%);
+        }
+        [data-theme="light"] .analytics-modal-close:hover {
+            background: rgba(0,0,0,0.05);
+        }
+        [data-theme="light"] .formula-box-modal {
+            background: rgba(79,70,229,0.04);
+            border-color: rgba(79,70,229,0.15);
+        }
+        [data-theme="light"] .formula-box-modal code {
+            background: rgba(0,0,0,0.06);
+        }
+        [data-theme="light"] .modal-data-table th {
+            background: rgba(0,0,0,0.02);
+            border-bottom-color: rgba(0,0,0,0.08);
+        }
+        [data-theme="light"] .modal-data-table td {
+            border-bottom-color: rgba(0,0,0,0.04);
+        }
+        [data-theme="light"] .modal-data-table tr:hover td {
+            background: rgba(0,0,0,0.02);
+        }
+        [data-theme="light"] .modal-stat-card {
+            background: rgba(79,70,229,0.06);
+        }
+        [data-theme="light"] .modal-stat-card.warning {
+            background: rgba(217,119,6,0.06);
+        }
+        [data-theme="light"] .alert-box-modal.info {
+            background: rgba(79,70,229,0.08);
+        }
+        [data-theme="light"] .alert-box-modal.warning {
+            background: rgba(217,119,6,0.08);
+        }
+
+        /* MODO SOLID DARK */
+        .solid .analytics-modal-content {
+            background: #16181f;
+            border-color: rgba(255,255,255,0.08);
+        }
+        .solid .analytics-modal-header {
+            background: #16181f;
+            border-bottom-color: rgba(255,255,255,0.05);
+        }
+        .solid .analytics-modal-close:hover {
+            background: rgba(255,255,255,0.04);
+        }
+        .solid .formula-box-modal {
+            background: rgba(99,102,241,0.06);
+            border-color: rgba(99,102,241,0.2);
+        }
+        .solid .formula-box-modal code {
+            background: rgba(0,0,0,0.3);
+        }
+        .solid .modal-data-table th {
+            background: rgba(255,255,255,0.02);
+            border-bottom-color: rgba(255,255,255,0.06);
+        }
+        .solid .modal-data-table td {
+            border-bottom-color: rgba(255,255,255,0.03);
+        }
+        .solid .modal-data-table tr:hover td {
+            background: rgba(255,255,255,0.02);
+        }
+        .solid .modal-stat-card {
+            background: rgba(99,102,241,0.08);
+        }
+        .solid .modal-stat-card.warning {
+            background: rgba(251,191,36,0.08);
+        }
+        .solid .alert-box-modal.info {
+            background: rgba(99,102,241,0.12);
+        }
+        .solid .alert-box-modal.warning {
+            background: rgba(251,191,36,0.12);
+        }
+
+        /* MODO SOLID LIGHT */
+        .solid[data-theme="light"] .analytics-modal {
+            background-color: rgba(0,0,0,0.35);
+        }
+        .solid[data-theme="light"] .analytics-modal-content {
+            background: #ffffff;
+            border-color: #e4e8f0;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.12);
+        }
+        .solid[data-theme="light"] .analytics-modal-header {
+            background: #ffffff;
+            border-bottom-color: #e4e8f0;
+        }
+        .solid[data-theme="light"] .analytics-modal-close:hover {
+            background: #f7f8fc;
+        }
+        .solid[data-theme="light"] .formula-box-modal {
+            background: rgba(79,70,229,0.05);
+            border-color: rgba(79,70,229,0.18);
+        }
+        .solid[data-theme="light"] .formula-box-modal code {
+            background: rgba(0,0,0,0.05);
+        }
+        .solid[data-theme="light"] .modal-data-table th {
+            background: #f7f8fc;
+            border-bottom-color: #e4e8f0;
+        }
+        .solid[data-theme="light"] .modal-data-table td {
+            border-bottom-color: #f1f5f9;
+        }
+        .solid[data-theme="light"] .modal-data-table tr:hover td {
+            background: #fafbfd;
+        }
+        .solid[data-theme="light"] .modal-stat-card {
+            background: rgba(79,70,229,0.07);
+        }
+        .solid[data-theme="light"] .modal-stat-card.warning {
+            background: rgba(217,119,6,0.07);
+        }
+        .solid[data-theme="light"] .alert-box-modal.info {
+            background: rgba(79,70,229,0.09);
+        }
+        .solid[data-theme="light"] .alert-box-modal.warning {
+            background: rgba(217,119,6,0.09);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .analytics-modal-content {
+                width: 96%;
+                margin: 2% auto;
+                max-height: 94vh;
+            }
+            .analytics-modal-header {
+                padding: 18px 20px;
+            }
+            .analytics-modal-body {
+                padding: 20px;
+            }
+            .analytics-modal-title {
+                font-size: 17px;
+            }
+            .modal-stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <!-- Tema inline: se ejecuta ANTES de pintar nada -->
+    <script>
+        // ── Session guard ── redirige a login si no hay sesión válida (8h)
+        (function() {
+            try {
+                var s = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
+                if (!s || !s.usuario || !s.ts || (Date.now() - s.ts) >= 8 * 60 * 60 * 1000) {
+                    window.location.replace('login.html');
+                    return;
+                }
+                // Validar device contra GAS en background (no bloquea el render)
+                // ADMIN tiene acceso multiplataforma, no valida dispositivo
+                var isAdmin = s.rol && String(s.rol).toUpperCase() === 'ADMIN';
+                if (!isAdmin) {
+                    var GAS_URL   = 'https://script.google.com/macros/s/AKfycbzFkQsoAMCfnkoBHSTMMx4evKkAkwkBVlCu3eHIMVcam41GR2Q1_9YffhJSf8SeOC3_/exec';
+                    var deviceId  = localStorage.getItem('tdm_device_id');
+                    if (s.id && deviceId && GAS_URL) {
+                        var params = 'action=check_device&id_usuario=' + encodeURIComponent(String(s.usuario)) + '&id_device=' + encodeURIComponent(deviceId);
+                        fetch(GAS_URL, {
+                            method:  'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body:    params
+                        })
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            if (data && data.ok && data.allowed === false) {
+                                sessionStorage.removeItem('tdm_session');
+                                window.location.replace('login.html?reason=device');
+                            }
+                        })
+                        .catch(function() {}); // si falla el GAS, no expulsar
+                    }
+                }
+            } catch(_) {
+                window.location.replace('login.html');
+            }
+        })();
+
+        (function() {
+            var saved = localStorage.getItem('theme');
+            var theme = saved || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+        // Mostrar el texto de marca solo cuando las fuentes estén listas
+        document.fonts.ready.then(function() {
+            var brand = document.querySelector('.loading-brand');
+            if (brand) brand.classList.add('fonts-ready');
+        });
+    </script>
+</head>
+
+<body>
+
+    <!-- Particles Background -->
+    <div class="particles-container">
+        <canvas id="particlesCanvas"></canvas>
+    </div>
+
+    <!-- Loading Overlay — arranca activo para evitar flash del dashboard -->
+    <div id="loadingOverlay" class="loading-overlay active">
+        <div class="welcome-container">
+            <div class="welcome-logo-wrapper">
+                <img id="loadingLogo" class="welcome-logo" src="logo/LOGO-ORIGINAL.svg" alt="TDM">
+            </div>
+            <div class="welcome-text" style="display: none;">
+                <div class="welcome-greeting">Bienvenido</div>
+                <div class="welcome-username" id="welcomeUsername"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div class="header-brand">
+            <div class="header-tdm-logo">
+                <img id="headerLogo" class="header-logo-inner" src="logo/LOGO-ORIGINAL.svg" alt="TDM" width="42" height="42">
+            </div>
+            <h1 class="dashboard-title">
+                GRUPO <span style="font-weight:700;margin-left:-0.35em">TDM</span>
+                <button id="updateReportBtn" class="update-btn-small" title="Actualizar Reporte" style="display: none;">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </h1>
+        </div>
+        <div class="date-selector-container">
+            <div class="header-btn-group">
+                <div class="social-links">
+                    <button id="profileBtn" class="theme-toggle-btn" title="Perfil de usuario" aria-label="Perfil de usuario">
+                        <i class="fas fa-user-circle"></i>
+                    </button>
+                </div>
+                <div class="btn-group-divider"></div>
+                <div class="social-links">
+                    <button id="settingsBtn" class="theme-toggle-btn" title="Configuración" aria-label="Configuración">
+                        <i class="fas fa-sliders"></i>
+                    </button>
+                </div>
+                <div class="btn-group-divider"></div>
+                <div class="date-picker-wrap">
+                    <button class="theme-toggle-btn" id="dateIconBtn" title="Seleccionar fecha" aria-label="Seleccionar fecha">
+                        <i class="fas fa-calendar-day"></i>
+                    </button>
+                </div>
+                <div class="btn-group-divider"></div>
+                <div class="proveedor-filter-wrap">
+                    <button id="proveedorBtn" class="theme-toggle-btn" title="Filtrar proveedor" aria-label="Filtrar proveedor">
+                        <i class="fas fa-house" id="proveedorIcon"></i>
+                    </button>
+                    <select id="proveedorFilter" class="proveedor-filter" style="display:none;">
+                        <option value="todos">TODOS</option>
+                        <option value="universo">UNIVERSO</option>
+                        <option value="angeles">ÁNGELES</option>
+                    </select>
+                </div>
+            </div>
+            <button id="captureBtn" class="capture-btn" title="Enviar informe" style="display: none;">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="cards-wrapper">
+    <div class="cards-container">
+        <!-- Tarjeta Día -->
+        <div class="card">
+            <div class="card-header" onclick="toggleCard(this)">
+                <h2 class="card-title">
+                    <div class="card-icon dia"><i class="fas fa-calendar-day"></i></div>
+                    <div class="title-text-group">
+                        <span class="title-main">Día <sup class="days-badge" id="dia-habiles"></sup></span>
+                    </div>
+                </h2>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span class="date-badge" id="dia-fecha"></span>
+                    <i class="fas fa-chevron-down collapse-indicator"></i>
+                </div>
+            </div>
+
+            <div class="card-content">
+                <div class="data-grid">
+                    <div class="data-item">
+                        <div class="data-label">
+                            <i class="fas fa-bullseye"></i> Meta Diaria
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext" id="dia-meta-tooltip">Cargando...</span>
+                            </div>
+                        </div>
+                        <p class="data-value" id="dia-meta"></p>
+                        <div class="data-vs" id="dia-vs-meta"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label"><i class="fas fa-money-bill-wave"></i> Ingreso Actual</div>
+                        <p class="data-value" id="dia-ingreso"></p>
+                        <div class="data-vs" id="dia-vs-ingreso"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label"><i class="fas fa-balance-scale"></i> Diferencia</div>
+                        <p class="data-value" id="dia-diferencia"></p>
+                        <div class="data-vs" id="dia-vs-diferencia"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label"><i class="fas fa-percent"></i> Porcentaje</div>
+                        <p class="data-value" id="dia-porcentaje"></p>
+                        <div class="data-vs" id="dia-vs-porcentaje"></div>
+                    </div>
+                </div>
+
+                <div class="progress-section">
+                    <div class="progress-header">
+                        <span class="progress-title">Progreso hacia la meta</span>
+                        <span class="progress-percent" id="dia-progressPercent">0%</span>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="dia-progressBar"></div>
+                    </div>
+                    <div class="progress-remaining" id="dia-restante"></div>
+                </div>
+
+                <div class="extra-stats">
+                    <div class="data-item">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-chart-simple"></i> Gestión Anual</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext" id="dia-gestion-tooltip">Comparación con el mismo día del año anterior</span>
+                            </div>
+                        </div>
+                        <p class="data-value">
+                            <span id="dia-gestion"></span>
+                            <span class="trend-icon" id="dia-trendIcon"></span>
+                        </p>
+                        <div class="data-vs" id="dia-vs-gestion"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-calculator"></i> Promedio</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext">Promedio simple de ingresos hasta la fecha</span>
+                            </div>
+                        </div>
+                        <p class="data-value info" id="dia-average"></p>
+                        <div class="data-vs" id="dia-vs-promedio"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-weight-hanging"></i> Promedio Ponderado</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext">Promedio ponderado por días hábiles</span>
+                            </div>
+                        </div>
+                        <p class="data-value purple" id="dia-weighted"></p>
+                        <div class="data-vs" id="dia-vs-weighted"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-chart-bar"></i> Desviación Estándar</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext" id="dia-desvest-tooltip">Variabilidad de los ingresos diarios</span>
+                            </div>
+                        </div>
+                        <p class="data-value" id="dia-desvest"></p>
+                        <div class="data-vs" id="dia-vs-desvest"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-crown"></i> Máximo</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext" id="dia-max-tooltip">Ingreso diario máximo registrado</span>
+                            </div>
+                        </div>
+                        <p class="data-value positive" id="dia-max"></p>
+                        <div class="data-vs" id="dia-vs-max"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-arrow-down"></i> Mínimo</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext" id="dia-min-tooltip">Ingreso diario mínimo registrado</span>
+                            </div>
+                        </div>
+                        <p class="data-value negative" id="dia-min"></p>
+                        <div class="data-vs" id="dia-vs-min"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>        <!-- Tarjeta Mes -->
+        <div class="card">
+            <div class="card-header" onclick="toggleCard(this)">
+                <h2 class="card-title">
+                    <div class="card-icon mes"><i class="fas fa-calendar-alt"></i></div>
+                    <div class="title-text-group">
+                        <span class="title-main">Mes <sup class="days-badge" id="mes-habiles"></sup></span>
+                    </div>
+                </h2>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span class="date-badge" id="mes-mes"></span>
+                    <i class="fas fa-chevron-down collapse-indicator"></i>
+                </div>
+            </div>
+
+            <div class="card-content">
+                <div class="data-grid">
+                    <div class="data-item">
+                        <div class="data-label"><i class="fas fa-bullseye"></i> Meta Mensual</div>
+                        <p class="data-value" id="mes-meta"></p>
+                        <div class="data-vs" id="mes-vs-meta"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label"><i class="fas fa-money-bill-wave"></i> Ingreso Actual</div>
+                        <p class="data-value" id="mes-ingreso"></p>
+                        <div class="data-vs" id="mes-vs-ingreso"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label"><i class="fas fa-balance-scale"></i> Diferencia</div>
+                        <p class="data-value" id="mes-diferencia"></p>
+                        <div class="data-vs" id="mes-vs-diferencia"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label"><i class="fas fa-percent"></i> Porcentaje</div>
+                        <p class="data-value" id="mes-porcentaje"></p>
+                        <div class="data-vs" id="mes-vs-porcentaje"></div>
+                    </div>
+                </div>
+
+                <div class="progress-section">
+                    <div class="progress-header">
+                        <span class="progress-title">Progreso hacia la meta</span>
+                        <span class="progress-percent" id="mes-progressPercent">0%</span>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="mes-progressBar"></div>
+                    </div>
+                    <div class="progress-remaining" id="mes-restante"></div>
+                </div>
+
+                <div class="extra-stats">
+                    <div class="data-item">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-chart-simple"></i> Gestión Anual</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext" id="mes-gestion-tooltip">Comparación con el mismo mes del año anterior</span>
+                            </div>
+                        </div>
+                        <p class="data-value">
+                            <span id="mes-gestion"></span>
+                            <span class="trend-icon" id="mes-trendIcon"></span>
+                        </p>
+                        <div class="data-vs" id="mes-vs-gestion"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-calculator"></i> Promedio</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext">Promedio simple de ingresos mensuales</span>
+                            </div>
+                        </div>
+                        <p class="data-value info" id="mes-average"></p>
+                        <div class="data-vs" id="mes-vs-promedio"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-weight-hanging"></i> Promedio Ponderado</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext">Promedio ponderado por días hábiles</span>
+                            </div>
+                        </div>
+                        <p class="data-value purple" id="mes-weighted"></p>
+                        <div class="data-vs" id="mes-vs-weighted"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-chart-bar"></i> Desviación Estándar</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext" id="mes-desvest-tooltip">Variabilidad de los ingresos mensuales</span>
+                            </div>
+                        </div>
+                        <p class="data-value" id="mes-desvest"></p>
+                        <div class="data-vs" id="mes-vs-desvest"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-crown"></i> Máximo</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext" id="mes-max-tooltip">Ingreso mensual máximo registrado</span>
+                            </div>
+                        </div>
+                        <p class="data-value positive" id="mes-max"></p>
+                        <div class="data-vs" id="mes-vs-max"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-arrow-down"></i> Mínimo</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext" id="mes-min-tooltip">Ingreso mensual mínimo registrado</span>
+                            </div>
+                        </div>
+                        <p class="data-value negative" id="mes-min"></p>
+                        <div class="data-vs" id="mes-vs-min"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Tarjeta Año -->
+        <div class="card">
+            <div class="card-header" onclick="toggleCard(this)">
+                <h2 class="card-title">
+                    <div class="card-icon ano"><i class="fas fa-calendar"></i></div>
+                    <div class="title-text-group">
+                        <span class="title-main">Año <sup class="days-badge" id="año-habiles"></sup></span>
+                    </div>
+                </h2>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span class="date-badge" id="año-año"></span>
+                    <i class="fas fa-chevron-down collapse-indicator"></i>
+                </div>
+            </div>
+
+            <div class="card-content">
+                <div class="data-grid">
+                    <div class="data-item">
+                        <div class="data-label"><i class="fas fa-bullseye"></i> Meta Anual</div>
+                        <p class="data-value" id="año-meta"></p>
+                        <div class="data-vs" id="año-vs-meta"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label"><i class="fas fa-money-bill-wave"></i> Ingreso Actual</div>
+                        <p class="data-value" id="año-ingreso"></p>
+                        <div class="data-vs" id="año-vs-ingreso"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label"><i class="fas fa-balance-scale"></i> Diferencia</div>
+                        <p class="data-value" id="año-diferencia"></p>
+                        <div class="data-vs" id="año-vs-diferencia"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label"><i class="fas fa-percent"></i> Porcentaje</div>
+                        <p class="data-value" id="año-porcentaje"></p>
+                        <div class="data-vs" id="año-vs-porcentaje"></div>
+                    </div>
+                </div>
+
+                <div class="progress-section">
+                    <div class="progress-header">
+                        <span class="progress-title">Progreso hacia la meta</span>
+                        <span class="progress-percent" id="año-progressPercent">0%</span>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="año-progressBar"></div>
+                    </div>
+                    <div class="progress-remaining" id="año-restante"></div>
+                </div>
+
+                <div class="extra-stats">
+                    <div class="data-item">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-chart-simple"></i> Gestión</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext" id="año-gestion-tooltip">Comparación con el año anterior completo</span>
+                            </div>
+                        </div>
+                        <p class="data-value">
+                            <span id="año-gestion"></span>
+                            <span class="trend-icon" id="año-trendIcon"></span>
+                        </p>
+                        <div class="data-vs" id="año-vs-gestion"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-calculator"></i> Promedio</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext">Promedio simple de ingresos anuales</span>
+                            </div>
+                        </div>
+                        <p class="data-value info" id="año-average"></p>
+                        <div class="data-vs" id="año-vs-promedio"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-weight-hanging"></i> Promedio Ponderado</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext">Promedio ponderado por días hábiles</span>
+                            </div>
+                        </div>
+                        <p class="data-value purple" id="año-weighted"></p>
+                        <div class="data-vs" id="año-vs-weighted"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-chart-bar"></i> Desviación Estándar</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext" id="año-desvest-tooltip">Variabilidad de los ingresos anuales</span>
+                            </div>
+                        </div>
+                        <p class="data-value" id="año-desvest"></p>
+                        <div class="data-vs" id="año-vs-desvest"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-crown"></i> Máximo</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext" id="año-max-tooltip">Ingreso anual máximo registrado</span>
+                            </div>
+                        </div>
+                        <p class="data-value positive" id="año-max"></p>
+                        <div class="data-vs" id="año-vs-max"></div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-arrow-down"></i> Mínimo</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext" id="año-min-tooltip">Ingreso anual mínimo registrado</span>
+                            </div>
+                        </div>
+                        <p class="data-value negative" id="año-min"></p>
+                        <div class="data-vs" id="año-vs-min"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjeta de Tendencias -->
+    <div class="cards-container2">
+        <div class="card trend-analysis-card">
+            <div class="card-top-border"></div>
+            <div class="card-header" onclick="toggleCard(this)">
+                <h2 class="card-title">
+                    <div class="card-icon tendencia"><i class="fas fa-chart-line"></i></div>
+                    <span class="title-main">Tendencia <sup class="days-badge" id="tendencia-resumen-texto"></sup></span>
+                </h2>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span class="date-badge" id="tendencia-mes"></span>
+                    <i class="fas fa-chevron-down collapse-indicator"></i>
+                </div>
+            </div>
+
+            <div class="card-content">
+                <!-- Métricas principales -->
+                <div class="data-grid">
+                    <div class="data-item highlight">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-project-diagram"></i> Proyección Mensual</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext">Estimación conservadora basada en tendencia y promedio móvil</span>
+                            </div>
+                        </div>
+                        <p class="data-value" id="tendencia-proyeccion"></p>
+                        <button class="info-btn-inline" onclick="mostrarModalProyeccion()">
+                            <i class="fas fa-calculator"></i> Ver cálculo completo
+                        </button>
+                    </div>
+                    <div class="data-item highlight">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-chart-line"></i> Pendiente Tendencia</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext">Tasa de cambio diaria según regresión lineal. Indica si los ingresos están en alza o baja.</span>
+                            </div>
+                        </div>
+                        <p class="data-value" id="tendencia-pendiente"></p>
+                        <button class="info-btn-inline" onclick="mostrarModalRegresion()">
+                            <i class="fas fa-square-root-alt"></i> Ver fórmula
+                        </button>
+                    </div>
+                    <div class="data-item highlight">
+                        <div class="data-label">
+                            <span class="label-text"><i class="fas fa-chart-area"></i> Promedio Móvil 7d</span>
+                            <div class="tooltip">
+                                <i class="fas fa-info-circle" style="color: var(--text-light); font-size: 12px;"></i>
+                                <span class="tooltiptext">Promedio de los últimos 7 días hábiles. Captura la tendencia más reciente.</span>
+                            </div>
+                        </div>
+                        <p class="data-value info" id="tendencia-promedio-movil"></p>
+                        <div style="font-size: 11px; color: var(--text-light); margin-top: 6px;">
+                            <span id="tendencia-dias-info"></span>
+                        </div>
+                        <button class="info-btn-inline" onclick="mostrarModalPromedioMovil()">
+                            <i class="fas fa-list"></i> Ver últimos 7 días
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Gráfico -->
+                <div class="chart-container">
+                    <div class="chart-toolbar">
+                        <span class="chart-title">Evolución Mensual Comparativa</span>
+                        <div class="chart-actions">
+                            <button class="chart-action-btn"
+                                onclick="exportChartAsImage('tendenciaChart', 'tendencia-financiera')">
+                                <i class="fas fa-download"></i> Exportar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chart-scroll-wrap">
+                        <canvas id="tendenciaChart"></canvas>
+                    </div>
+                    <div class="chart-footer">
+                        <span class="chart-note">Comparativa anual de ingresos</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjeta Database -->
+    <div class="cards-container2">
+        <div class="card">
+            <div class="card-header" onclick="datosToggleCard(this)">
+                <h2 class="card-title">
+                    <div class="card-icon datos"><i class="fas fa-database"></i></div>
+                    DataBase
+                </h2>
+                <div class="header-controls">
+                    <span class="records-badge" id="datos-contador">Cargando ...</span>
+                    <i class="fas fa-chevron-down collapse-indicator"></i>
+                </div>
+            </div>
+
+            <div class="card-content">
+                <div class="download-section">
+                    <h3 class="download-title">Exportar datos</h3>
+                    <p class="download-description">Selecciona el formato para descargar los datos</p>
+                    <div class="download-options">
+                        <div class="download-option" onclick="datosDescargar('csv')">
+                            <div class="option-icon csv"><i class="fas fa-file-csv"></i></div>
+                            <div class="option-info">
+                                <h4>CSV</h4>
+                                <p>Formato de texto plano</p>
+                            </div>
+                            <div class="option-action"><i class="fas fa-download"></i></div>
+                        </div>
+                        <div class="download-option" onclick="datosDescargar('json')">
+                            <div class="option-icon json"><i class="fas fa-file-code"></i></div>
+                            <div class="option-info">
+                                <h4>JSON</h4>
+                                <p>Estructura de datos</p>
+                            </div>
+                            <div class="option-action"><i class="fas fa-download"></i></div>
+                        </div>
+                        <div class="download-option" onclick="datosDescargar('excel')">
+                            <div class="option-icon excel"><i class="fas fa-file-excel"></i></div>
+                            <div class="option-info">
+                                <h4>Excel</h4>
+                                <p>Hoja de cálculo</p>
+                            </div>
+                            <div class="option-action"><i class="fas fa-download"></i></div>
+                        </div>
+                        <div class="download-option" onclick="datosDescargarExcelFiltrado()">
+                            <div class="option-icon excel"><i class="fas fa-filter"></i></div>
+                            <div class="option-info">
+                                <h4>Excel (Filtrado)</h4>
+                                <input type="text" id="filtro-fechas" placeholder="Rango de fechas"
+                                    class="flatpickr-input" readonly
+                                    style="padding:4px 0; border:none; border-radius:8px; width:auto; font-size:10px; cursor:pointer; background:transparent; text-align:left;">
+                            </div>
+                            <div class="option-action"><i class="fas fa-download"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div><!-- /.cards-wrapper -->
+
+
+
+    <!-- PWA Install Button -->
+    <button id="installBtn" class="install-btn hidden pulse">
+        <i class="fas fa-mobile-alt"></i> Instalar Aplicación
+    </button>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        <div class="footer-content">
+            <div class="footer-line">Developed by <strong>Andrés Mendoza</strong> © 2026</div>
+            <div class="footer-line footer-powered">
+                Powered by <strong>GrupoTDM</strong>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modales de Análisis Avanzado -->
+    <div id="modalProyeccion" class="analytics-modal">
+        <div class="analytics-modal-content">
+            <div class="analytics-modal-header">
+                <h2 class="analytics-modal-title">
+                    <i class="fas fa-calculator"></i>
+                    Cálculo de Proyección Mensual
+                </h2>
+                <span class="analytics-modal-close" onclick="cerrarModalAnalytics('modalProyeccion')">&times;</span>
+            </div>
+            <div class="analytics-modal-body" id="modalProyeccionBody">
+                <!-- Contenido dinámico -->
+            </div>
+        </div>
+    </div>
+
+    <div id="modalRegresion" class="analytics-modal">
+        <div class="analytics-modal-content">
+            <div class="analytics-modal-header">
+                <h2 class="analytics-modal-title">
+                    <i class="fas fa-square-root-alt"></i>
+                    Regresión Lineal y Tendencia
+                </h2>
+                <span class="analytics-modal-close" onclick="cerrarModalAnalytics('modalRegresion')">&times;</span>
+            </div>
+            <div class="analytics-modal-body" id="modalRegresionBody">
+                <!-- Contenido dinámico -->
+            </div>
+        </div>
+    </div>
+
+    <div id="modalDiasHabiles" class="analytics-modal">
+        <div class="analytics-modal-content">
+            <div class="analytics-modal-header">
+                <h2 class="analytics-modal-title">
+                    <i class="fas fa-calendar-alt"></i>
+                    Análisis de Días Hábiles
+                </h2>
+                <span class="analytics-modal-close" onclick="cerrarModalAnalytics('modalDiasHabiles')">&times;</span>
+            </div>
+            <div class="analytics-modal-body" id="modalDiasHabilesBody">
+                <!-- Contenido dinámico -->
+            </div>
+        </div>
+    </div>
+
+    <div id="modalPromedioMovil" class="analytics-modal">
+        <div class="analytics-modal-content">
+            <div class="analytics-modal-header">
+                <h2 class="analytics-modal-title">
+                    <i class="fas fa-chart-area"></i>
+                    Promedio Móvil (7 días)
+                </h2>
+                <span class="analytics-modal-close" onclick="cerrarModalAnalytics('modalPromedioMovil')">&times;</span>
+            </div>
+            <div class="analytics-modal-body" id="modalPromedioMovilBody">
+                <!-- Contenido dinámico -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Libraries -->
+    <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+
+    <!-- Local Scripts (Load in order of dependency) -->
+    <script src="js/config/constants.js"></script>
+    <script src="js/core/biometry.js"></script>
+    <script src="js/utils/date_utils.js"></script>
+    <script src="js/utils/formatters.js"></script>
+    <script src="js/api/google_sheets.js"></script>
+    <script src="js/core/metrics.js"></script>
+    <script src="js/core/trends_logic.js"></script>
+    <script src="js/ui/render.js"></script>
+    <script src="js/ui/charts.js"></script>
+    <script src="js/ui/events.js"></script>
+    <script src="js/ui/capture.js"></script>
+    <script src="js/ui/email.js"></script>
+    <script src="js/ui/database.js"></script>
+    <script src="js/ui/analytics_modals.js"></script>
+    <script src="js/pwa/sw_init.js"></script>
+    <script src="js/utils/particles.js"></script>
+
+    <!-- Profile Panel Script -->
+    <script>
+        (function initProfilePanel() {
+            var btn = document.getElementById('profileBtn');
+            if (!btn) return;
+
+            var GAS_URL = 'https://script.google.com/macros/s/AKfycbzFkQsoAMCfnkoBHSTMMx4evKkAkwkBVlCu3eHIMVcam41GR2Q1_9YffhJSf8SeOC3_/exec';
+
+            // Configuración de roles con íconos y colores
+            var roleConfig = {
+                'OWNER': { icon: 'fa-code', color: '#dc2626', label: 'Propietario' },
+                'ADMIN': { icon: 'fa-crown', color: '#f59e0b', label: 'Administrador' },
+                'USER': { icon: 'fa-user', color: '#6366f1', label: 'Usuario' },
+                'COORDINADOR': { icon: 'fa-user-tie', color: '#8b5cf6', label: 'Coordinador' },
+                'SUPERVISOR': { icon: 'fa-user-shield', color: '#10b981', label: 'Supervisor' },
+                'OPERADOR': { icon: 'fa-user-gear', color: '#3b82f6', label: 'Operador' },
+                'ANALISTA': { icon: 'fa-chart-line', color: '#06b6d4', label: 'Analista' },
+                'GERENTE': { icon: 'fa-briefcase', color: '#ec4899', label: 'Gerente' }
+            };
+
+            // Crear panel
+            var panel = document.createElement('div');
+            panel.id = 'profilePanel';
+            panel.className = 'profile-panel';
+            panel.setAttribute('role', 'menu');
+            panel.setAttribute('aria-hidden', 'true');
+            document.body.appendChild(panel);
+
+            // Cargar datos del usuario
+            function loadUserData() {
+                try {
+                    var session = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
+                    if (!session) return { nombre: '-', usuario: '-', rol: 'USER', correo: '-' };
+                    return {
+                        nombre: session.nombre || '-',
+                        usuario: session.usuario || '-',
+                        rol: (session.rol || 'USER').toUpperCase(),
+                        correo: session.correo || '-'
+                    };
+                } catch(e) {
+                    return { nombre: '-', usuario: '-', rol: 'USER', correo: '-' };
+                }
+            }
+
+            // Obtener configuración del rol
+            function getRoleConfig(rol) {
+                return roleConfig[rol] || roleConfig['USER'];
+            }
+
+            // Renderizar panel
+            function renderPanel() {
+                var data = loadUserData();
+                var config = getRoleConfig(data.rol);
+                
+                // Verificar si hay biometría registrada
+                var hasBiometry = false;
+                if (typeof BIOMETRY !== 'undefined' && BIOMETRY.isRegistered()) {
+                    hasBiometry = true;
+                }
+                
+                var biometrySection = hasBiometry ? `
+                    <div class="profile-divider"></div>
+                    <button class="profile-action-btn" id="profileBiometricBtn">
+                        <i class="fas fa-fingerprint"></i>
+                        <span>Desactivar biometría</span>
+                    </button>
+                ` : '';
+                
+                panel.innerHTML = `
+                    <div class="profile-header">
+                        <div class="profile-avatar" style="background: ${config.color}20; border-color: ${config.color}50;">
+                            <i class="fas ${config.icon}" style="color: ${config.color};"></i>
+                        </div>
+                        <div class="profile-header-info">
+                            <div class="profile-name">${data.nombre}</div>
+                            <div class="profile-role-badge" style="color: ${config.color};">
+                                <span style="background: ${config.color};"></span>
+                                ${config.label}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="profile-body">
+                        <div class="profile-info-item">
+                            <span class="profile-info-label">Usuario</span>
+                            <span class="profile-info-value">${data.usuario}</span>
+                        </div>
+                        <div class="profile-info-item">
+                            <span class="profile-info-label">Correo</span>
+                            <span class="profile-info-value">${data.correo}</span>
+                        </div>
+                    </div>
+                    ${biometrySection}
+                    <div class="profile-divider"></div>
+                    <button class="profile-logout" id="profileLogoutBtn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Cerrar Sesión</span>
+                    </button>
+                `;
+
+                // Agregar evento de biometría
+                var biometricBtn = panel.querySelector('#profileBiometricBtn');
+                if (biometricBtn) {
+                    biometricBtn.addEventListener('click', function() {
+                        closePanel();
+                        if (typeof BIOMETRY === 'undefined') {
+                            alert('Biometría no disponible');
+                            return;
+                        }
+                        
+                        if (confirm('¿Desea desactivar la autenticación biométrica? Deberá activarla nuevamente desde el login.')) {
+                            BIOMETRY.remove();
+                            alert('Biometría desactivada correctamente');
+                        }
+                    });
+                }
+
+                // Agregar evento de logout
+                var logoutBtn = panel.querySelector('#profileLogoutBtn');
+                if (logoutBtn) {
+                    logoutBtn.addEventListener('click', function() {
+                        closePanel();
+                        if (!confirm('¿Cerrar sesión?')) return;
+                        var s = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
+                        
+                        // Limpiar sessionStorage y localStorage
+                        sessionStorage.removeItem('tdm_session');
+                        sessionStorage.removeItem('tdm_preload_data');
+                        localStorage.removeItem('tdm_user_name');
+                        
+                        if (s && s.usuario) {
+                            var body = 'action=logout&id_usuario=' + encodeURIComponent(s.usuario);
+                            navigator.sendBeacon(GAS_URL, new Blob([body], { type: 'application/x-www-form-urlencoded' }));
+                        }
+                        window.location.replace('login.html');
+                    });
+                }
+            }
+
+            // Posicionar panel
+            function positionPanel() {
+                var rect = btn.getBoundingClientRect();
+                var pw = panel.offsetWidth || 280;
+                var ph = panel.offsetHeight || 250;
+                var margin = 8;
+                var vw = window.innerWidth;
+                var vh = window.innerHeight;
+
+                // Alineado a la izquierda del botón
+                var left = rect.left;
+                var top = rect.bottom + margin;
+                if (left + pw > vw - margin) left = vw - pw - margin;
+                if (left < margin) left = margin;
+                if (top + ph > vh - margin) top = rect.top - ph - margin;
+
+                panel.style.left = left + 'px';
+                panel.style.top = top + 'px';
+            }
+
+            // Cerrar panel
+            function closePanel() {
+                panel.classList.remove('open');
+                panel.setAttribute('aria-hidden', 'true');
+            }
+
+            // Abrir/cerrar panel
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var opening = !panel.classList.contains('open');
+                if (opening) {
+                    // Cerrar otros paneles antes de abrir este
+                    window.closeAllPanels('profile');
+                    window.activePanels.profile = panel;
+                    
+                    renderPanel();
+                    panel.style.visibility = 'hidden';
+                    panel.classList.add('open');
+                    positionPanel();
+                    panel.style.visibility = '';
+                } else {
+                    closePanel();
+                }
+                panel.setAttribute('aria-hidden', String(!opening));
+            });
+
+            // Cerrar al hacer clic fuera
+            document.addEventListener('click', function(e) {
+                if (!panel.contains(e.target) && e.target !== btn) closePanel();
+            });
+
+            // Cerrar con Escape
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') closePanel();
+            });
+
+            // Reposicionar al cambiar tamaño de ventana
+            window.addEventListener('resize', function() {
+                if (panel.classList.contains('open')) positionPanel();
+            });
+        })();
+
+        // ─── Control de visibilidad basado en rol OWNER ───────────────────────────
+        // Ya no es necesario, la lógica está en el panel de configuración
+        
+        function openUsersManagementModal() {
+            alert('Módulo de Gestión de Usuarios\n\nEsta funcionalidad estará disponible próximamente.\n\nPermitirá:\n- Ver lista de usuarios\n- Crear nuevos usuarios\n- Editar roles y permisos\n- Activar/desactivar usuarios\n- Gestionar dispositivos autorizados');
+        }
+
+        // ─── Cargar nombre de usuario en pantalla de bienvenida ──────────────────
+        (function loadWelcomeUsername() {
+            try {
+                // Verificar si es la primera carga después del login
+                var showWelcome = sessionStorage.getItem('tdm_show_welcome') === 'true';
+                
+                if (showWelcome) {
+                    // Intentar obtener de localStorage primero (persistente)
+                    var userName = localStorage.getItem('tdm_user_name');
+                    
+                    // Si no existe en localStorage, obtener de sessionStorage
+                    if (!userName) {
+                        var session = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
+                        if (session && session.nombre) {
+                            userName = session.nombre;
+                            // Guardar en localStorage para persistencia
+                            localStorage.setItem('tdm_user_name', userName);
+                        }
+                    }
+                    
+                    // Solo mostrar si hay nombre válido
+                    if (userName && userName.trim()) {
+                        var welcomeText = document.querySelector('.welcome-text');
+                        var welcomeUsername = document.getElementById('welcomeUsername');
+                        
+                        if (welcomeText) welcomeText.style.display = 'flex';
+                        if (welcomeUsername) welcomeUsername.textContent = userName;
+                    }
+                    
+                    // Marcar que ya se mostró la bienvenida
+                    sessionStorage.removeItem('tdm_show_welcome');
+                }
+                // Si no es la primera carga, solo mostrar el logo (sin texto ni loader)
+            } catch(e) {
+                console.error('Error cargando nombre de usuario:', e);
+            }
+        })();
+    </script>
+
+</body>
+
+</html>
