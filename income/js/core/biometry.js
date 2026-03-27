@@ -50,16 +50,24 @@ const BIOMETRY = {
                     requireResidentKey: false,                // NO crear passkey residente
                     residentKey: "discouraged"                // Desalentar passkeys en iCloud
                 },
-                timeout: 120000,  // 2 minutos de timeout (más tiempo para Face ID)
+                timeout: 60000,  // 60 segundos de timeout
                 attestation: "none",
                 extensions: {
                     credProps: true  // Obtener propiedades de la credencial
                 }
             };
 
-            const credential = await navigator.credentials.create({
+            // Crear timeout manual adicional por si el navegador no respeta el timeout
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('REGISTRATION_TIMEOUT')), 65000);
+            });
+
+            const credentialPromise = navigator.credentials.create({
                 publicKey: publicKeyCredentialCreationOptions
             });
+
+            // Usar Promise.race para garantizar timeout
+            const credential = await Promise.race([credentialPromise, timeoutPromise]);
 
             if (credential) {
                 // Guardar el ID de la credencial localmente
@@ -68,12 +76,16 @@ const BIOMETRY = {
                 localStorage.setItem('tdm_biometric_user', session.usuario);
 
                 return { success: true, message: "Biometría configurada correctamente." };
+            } else {
+                return { success: false, message: "No se pudo crear la credencial." };
             }
         } catch (error) {
             console.error("Biometric Registration Error:", error);
             
             // Mensajes de error más específicos
-            if (error.name === 'NotAllowedError') {
+            if (error.message === 'REGISTRATION_TIMEOUT') {
+                return { success: false, message: "Tiempo de espera agotado. Intente nuevamente." };
+            } else if (error.name === 'NotAllowedError') {
                 return { success: false, message: "Autenticación cancelada o no autorizada." };
             } else if (error.name === 'InvalidStateError') {
                 return { success: false, message: "Ya existe una credencial para este usuario." };
@@ -85,7 +97,7 @@ const BIOMETRY = {
                 return { success: false, message: "Tiempo de espera agotado. Intente nuevamente." };
             }
             
-            return { success: false, message: error.message };
+            return { success: false, message: error.message || "Error desconocido al registrar biometría." };
         }
     },
 

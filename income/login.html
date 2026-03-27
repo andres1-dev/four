@@ -1326,18 +1326,28 @@ async function offerBiometricRegistration(userName) {
 
         const skipBtn = modal.querySelector('#bioSkip');
         const activateBtn = modal.querySelector('#bioActivate');
+        let registrationInProgress = false;
 
         skipBtn.addEventListener('click', () => {
-            modal.remove();
-            resolve(false);
+            if (!registrationInProgress) {
+                modal.remove();
+                resolve(false);
+            }
         });
 
         activateBtn.addEventListener('click', async () => {
+            if (registrationInProgress) return;
+            
+            registrationInProgress = true;
             activateBtn.disabled = true;
+            skipBtn.disabled = true;
             activateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Configurando...';
 
             try {
+                console.log("Iniciando registro biométrico...");
                 const result = await BIOMETRY.register();
+                console.log("Resultado del registro:", result);
+                
                 if (result.success) {
                     activateBtn.innerHTML = '<i class="fas fa-check"></i> Activado';
                     activateBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
@@ -1348,25 +1358,42 @@ async function offerBiometricRegistration(userName) {
                 } else {
                     activateBtn.innerHTML = 'Error';
                     activateBtn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+                    console.error("Error en registro:", result.message);
+                    
+                    // Mostrar mensaje de error al usuario
+                    const errorMsg = document.createElement('p');
+                    errorMsg.style.cssText = 'color: #ef4444; font-size: 12px; margin-top: 10px;';
+                    errorMsg.textContent = result.message;
+                    activateBtn.parentElement.appendChild(errorMsg);
+                    
                     setTimeout(() => {
                         modal.remove();
                         resolve(false);
-                    }, 1500);
+                    }, 2500);
                 }
             } catch (err) {
                 console.error('Error registrando biometría:', err);
                 activateBtn.innerHTML = 'Error';
                 activateBtn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+                
+                // Mostrar mensaje de error al usuario
+                const errorMsg = document.createElement('p');
+                errorMsg.style.cssText = 'color: #ef4444; font-size: 12px; margin-top: 10px;';
+                errorMsg.textContent = err.message || 'Error desconocido';
+                activateBtn.parentElement.appendChild(errorMsg);
+                
                 setTimeout(() => {
                     modal.remove();
                     resolve(false);
-                }, 1500);
+                }, 2500);
+            } finally {
+                registrationInProgress = false;
             }
         });
 
-        // Cerrar con ESC
+        // Cerrar con ESC (solo si no hay registro en progreso)
         const handleEsc = (e) => {
-            if (e.key === 'Escape') {
+            if (e.key === 'Escape' && !registrationInProgress) {
                 modal.remove();
                 document.removeEventListener('keydown', handleEsc);
                 resolve(false);
