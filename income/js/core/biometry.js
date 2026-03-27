@@ -204,26 +204,23 @@ const BIOMETRY = {
 
             // Key (Numeric Keypad Style - Windows Hello)
             key: `<svg width="50" height="50" viewBox="0 0 24 24" fill="currentColor">
-                <!-- Rectángulo exterior del teclado -->
-                <rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <!-- Fila 1 -->
+                <circle cx="7" cy="6.5" r="1.2"/>
+                <circle cx="12" cy="6.5" r="1.2"/>
+                <circle cx="17" cy="6.5" r="1.2"/>
                 
-                <!-- Fila 1: 1, 2, 3 -->
-                <circle cx="7" cy="7" r="1.2"/>
-                <circle cx="12" cy="7" r="1.2"/>
-                <circle cx="17" cy="7" r="1.2"/>
+                <!-- Fila 2 -->
+                <circle cx="7" cy="11" r="1.2"/>
+                <circle cx="12" cy="11" r="1.2"/>
+                <circle cx="17" cy="11" r="1.2"/>
                 
-                <!-- Fila 2: 4, 5, 6 -->
-                <circle cx="7" cy="11.5" r="1.2"/>
-                <circle cx="12" cy="11.5" r="1.2"/>
-                <circle cx="17" cy="11.5" r="1.2"/>
+                <!-- Fila 3 -->
+                <circle cx="7" cy="15.5" r="1.2"/>
+                <circle cx="12" cy="15.5" r="1.2"/>
+                <circle cx="17" cy="15.5" r="1.2"/>
                 
-                <!-- Fila 3: 7, 8, 9 -->
-                <circle cx="7" cy="16" r="1.2"/>
-                <circle cx="12" cy="16" r="1.2"/>
-                <circle cx="17" cy="16" r="1.2"/>
-                
-                <!-- Fila 4: 0 (centrado) -->
-                <circle cx="12" cy="19.5" r="1.2"/>
+                <!-- 0 (más separado) -->
+                <circle cx="12" cy="20.5" r="1.2"/>
             </svg>`,
 
             generic: `<svg width="50" height="50" viewBox="0 0 24 24" fill="currentColor">
@@ -239,8 +236,8 @@ const BIOMETRY = {
         switch (type) {
             case 'faceid': return 'Face ID';
             case 'touchid': return 'Touch ID';
-            case 'fingerprint': return 'Huella Digital';
-            case 'key': return 'Windows Hello';
+            case 'fingerprint': return 'Huella';
+            case 'key': return 'Key';
             default: return 'Biometría';
         }
     }
