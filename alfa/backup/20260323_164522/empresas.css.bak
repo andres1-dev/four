@@ -1,0 +1,93 @@
+/* ============================================
+   DISTRIBUTION - EMPRESAS
+   ============================================ */
+
+.empresas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.empresa-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background-color: var(--editor) !important;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.empresa-item:hover {
+    border-color: var(--text-secondary);
+    background: var(--hover);
+}
+
+.empresa-item label {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    min-width: 80px;
+}
+
+.empresa-item input[type="number"] {
+    width: 70px;
+    padding: 10px 14px;
+    text-align: center;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.empresa-item input[type="number"]:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+}
+
+.empresa-item .principal-input {
+    background: var(--hover) !important;
+    font-weight: 600;
+    border-color: var(--primary) !important;
+    cursor: not-allowed;
+    opacity: 0.8;
+    border-radius: 6px !important;
+}
+
+.empresa-item .input-group {
+    width: 90px;
+    height: 32px;
+}
+
+.empresa-item input[type="number"] {
+    border-radius: 6px 0 0 6px;
+    border-right: none;
+    text-align: center;
+    padding: 0 8px;
+    height: 100%;
+    width: 100%;
+}
+
+.empresa-item .principal-input {
+    border-radius: 6px !important;
+    border-right: 1px solid var(--primary) !important;
+}
+
+/* Ocultar flechas nativas en inputs de empresa */
+.empresa-item input[type="number"]::-webkit-outer-spin-button,
+.empresa-item input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.empresa-item input[type="number"] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
