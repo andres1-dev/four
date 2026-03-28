@@ -6,6 +6,8 @@ class SyncManager {
     this.swRegistration = null;
     this.isInitialized = false;
     this.onSyncCallback = null;
+    this.firebaseRef = null;
+    this.lastEventId = null;
   }
 
   async init(onSyncCallback) {
@@ -37,7 +39,7 @@ class SyncManager {
       }
     }
 
-    // Broadcast Channel API para sincronización entre pestañas del mismo origen
+    // Broadcast Channel API para sincronización entre pestañas del mismo navegador
     if ('BroadcastChannel' in window) {
       this.channel = new BroadcastChannel('documentos-sync');
       
@@ -47,6 +49,43 @@ class SyncManager {
           this.onSyncCallback(event.data);
         }
       };
+    }
+
+    // Firebase Realtime Database para sincronización entre dispositivos
+    if (window.isFirebaseInitialized && window.firebaseDatabase) {
+      try {
+        this.firebaseRef = window.firebaseDatabase.ref('sistema-documentos/sync-events');
+        
+        // Escuchar nuevos eventos
+        this.firebaseRef.on('child_added', (snapshot) => {
+          const event = snapshot.val();
+          
+          // Ignorar eventos propios y eventos antiguos
+          if (event && event.id !== this.lastEventId) {
+            console.log('[Firebase] Evento recibido:', event);
+            
+            if (this.onSyncCallback) {
+              this.onSyncCallback({
+                type: 'FORCE_REFRESH',
+                action: event.action,
+                rec: event.rec,
+                timestamp: event.timestamp,
+                source: 'firebase'
+              });
+            }
+          }
+        });
+
+        console.log('[Firebase] ✅ Escuchando cambios en tiempo real');
+        
+        // Limpiar eventos antiguos (más de 1 hora)
+        this.cleanOldEvents();
+        
+      } catch (error) {
+        console.error('[Firebase] Error al configurar listeners:', error);
+      }
+    } else {
+      console.warn('[Firebase] ⚠️ No inicializado. Solo sincronización local.');
     }
 
     this.isInitialized = true;
@@ -60,21 +99,25 @@ class SyncManager {
       return;
     }
 
+    const eventId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    this.lastEventId = eventId;
+
     const message = {
       type: 'FORCE_REFRESH',
       action: action,
       rec: rec,
       timestamp: Date.now(),
+      id: eventId,
       ...additionalData
     };
 
-    // Enviar por Broadcast Channel (pestañas del mismo navegador)
+    // 1. Enviar por Broadcast Channel (pestañas del mismo navegador)
     if (this.channel) {
       this.channel.postMessage(message);
-      console.log('[Sync] Mensaje enviado por Broadcast Channel:', message);
+      console.log('[Sync] Mensaje enviado por Broadcast Channel');
     }
 
-    // Enviar por Service Worker (puede llegar a otros dispositivos si están conectados)
+    // 2. Enviar por Service Worker
     if (this.swRegistration && this.swRegistration.active) {
       this.swRegistration.active.postMessage({
         type: 'SYNC_UPDATE',
@@ -82,8 +125,43 @@ class SyncManager {
         rec: rec,
         ...additionalData
       });
-      console.log('[Sync] Mensaje enviado al Service Worker:', message);
+      console.log('[Sync] Mensaje enviado al Service Worker');
     }
+
+    // 3. Enviar por Firebase (sincronización entre dispositivos)
+    if (window.isFirebaseInitialized && this.firebaseRef) {
+      try {
+        this.firebaseRef.push({
+          action: action,
+          rec: rec,
+          timestamp: Date.now(),
+          id: eventId,
+          ...additionalData
+        });
+        console.log('[Firebase] ✅ Evento enviado a Firebase');
+      } catch (error) {
+        console.error('[Firebase] Error al enviar evento:', error);
+      }
+    }
+  }
+
+  // Limpiar eventos antiguos de Firebase (más de 1 hora)
+  cleanOldEvents() {
+    if (!window.isFirebaseInitialized || !this.firebaseRef) return;
+
+    const oneHourAgo = Date.now() - (60 * 60 * 1000);
+    
+    this.firebaseRef.orderByChild('timestamp').endAt(oneHourAgo).once('value', (snapshot) => {
+      const updates = {};
+      snapshot.forEach((child) => {
+        updates[child.key] = null;
+      });
+      
+      if (Object.keys(updates).length > 0) {
+        this.firebaseRef.update(updates);
+        console.log('[Firebase] Limpiados', Object.keys(updates).length, 'eventos antiguos');
+      }
+    });
   }
 
   // Destruir conexiones
@@ -91,6 +169,11 @@ class SyncManager {
     if (this.channel) {
       this.channel.close();
     }
+    
+    if (this.firebaseRef) {
+      this.firebaseRef.off();
+    }
+    
     this.isInitialized = false;
   }
 }

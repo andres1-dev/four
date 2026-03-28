@@ -669,6 +669,11 @@ async function cargarTablaDocumentos() {
             loader.style.display = 'block';
         }
 
+        // FORZAR RECARGA DE DATOS DESDE GOOGLE SHEETS
+        if (typeof window.cargarDatos === 'function') {
+            await window.cargarDatos();
+        }
+
         await cargarResponsables();
 
         if (documentosTable) {
@@ -875,9 +880,14 @@ async function cambiarResponsable(rec, responsable) {
         if (result.success) {
             await mostrarNotificacion('✓ Asignado', responsable, 'success');
 
-            // Notificar cambio a otras pestañas
+            // Notificar cambio a otras pestañas INMEDIATAMENTE
             if (window.syncManager) {
                 window.syncManager.notifyChange('cambiarResponsable', rec, { responsable });
+            }
+
+            // Recargar datos desde Google Sheets
+            if (typeof window.cargarDatos === 'function') {
+                await window.cargarDatos();
             }
 
             await actualizarDatosGlobales();
@@ -999,9 +1009,14 @@ async function cambiarEstadoDocumento(rec, nuevoEstado) {
 
                 await mostrarNotificacion('✓ Finalizado', `REC${rec} completado`, 'success');
                 
-                // Notificar cambio a otras pestañas
+                // Notificar cambio a otras pestañas INMEDIATAMENTE
                 if (window.syncManager) {
                     window.syncManager.notifyChange('cambiarEstado', rec, { nuevoEstado: 'FINALIZADO' });
+                }
+                
+                // Recargar datos desde Google Sheets
+                if (typeof window.cargarDatos === 'function') {
+                    await window.cargarDatos();
                 }
                 
                 // RECARGAR COMPLETA SOLO PARA FINALIZADO
@@ -1122,9 +1137,14 @@ async function cambiarEstadoDocumento(rec, nuevoEstado) {
 
             await mostrarNotificacion('✓ Actualizado', `${nuevoEstado}`, 'success');
 
-            // Notificar cambio a otras pestañas
+            // Notificar cambio a otras pestañas INMEDIATAMENTE
             if (window.syncManager) {
                 window.syncManager.notifyChange('cambiarEstado', rec, { nuevoEstado });
+            }
+
+            // Recargar datos desde Google Sheets
+            if (typeof window.cargarDatos === 'function') {
+                await window.cargarDatos();
             }
 
             // ACTUALIZACIÓN PARCIAL (solo la fila)
@@ -1210,9 +1230,14 @@ async function restablecerDocumento(rec) {
 
             await mostrarNotificacion('✓ Restablecido', `REC${rec}`, 'success');
 
-            // Notificar cambio a otras pestañas
+            // Notificar cambio a otras pestañas INMEDIATAMENTE
             if (window.syncManager) {
                 window.syncManager.notifyChange('restablecer', rec);
+            }
+
+            // Recargar datos desde Google Sheets
+            if (typeof window.cargarDatos === 'function') {
+                await window.cargarDatos();
             }
 
             // RECARGAR COMPLETA PARA RESTABLECER
@@ -1873,19 +1898,15 @@ $(document).ready(function () {
                         
                         // Mostrar notificación sutil
                         mostrarNotificacion(
-                            'Actualización disponible',
-                            'Se detectaron cambios en otra pestaña. Actualizando...',
+                            'Actualización',
+                            'Cambios detectados. Recargando datos...',
                             'info'
                         );
                         
-                        // Actualizar datos según la acción
-                        if (data.rec) {
-                            // Actualizar fila específica
-                            actualizarInmediatamente(false, data.rec, data.action);
-                        } else {
-                            // Actualizar toda la tabla
-                            actualizarInmediatamente(true);
-                        }
+                        // FORZAR RECARGA COMPLETA DE DATOS DESDE GOOGLE SHEETS
+                        setTimeout(() => {
+                            cargarTablaDocumentos();
+                        }, 500);
                     });
                 }
 

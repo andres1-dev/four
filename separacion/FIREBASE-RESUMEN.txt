@@ -1,0 +1,106 @@
+═══════════════════════════════════════════════════════════════════
+  🔥 FIREBASE - SINCRONIZACIÓN EN TIEMPO REAL
+═══════════════════════════════════════════════════════════════════
+
+✅ ARCHIVOS CREADOS:
+
+  📄 FIREBASE-SETUP.md          → Guía paso a paso completa
+  📄 js/firebase-config.js      → Configuración (DEBES EDITARLO)
+  📄 test-firebase.html         → Herramienta de prueba
+  📄 js/sync-manager.js         → Actualizado con Firebase
+  📄 index.html                 → Actualizado con scripts Firebase
+
+═══════════════════════════════════════════════════════════════════
+
+🚀 PASOS RÁPIDOS (15 MINUTOS):
+
+  1️⃣  Ir a Firebase Console
+      → https://console.firebase.google.com/
+      → Crear proyecto "sistema-documentos"
+
+  2️⃣  Crear Realtime Database
+      → Modo de prueba
+      → Reglas públicas (read: true, write: true)
+
+  3️⃣  Obtener Configuración
+      → Registrar app web
+      → Copiar firebaseConfig
+
+  4️⃣  Editar js/firebase-config.js
+      → Pegar tu configuración
+      → Guardar
+
+  5️⃣  Subir a GitHub
+      → git add .
+      → git commit -m "Add Firebase sync"
+      → git push
+
+  6️⃣  Probar
+      → Abre test-firebase.html
+      → Clic en "Probar Conexión"
+      → Debe decir "✅ Firebase funcionando"
+
+═══════════════════════════════════════════════════════════════════
+
+📖 DOCUMENTACIÓN COMPLETA:
+
+  Lee: FIREBASE-SETUP.md
+  (Tiene capturas de pantalla y explicaciones detalladas)
+
+═══════════════════════════════════════════════════════════════════
+
+🎯 RESULTADO:
+
+  Después de configurar Firebase, tu app sincronizará en tiempo real:
+
+  ✅ Entre pestañas del mismo navegador
+  ✅ Entre diferentes navegadores
+  ✅ Entre diferentes PCs
+  ✅ Entre PC y celular
+  ✅ Entre cualquier dispositivo en el mundo
+
+  Cuando alguien haga un cambio:
+  → Todos los demás lo verán INSTANTÁNEAMENTE
+  → Sin necesidad de recargar
+  → Sin importar dónde estén
+
+═══════════════════════════════════════════════════════════════════
+
+🔧 HERRAMIENTAS:
+
+  test-firebase.html
+  → Prueba la conexión
+  → Envía eventos de prueba
+  → Ve el log en tiempo real
+
+  verificar-pwa.html
+  → Verifica toda la configuración PWA
+  → Incluye verificación de Firebase
+
+═══════════════════════════════════════════════════════════════════
+
+💰 COSTO: GRATIS
+
+  Firebase Plan Spark (gratuito):
+  ✅ 100 conexiones simultáneas
+  ✅ 1 GB almacenamiento
+  ✅ 10 GB transferencia/mes
+  ✅ Más que suficiente para tu uso
+
+═══════════════════════════════════════════════════════════════════
+
+⚠️  IMPORTANTE:
+
+  1. DEBES editar js/firebase-config.js con TUS credenciales
+  2. Sin esto, Firebase NO funcionará
+  3. La sincronización local (pestañas) seguirá funcionando
+
+═══════════════════════════════════════════════════════════════════
+
+🎉 ¡EMPIEZA AQUÍ!
+
+  1. Abre: FIREBASE-SETUP.md
+  2. Sigue los pasos
+  3. ¡Listo en 15 minutos!
+
+═══════════════════════════════════════════════════════════════════
