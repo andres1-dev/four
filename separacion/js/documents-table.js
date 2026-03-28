@@ -160,6 +160,60 @@ async function llamarAPI(params) {
     }
 }
 
+// Función para actualizar solo una fila desde el API (optimización para evitar 429)
+async function actualizarFilaDesdeAPI(rec) {
+    try {
+        console.log('[Sync] Actualizando solo REC:', rec);
+        
+        // Obtener datos del documento específico desde el API
+        const result = await llamarAPI({
+            action: 'obtenerDocumento',
+            id: rec
+        });
+
+        if (!result.success || !result.data) {
+            console.error('[Sync] Error al obtener documento:', result.message);
+            return;
+        }
+
+        const docData = result.data;
+        
+        // Actualizar window.datosTablaDocumentos
+        if (window.datosTablaDocumentos) {
+            const index = window.datosTablaDocumentos.findIndex(row => row[0] === rec);
+            if (index !== -1) {
+                window.datosTablaDocumentos[index] = [
+                    docData.documento,
+                    docData.fechaHora,
+                    docData.distribucion,
+                    docData.estado,
+                    docData.colaborador,
+                    docData.datetime_inicio,
+                    docData.datetime_fin,
+                    docData.duracion_guardada,
+                    docData.pausas,
+                    docData.datetime_pausas,
+                    docData.duracion_pausas
+                ];
+            }
+        }
+
+        // Actualizar la fila en la tabla visual
+        await actualizarFilaEspecifica(rec);
+        
+        // Actualizar tarjetas de resumen
+        await actualizarDatosGlobales();
+        
+        console.log('[Sync] ✅ Fila actualizada exitosamente');
+        
+    } catch (error) {
+        console.error('[Sync] Error al actualizar fila:', error);
+        // Si falla, recargar todo como fallback
+        console.log('[Sync] Fallback: recargando tabla completa');
+        cargarTablaDocumentos();
+    }
+}
+
 async function actualizarFilaEspecifica(rec) {
     if (!documentosTable) return;
 
@@ -1893,20 +1947,34 @@ $(document).ready(function () {
 
                 // Inicializar sistema de sincronización
                 if (window.syncManager) {
-                    window.syncManager.init((data) => {
+                    window.syncManager.init(async (data) => {
                         console.log('[App] Cambio detectado desde otra pestaña:', data);
                         
-                        // Mostrar notificación sutil
-                        mostrarNotificacion(
-                            'Actualización',
-                            'Cambios detectados. Recargando datos...',
-                            'info'
-                        );
-                        
-                        // FORZAR RECARGA COMPLETA DE DATOS DESDE GOOGLE SHEETS
-                        setTimeout(() => {
-                            cargarTablaDocumentos();
-                        }, 500);
+                        // Si es actualización parcial, solo actualizar esa fila
+                        if (data.updateType === 'partial' && data.rec) {
+                            console.log('[App] Actualización parcial para REC:', data.rec);
+                            
+                            // Mostrar notificación sutil
+                            mostrarNotificacion(
+                                'Actualización',
+                                `Documento ${data.rec} actualizado`,
+                                'info'
+                            );
+                            
+                            // Actualizar solo esa fila desde el API
+                            await actualizarFilaDesdeAPI(data.rec);
+                        } else {
+                            // Actualización completa (fallback)
+                            mostrarNotificacion(
+                                'Actualización',
+                                'Recargando datos...',
+                                'info'
+                            );
+                            
+                            setTimeout(() => {
+                                cargarTablaDocumentos();
+                            }, 500);
+                        }
                     });
                 }
 

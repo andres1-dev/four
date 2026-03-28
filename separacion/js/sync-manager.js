@@ -108,6 +108,7 @@ class SyncManager {
       rec: rec,
       timestamp: Date.now(),
       id: eventId,
+      updateType: 'partial', // Indicar que es actualización parcial
       ...additionalData
     };
 
@@ -123,6 +124,7 @@ class SyncManager {
         type: 'SYNC_UPDATE',
         action: action,
         rec: rec,
+        updateType: 'partial',
         ...additionalData
       });
       console.log('[Sync] Mensaje enviado al Service Worker');
@@ -136,6 +138,7 @@ class SyncManager {
           rec: rec,
           timestamp: Date.now(),
           id: eventId,
+          updateType: 'partial',
           ...additionalData
         });
         console.log('[Firebase] ✅ Evento enviado a Firebase');
