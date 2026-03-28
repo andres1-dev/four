@@ -14,8 +14,14 @@ class SyncManager {
     // Registrar Service Worker
     if ('serviceWorker' in navigator) {
       try {
-        this.swRegistration = await navigator.serviceWorker.register('/sw.js');
-        console.log('[Sync] Service Worker registrado');
+        // Detectar la ruta base del proyecto (funciona en subdirectorios de GitHub Pages)
+        const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+        const swPath = basePath + 'sw.js';
+        
+        this.swRegistration = await navigator.serviceWorker.register(swPath, {
+          scope: basePath
+        });
+        console.log('[Sync] Service Worker registrado en:', swPath);
 
         // Escuchar mensajes del Service Worker
         navigator.serviceWorker.addEventListener('message', (event) => {

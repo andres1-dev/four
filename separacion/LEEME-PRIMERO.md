@@ -88,10 +88,12 @@ tu-proyecto/
 
 ## ❓ ¿Necesitas Ayuda?
 
-1. **Problemas con iconos**: Lee `icons/README.md`
-2. **Problemas con Git**: Lee `COMANDOS-GIT.md`
-3. **Problemas con PWA**: Lee `PWA-SETUP.md` sección "Solución de Problemas"
-4. **Entender sincronización**: Lee `README-PWA.md` sección "Sincronización"
+1. **Error 404 en Service Worker**: Lee `SOLUCION-ERROR-404.md`
+2. **Verificar configuración**: Abre `verificar-pwa.html` en tu navegador
+3. **Problemas con iconos**: Lee `icons/README.md`
+4. **Problemas con Git**: Lee `COMANDOS-GIT.md`
+5. **Problemas con PWA**: Lee `PWA-SETUP.md` sección "Solución de Problemas"
+6. **Entender sincronización**: Lee `README-PWA.md` sección "Sincronización"
 
 ## 🎯 Objetivo
 

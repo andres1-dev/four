@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificador PWA</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #007bff; }
+        .check-item {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .check-item.success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+        .check-item.error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+        .check-item.warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+        .icon { font-size: 24px; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        button:hover { background: #0056b3; }
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Verificador de PWA</h1>
+        <p>Esta herramienta verifica que todos los archivos de la PWA estén correctamente configurados.</p>
+        
+        <button onclick="verificarTodo()">🚀 Verificar Configuración</button>
+        
+        <div id="resultados"></div>
+        
+        <div class="info" style="margin-top: 30px;">
+            <strong>📍 Ubicación actual:</strong><br>
+            <code id="ubicacion"></code>
+        </div>
+    </div>
+
+    <script>
+        // Mostrar ubicación actual
+        document.getElementById('ubicacion').textContent = window.location.href;
+
+        async function verificarTodo() {
+            const resultados = document.getElementById('resultados');
+            resultados.innerHTML = '<h2>Verificando...</h2>';
+            
+            const checks = [];
+
+            // 1. Verificar Service Worker disponible
+            checks.push({
+                nombre: 'Service Worker API',
+                resultado: 'serviceWorker' in navigator,
+                mensaje: 'serviceWorker' in navigator ? 
+                    'El navegador soporta Service Workers' : 
+                    'El navegador NO soporta Service Workers'
+            });
+
+            // 2. Verificar HTTPS
+            checks.push({
+                nombre: 'HTTPS',
+                resultado: window.location.protocol === 'https:' || window.location.hostname === 'localhost',
+                mensaje: window.location.protocol === 'https:' || window.location.hostname === 'localhost' ?
+                    'Conexión segura (HTTPS o localhost)' :
+                    'Se requiere HTTPS para Service Workers'
+            });
+
+            // 3. Verificar sw.js
+            const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+            const swPath = basePath + 'sw.js';
+            
+            try {
+                const swResponse = await fetch(swPath);
+                checks.push({
+                    nombre: 'Archivo sw.js',
+                    resultado: swResponse.ok,
+                    mensaje: swResponse.ok ? 
+                        `sw.js encontrado en: ${swPath}` : 
+                        `sw.js NO encontrado en: ${swPath} (${swResponse.status})`
+                });
+            } catch (error) {
+                checks.push({
+                    nombre: 'Archivo sw.js',
+                    resultado: false,
+                    mensaje: `Error al buscar sw.js: ${error.message}`
+                });
+            }
+
+            // 4. Verificar manifest.json
+            try {
+                const manifestResponse = await fetch(basePath + 'manifest.json');
+                checks.push({
+                    nombre: 'Archivo manifest.json',
+                    resultado: manifestResponse.ok,
+                    mensaje: manifestResponse.ok ? 
+                        'manifest.json encontrado' : 
+                        `manifest.json NO encontrado (${manifestResponse.status})`
+                });
+                
+                if (manifestResponse.ok) {
+                    const manifest = await manifestResponse.json();
+                    checks.push({
+                        nombre: 'Nombre de la app',
+                        resultado: true,
+                        mensaje: `"${manifest.name || manifest.short_name}"`
+                    });
+                }
+            } catch (error) {
+                checks.push({
+                    nombre: 'Archivo manifest.json',
+                    resultado: false,
+                    mensaje: `Error: ${error.message}`
+                });
+            }
+
+            // 5. Verificar sync-manager.js
+            try {
+                const syncResponse = await fetch(basePath + 'js/sync-manager.js');
+                checks.push({
+                    nombre: 'Archivo sync-manager.js',
+                    resultado: syncResponse.ok,
+                    mensaje: syncResponse.ok ? 
+                        'sync-manager.js encontrado' : 
+                        'sync-manager.js NO encontrado'
+                });
+            } catch (error) {
+                checks.push({
+                    nombre: 'Archivo sync-manager.js',
+                    resultado: false,
+                    mensaje: `Error: ${error.message}`
+                });
+            }
+
+            // 6. Verificar iconos
+            const iconos = [
+                'icons/favicon-16x16.png',
+                'icons/favicon-32x32.png',
+                'icons/apple-touch-icon.png',
+                'icons/icon-192.png',
+                'icons/icon-512.png'
+            ];
+
+            let iconosEncontrados = 0;
+            for (const icono of iconos) {
+                try {
+                    const response = await fetch(basePath + icono);
+                    if (response.ok) iconosEncontrados++;
+                } catch (error) {}
+            }
+
+            checks.push({
+                nombre: 'Iconos PWA',
+                resultado: iconosEncontrados === 5,
+                mensaje: `${iconosEncontrados}/5 iconos encontrados${iconosEncontrados < 5 ? ' - Genera los iconos con icons/generate-icons.html' : ''}`
+            });
+
+            // 7. Verificar Broadcast Channel
+            checks.push({
+                nombre: 'Broadcast Channel API',
+                resultado: 'BroadcastChannel' in window,
+                mensaje: 'BroadcastChannel' in window ?
+                    'Sincronización entre pestañas disponible' :
+                    'Sincronización limitada (navegador antiguo)'
+            });
+
+            // 8. Intentar registrar Service Worker
+            if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
+                try {
+                    const registration = await navigator.serviceWorker.register(swPath, { scope: basePath });
+                    checks.push({
+                        nombre: 'Registro de Service Worker',
+                        resultado: true,
+                        mensaje: `Service Worker registrado exitosamente (scope: ${basePath})`
+                    });
+                } catch (error) {
+                    checks.push({
+                        nombre: 'Registro de Service Worker',
+                        resultado: false,
+                        mensaje: `Error al registrar: ${error.message}`
+                    });
+                }
+            }
+
+            // Mostrar resultados
+            let html = '<h2>Resultados:</h2>';
+            let todoBien = true;
+
+            checks.forEach(check => {
+                const clase = check.resultado ? 'success' : 'error';
+                const icono = check.resultado ? '✅' : '❌';
+                
+                if (!check.resultado) todoBien = false;
+                
+                html += `
+                    <div class="check-item ${clase}">
+                        <span class="icon">${icono}</span>
+                        <div>
+                            <strong>${check.nombre}</strong><br>
+                            ${check.mensaje}
+                        </div>
+                    </div>
+                `;
+            });
+
+            if (todoBien) {
+                html += `
+                    <div class="check-item success" style="margin-top: 20px;">
+                        <span class="icon">🎉</span>
+                        <div>
+                            <strong>¡Todo está configurado correctamente!</strong><br>
+                            Tu PWA está lista para usar.
+                        </div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="check-item warning" style="margin-top: 20px;">
+                        <span class="icon">⚠️</span>
+                        <div>
+                            <strong>Hay algunos problemas</strong><br>
+                            Revisa los elementos marcados con ❌ arriba.
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `
+                <div class="info" style="margin-top: 20px;">
+                    <strong>🔧 Soluciones rápidas:</strong><br>
+                    • Si faltan iconos: Abre <code>icons/generate-icons.html</code><br>
+                    • Si falta sw.js: Verifica que esté en la raíz del proyecto<br>
+                    • Si no es HTTPS: Usa GitHub Pages o localhost<br>
+                    • Ruta base detectada: <code>${basePath}</code>
+                </div>
+            `;
+
+            resultados.innerHTML = html;
+        }
+
+        // Verificar automáticamente al cargar
+        window.onload = () => {
+            setTimeout(verificarTodo, 500);
+        };
+    </script>
+</body>
+</html>

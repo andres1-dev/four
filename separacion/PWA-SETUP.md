@@ -111,6 +111,17 @@ Esto garantiza que siempre tengas la versión más reciente de la aplicación.
 2. En la pestaña 1: Cambia el responsable de un documento
 3. En la pestaña 2: Verás una notificación y la tabla se actualizará automáticamente
 
+## 🔍 Verificar Configuración
+
+Abre `verificar-pwa.html` en tu navegador para verificar que todo está correctamente configurado:
+- Service Worker registrado
+- Manifest.json accesible
+- Iconos generados
+- HTTPS habilitado
+- Rutas correctas
+
+Esta herramienta detecta automáticamente problemas y sugiere soluciones.
+
 ## 🎨 Personalizar el Logo
 
 El generador de iconos crea un logo con:
@@ -155,8 +166,9 @@ Edita `js/sync-manager.js` para cambiar:
 
 1. Verifica que estés usando HTTPS (o localhost)
 2. Revisa la consola del navegador para errores
-3. Asegúrate de que `sw.js` esté en la raíz del proyecto
-4. Verifica que la ruta en el registro sea correcta (`/sw.js`)
+3. Asegúrate de que `sw.js` esté en la raíz del proyecto (mismo nivel que index.html)
+4. El sistema detecta automáticamente la ruta base (funciona en subdirectorios)
+5. Si ves error 404, verifica que `sw.js` esté subido a GitHub
 
 ### Los iconos no se muestran
 

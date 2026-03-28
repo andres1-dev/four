@@ -34,9 +34,10 @@ git push
 
 ### 5️⃣ Probar
 1. Abre tu URL de GitHub Pages
-2. Presiona F12 → Application → Manifest (verifica iconos)
-3. Presiona F12 → Application → Service Workers (debe estar "activated")
-4. Busca el ícono ➕ en la barra de direcciones para instalar
+2. Abre `verificar-pwa.html` para verificar la configuración
+3. Presiona F12 → Application → Manifest (verifica iconos)
+4. Presiona F12 → Application → Service Workers (debe estar "activated")
+5. Busca el ícono ➕ en la barra de direcciones para instalar
 
 ## 🔄 Sincronización en Tiempo Real
 
