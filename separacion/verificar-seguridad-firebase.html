@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificar Seguridad Firebase</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #007bff; }
+        .check-item {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .check-item.success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+        .check-item.error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+        .check-item.warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+        .icon { font-size: 24px; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover { background: #0056b3; }
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .rules-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 Verificador de Seguridad Firebase</h1>
+        <p>Esta herramienta verifica la configuración de seguridad de tu Firebase.</p>
+        
+        <button onclick="verificarSeguridad()">🔍 Verificar Seguridad</button>
+        <button onclick="probarEscritura()">✍️ Probar Escritura</button>
+        <button onclick="probarLectura()">📖 Probar Lectura</button>
+        
+        <div id="resultados"></div>
+        
+        <div class="info" style="margin-top: 30px;">
+            <h3>📋 Reglas Recomendadas</h3>
+            <p>Copia estas reglas en Firebase Console → Realtime Database → Reglas:</p>
+            <div class="rules-box">
+{
+  "rules": {
+    "sistema-documentos": {
+      "sync-events": {
+        ".read": true,
+        ".write": true,
+        ".indexOn": ["timestamp"],
+        "$eventId": {
+          ".validate": "newData.hasChildren(['action', 'timestamp', 'id'])"
+        }
+      }
+    }
+  }
+}
+            </div>
+            <p><strong>Pasos:</strong></p>
+            <ol>
+                <li>Ve a <a href="https://console.firebase.google.com/" target="_blank">Firebase Console</a></li>
+                <li>Selecciona tu proyecto</li>
+                <li>Ve a Realtime Database → Reglas</li>
+                <li>Pega las reglas de arriba</li>
+                <li>Haz clic en "Publicar"</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+
+    <script>
+        function mostrarResultado(mensaje, tipo, icono) {
+            const resultados = document.getElementById('resultados');
+            const div = document.createElement('div');
+            div.className = `check-item ${tipo}`;
+            div.innerHTML = `
+                <span class="icon">${icono}</span>
+                <div>${mensaje}</div>
+            `;
+            resultados.appendChild(div);
+        }
+
+        function limpiarResultados() {
+            document.getElementById('resultados').innerHTML = '';
+        }
+
+        async function verificarSeguridad() {
+            limpiarResultados();
+            
+            if (!window.isFirebaseInitialized) {
+                mostrarResultado('Firebase no está inicializado', 'error', '❌');
+                return;
+            }
+
+            mostrarResultado('Verificando configuración de seguridad...', 'warning', '⏳');
+
+            // 1. Verificar que la API Key no sea la de ejemplo
+            const config = window.firebaseApp.options;
+            if (config.apiKey === 'TU_API_KEY_AQUI') {
+                mostrarResultado('API Key no configurada correctamente', 'error', '❌');
+                return;
+            } else {
+                mostrarResultado('API Key configurada ✓', 'success', '✅');
+            }
+
+            // 2. Verificar conexión
+            try {
+                const testRef = window.firebaseDatabase.ref('.info/connected');
+                const snapshot = await testRef.once('value');
+                if (snapshot.val() === true) {
+                    mostrarResultado('Conectado a Firebase ✓', 'success', '✅');
+                } else {
+                    mostrarResultado('No conectado a Firebase', 'error', '❌');
+                }
+            } catch (error) {
+                mostrarResultado('Error de conexión: ' + error.message, 'error', '❌');
+            }
+
+            // 3. Verificar estructura de datos
+            try {
+                const eventsRef = window.firebaseDatabase.ref('sistema-documentos/sync-events');
+                const snapshot = await eventsRef.limitToLast(1).once('value');
+                
+                if (snapshot.exists()) {
+                    mostrarResultado('Estructura de datos correcta ✓', 'success', '✅');
+                    
+                    // Contar eventos
+                    const allSnapshot = await eventsRef.once('value');
+                    const count = allSnapshot.numChildren();
+                    mostrarResultado(`Eventos almacenados: ${count}`, 'success', '📊');
+                } else {
+                    mostrarResultado('No hay eventos aún (normal si es nuevo)', 'warning', '⚠️');
+                }
+            } catch (error) {
+                mostrarResultado('Error al leer datos: ' + error.message, 'error', '❌');
+            }
+
+            // 4. Información de configuración
+            mostrarResultado(`Proyecto: ${config.projectId}`, 'success', 'ℹ️');
+            mostrarResultado(`Database URL: ${config.databaseURL}`, 'success', 'ℹ️');
+
+            // 5. Recomendaciones
+            mostrarResultado(
+                'Recomendación: Configura las reglas de seguridad (ver abajo)',
+                'warning',
+                '💡'
+            );
+        }
+
+        async function probarEscritura() {
+            limpiarResultados();
+            
+            if (!window.isFirebaseInitialized) {
+                mostrarResultado('Firebase no está inicializado', 'error', '❌');
+                return;
+            }
+
+            mostrarResultado('Probando escritura...', 'warning', '⏳');
+
+            try {
+                const eventsRef = window.firebaseDatabase.ref('sistema-documentos/sync-events');
+                const testEvent = {
+                    action: 'test-seguridad',
+                    rec: 'TEST',
+                    timestamp: Date.now(),
+                    id: `test-${Date.now()}`
+                };
+
+                await eventsRef.push(testEvent);
+                mostrarResultado('✅ Escritura exitosa - Las reglas permiten escribir', 'success', '✅');
+                
+                // Limpiar el evento de prueba
+                setTimeout(async () => {
+                    const snapshot = await eventsRef.orderByChild('action').equalTo('test-seguridad').once('value');
+                    const updates = {};
+                    snapshot.forEach(child => {
+                        updates[child.key] = null;
+                    });
+                    await eventsRef.update(updates);
+                    mostrarResultado('Evento de prueba eliminado', 'success', '🗑️');
+                }, 2000);
+
+            } catch (error) {
+                mostrarResultado('❌ Error al escribir: ' + error.message, 'error', '❌');
+                mostrarResultado('Posible causa: Reglas de seguridad muy restrictivas', 'warning', '⚠️');
+            }
+        }
+
+        async function probarLectura() {
+            limpiarResultados();
+            
+            if (!window.isFirebaseInitialized) {
+                mostrarResultado('Firebase no está inicializado', 'error', '❌');
+                return;
+            }
+
+            mostrarResultado('Probando lectura...', 'warning', '⏳');
+
+            try {
+                const eventsRef = window.firebaseDatabase.ref('sistema-documentos/sync-events');
+                const snapshot = await eventsRef.limitToLast(5).once('value');
+                
+                mostrarResultado('✅ Lectura exitosa - Las reglas permiten leer', 'success', '✅');
+                
+                const count = snapshot.numChildren();
+                mostrarResultado(`Últimos ${count} eventos leídos correctamente`, 'success', '📖');
+
+                if (count > 0) {
+                    snapshot.forEach(child => {
+                        const event = child.val();
+                        mostrarResultado(
+                            `Evento: ${event.action} (REC: ${event.rec})`,
+                            'success',
+                            '📄'
+                        );
+                    });
+                }
+
+            } catch (error) {
+                mostrarResultado('❌ Error al leer: ' + error.message, 'error', '❌');
+                mostrarResultado('Posible causa: Reglas de seguridad muy restrictivas', 'warning', '⚠️');
+            }
+        }
+
+        // Verificación automática al cargar
+        window.onload = () => {
+            setTimeout(() => {
+                if (window.isFirebaseInitialized) {
+                    mostrarResultado('Firebase cargado correctamente', 'success', '✅');
+                } else {
+                    mostrarResultado('Firebase no configurado', 'error', '❌');
+                }
+            }, 1000);
+        };
+    </script>
+</body>
+</html>

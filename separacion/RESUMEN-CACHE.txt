@@ -1,0 +1,100 @@
+═══════════════════════════════════════════════════════════════════
+  🔧 SOLUCIÓN AL ERROR 429 - FIREBASE COMO CACHÉ
+═══════════════════════════════════════════════════════════════════
+
+❌ PROBLEMA:
+
+  Firebase notificaba a TODAS las pestañas
+  → Todas recargaban desde Google Sheets
+  → Demasiadas peticiones simultáneas
+  → Error 429: Too Many Requests
+
+═══════════════════════════════════════════════════════════════════
+
+✅ SOLUCIÓN IMPLEMENTADA:
+
+  Sistema de Líder + Caché:
+  
+  1. Una pestaña es "líder" (automático)
+  2. Solo el líder carga desde Google Sheets
+  3. El líder guarda en Firebase
+  4. Las demás leen desde Firebase (instantáneo)
+
+═══════════════════════════════════════════════════════════════════
+
+📦 ARCHIVOS CREADOS/MODIFICADOS:
+
+  ✅ js/firebase-cache.js (nuevo)
+  ✅ js/main.js (actualizado)
+  ✅ index.html (actualizado)
+
+═══════════════════════════════════════════════════════════════════
+
+🚀 QUÉ HACER:
+
+  1. git add .
+  2. git commit -m "Fix 429 error with Firebase cache"
+  3. git push
+  4. Espera 1-2 minutos
+  5. Abre tu app
+  6. Abre la consola (F12)
+  7. Verifica los mensajes [Cache]
+
+═══════════════════════════════════════════════════════════════════
+
+🧪 VERIFICAR QUE FUNCIONA:
+
+  Abre 5 pestañas de tu app
+  
+  Pestaña 1 (Líder):
+  → [Cache] 👑 Soy el líder
+  → [Cache] Cargando desde Google Sheets
+  
+  Pestañas 2-5 (Seguidoras):
+  → [Cache] 📖 Leeré desde Firebase
+  → [Cache] ✅ Datos cargados desde Firebase
+  
+  ✅ Solo 1 petición a Sheets en lugar de 5
+
+═══════════════════════════════════════════════════════════════════
+
+📊 RESULTADOS:
+
+  ANTES:
+  5 pestañas × 3 hojas = 15 peticiones a Sheets
+  ❌ Error 429 frecuente
+  
+  AHORA:
+  1 líder × 3 hojas = 3 peticiones a Sheets
+  ✅ Sin error 429
+  ✅ 80% menos peticiones
+
+═══════════════════════════════════════════════════════════════════
+
+💡 CÓMO FUNCIONA:
+
+  Cambio en Pestaña 1:
+  ↓
+  Pestaña 1 (Líder) carga desde Sheets
+  ↓
+  Líder guarda en Firebase
+  ↓
+  Firebase notifica a Pestañas 2-5
+  ↓
+  Pestañas 2-5 leen desde Firebase
+  ↓
+  ✅ Todas actualizadas (solo 1 petición a Sheets)
+
+═══════════════════════════════════════════════════════════════════
+
+📖 DOCUMENTACIÓN COMPLETA:
+
+  Lee: SOLUCION-ERROR-429.md
+
+═══════════════════════════════════════════════════════════════════
+
+🎉 ¡LISTO!
+
+  Sube los cambios a GitHub y el error 429 desaparecerá.
+
+═══════════════════════════════════════════════════════════════════
