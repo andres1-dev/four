@@ -36,7 +36,6 @@
     <link rel="stylesheet" href="css/components/pwa.css">
     <link rel="stylesheet" href="css/components/particles.css">
     <link rel="stylesheet" href="css/components/footer.css">
-    <link rel="stylesheet" href="css/components/user_management.css">
     <link rel="stylesheet" href="css/utils/animations.css">
 
     <!-- Advanced Analytics Styles -->
@@ -484,12 +483,37 @@
 
     <!-- Tema inline: se ejecuta ANTES de pintar nada -->
     <script>
-        // ── Session guard ── solo sessionStorage, sin TTL
+        // ── Session guard ── redirige a login si no hay sesión válida (8h)
         (function() {
             try {
                 var s = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
-                if (s && s.usuario) return; // Sesión válida
-                window.location.replace('login.html');
+                if (!s || !s.usuario || !s.ts || (Date.now() - s.ts) >= 8 * 60 * 60 * 1000) {
+                    window.location.replace('login.html');
+                    return;
+                }
+                // Validar device contra GAS en background (no bloquea el render)
+                // ADMIN tiene acceso multiplataforma, no valida dispositivo
+                var isAdmin = s.rol && String(s.rol).toUpperCase() === 'ADMIN';
+                if (!isAdmin) {
+                    var GAS_URL   = 'https://script.google.com/macros/s/AKfycbzFkQsoAMCfnkoBHSTMMx4evKkAkwkBVlCu3eHIMVcam41GR2Q1_9YffhJSf8SeOC3_/exec';
+                    var deviceId  = localStorage.getItem('tdm_device_id');
+                    if (s.id && deviceId && GAS_URL) {
+                        var params = 'action=check_device&id_usuario=' + encodeURIComponent(String(s.usuario)) + '&id_device=' + encodeURIComponent(deviceId);
+                        fetch(GAS_URL, {
+                            method:  'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body:    params
+                        })
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            if (data && data.ok && data.allowed === false) {
+                                sessionStorage.removeItem('tdm_session');
+                                window.location.replace('login.html?reason=device');
+                            }
+                        })
+                        .catch(function() {}); // si falla el GAS, no expulsar
+                    }
+                }
             } catch(_) {
                 window.location.replace('login.html');
             }
@@ -1200,12 +1224,10 @@
     <script src="js/ui/render.js"></script>
     <script src="js/ui/charts.js"></script>
     <script src="js/ui/events.js"></script>
-    <script src="js/utils/token_auth.js"></script>
     <script src="js/ui/capture.js"></script>
     <script src="js/ui/email.js"></script>
     <script src="js/ui/database.js"></script>
     <script src="js/ui/analytics_modals.js"></script>
-    <script src="js/ui/user_management.js"></script>
     <script src="js/pwa/sw_init.js"></script>
     <script src="js/utils/particles.js"></script>
 
@@ -1410,15 +1432,10 @@
         })();
 
         // ─── Control de visibilidad basado en rol OWNER ───────────────────────────
-        // La lógica está en el panel de configuración y el módulo está en user_management.js
+        // Ya no es necesario, la lógica está en el panel de configuración
         
         function openUsersManagementModal() {
-            if (typeof showUserManagementModal !== 'undefined') {
-                showUserManagementModal();
-            } else {
-                console.error('Módulo de gestión de usuarios no cargado');
-                alert('Error: El módulo de gestión de usuarios no está disponible. Por favor, recarga la página.');
-            }
+            alert('Módulo de Gestión de Usuarios\n\nEsta funcionalidad estará disponible próximamente.\n\nPermitirá:\n- Ver lista de usuarios\n- Crear nuevos usuarios\n- Editar roles y permisos\n- Activar/desactivar usuarios\n- Gestionar dispositivos autorizados');
         }
 
         // ─── Cargar nombre de usuario en pantalla de bienvenida ──────────────────

@@ -241,16 +241,10 @@ async function captureAndDownloadCards(silent = false) {
         // 7. Esperar un momento para que se descargue
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // 8. Generar token de acceso y abrir WhatsApp
+        // 8. Generar mensaje y abrir WhatsApp
         if (!silent && loadingText) loadingText.textContent = "Abriendo WhatsApp...";
         else updateToast('Abriendo WhatsApp...');
-        let appUrl = APP_BASE_URL;
-        try {
-            if (typeof generateAndSaveToken === 'function') {
-                appUrl = await generateAndSaveToken();
-            }
-        } catch (_) {}
-        const whatsappText = generateWhatsAppMessage('', appUrl);
+        const whatsappText = generateWhatsAppMessage();
         openWhatsAppWithText(whatsappText);
         
         // Esperar un momento y cerrar el overlay/toast
@@ -370,7 +364,7 @@ function showToast(message, duration = 5000) {
 }
 
 // WhatsApp message - matching backup.html exactly
-function generateWhatsAppMessage(imageUrl = "", appUrl = "") {
+function generateWhatsAppMessage(imageUrl = "") {
     if (!currentReportData) return "";
 
     const diaData = currentReportData.dia.actual;
@@ -436,9 +430,8 @@ Muestra Semanal (S${semanaActual}/S${semanaAnterior}) Gestión ${flechaGestion} 
 * Desviación: *${formatoCantidad(diaData.desvest)}*
 * Máximo: *${formatoCantidad(diaData.max)}*`;
 
-    // Agregar enlace a la aplicación (con token si está disponible)
-    const linkApp = appUrl || APP_BASE_URL;
-    mensaje += `\n\n☆ Link a la aplicación: ${linkApp}`;
+    // Agregar enlace a la aplicación
+    mensaje += `\n\n☆ Link a la aplicación: https://andres1-dev.github.io/four/income/index.html`;
 
     // Solo agregar link de imagen si existe (para compatibilidad con código antiguo)
     if (imageUrl) {

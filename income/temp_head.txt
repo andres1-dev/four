@@ -1,0 +1,490 @@
+﻿<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ingresos de Marca Propia</title>
+
+    <!-- PWA Metadata -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#080a0f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ingresos MP">
+    <link rel="apple-touch-icon" href="icons/icon-512.png">
+    <link rel="icon" href="logo/LOGO-ORIGINAL.svg" type="image/svg+xml">
+    <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
+
+    <!-- External CSS Libraries -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Bebas+Neue&family=Montserrat:wght@900&family=Raleway:wght@300;400;700&display=block">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+
+    <!-- Local Component Styles -->
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components/cards.css">
+    <link rel="stylesheet" href="css/components/trends.css">
+    <link rel="stylesheet" href="css/components/loading.css">
+    <link rel="stylesheet" href="css/components/pwa.css">
+    <link rel="stylesheet" href="css/components/particles.css">
+    <link rel="stylesheet" href="css/components/footer.css">
+    <link rel="stylesheet" href="css/components/user_management.css">
+    <link rel="stylesheet" href="css/utils/animations.css">
+
+    <!-- Advanced Analytics Styles -->
+    <style>
+        /* Modal System */
+        .analytics-modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.75);
+            backdrop-filter: blur(6px);
+            animation: fadeIn 0.2s ease;
+        }
+        .analytics-modal-content {
+            background: var(--card-bg);
+            margin: 3% auto;
+            padding: 0;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            width: 92%;
+            max-width: 900px;
+            max-height: 88vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.6);
+            animation: slideUp 0.3s ease;
+        }
+        .analytics-modal-header {
+            padding: 24px 28px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(99,102,241,0.05) 0%, transparent 100%);
+        }
+        .analytics-modal-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            letter-spacing: -0.02em;
+        }
+        .analytics-modal-title i {
+            color: var(--primary-color);
+            font-size: 22px;
+        }
+        .analytics-modal-body {
+            padding: 28px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .analytics-modal-close {
+            color: var(--text-medium);
+            font-size: 32px;
+            font-weight: 300;
+            cursor: pointer;
+            transition: all 0.2s;
+            line-height: 1;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+        .analytics-modal-close:hover {
+            color: var(--text-dark);
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* Info Button */
+        .info-btn-inline {
+            background: transparent;
+            border: 1px solid rgba(99,102,241,0.25);
+            color: var(--primary-color);
+            padding: 7px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            margin-top: 8px;
+        }
+        .info-btn-inline:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+        }
+        .info-btn-inline i {
+            font-size: 11px;
+        }
+
+        /* Formula Box */
+        .formula-box-modal {
+            background: rgba(99,102,241,0.04);
+            border: 1px solid rgba(99,102,241,0.15);
+            border-left: 3px solid var(--primary-color);
+            border-radius: 10px;
+            padding: 18px 20px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+        .formula-box-modal .formula-label {
+            color: var(--primary-color);
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .formula-box-modal code {
+            color: var(--accent-purple);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            background: rgba(0,0,0,0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .formula-box-modal strong {
+            color: var(--text-dark);
+            font-weight: 700;
+        }
+        .formula-box-modal p {
+            margin-top: 10px;
+            color: var(--text-medium);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        /* Data Table in Modal */
+        .modal-data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin: 16px 0;
+        }
+        .modal-data-table th {
+            background: rgba(255,255,255,0.03);
+            color: var(--text-medium);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 11px;
+            padding: 12px 14px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .modal-data-table td {
+            padding: 11px 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            color: var(--text-medium);
+        }
+        .modal-data-table tr:hover td {
+            background: rgba(255,255,255,0.02);
+        }
+        .modal-data-table .num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .modal-data-table .highlight-cell {
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        /* Badge Styles */
+        .day-badge-modal {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        .day-badge-modal.weekend {
+            background: rgba(251,191,36,0.15);
+            color: var(--warning-color);
+        }
+        .day-badge-modal.extra {
+            background: rgba(139,92,246,0.15);
+            color: var(--accent-purple);
+        }
+
+        /* Stats Grid in Modal */
+        .modal-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+            margin: 20px 0;
+        }
+        .modal-stat-card {
+            background: rgba(99,102,241,0.05);
+            padding: 16px;
+            border-radius: 10px;
+            border-left: 3px solid var(--primary-color);
+        }
+        .modal-stat-card.warning {
+            background: rgba(251,191,36,0.05);
+            border-left-color: var(--warning-color);
+        }
+        .modal-stat-label {
+            color: var(--text-medium);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .modal-stat-value {
+            color: var(--text-dark);
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+        .modal-stat-sub {
+            color: var(--text-light);
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        /* Alert Box */
+        .alert-box-modal {
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin: 16px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        .alert-box-modal.info {
+            background: rgba(99,102,241,0.1);
+            border-left: 3px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+        .alert-box-modal.warning {
+            background: rgba(251,191,36,0.1);
+            border-left: 3px solid var(--warning-color);
+            color: var(--warning-color);
+        }
+        .alert-box-modal i {
+            font-size: 16px;
+            margin-top: 2px;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Quitar negrita de tarjetas específicas de tendencia */
+        #tendencia-pendiente,
+        #tendencia-promedio-movil {
+            font-weight: 600 !important;
+        }
+
+        /* ══════════════════════════════════════════════════════
+           ADAPTACIÓN DE MODALES A DIFERENTES TEMAS
+           ══════════════════════════════════════════════════════ */
+
+        /* MODO LIGHT */
+        [data-theme="light"] .analytics-modal {
+            background-color: rgba(0,0,0,0.4);
+        }
+        [data-theme="light"] .analytics-modal-content {
+            background: #ffffff;
+            border-color: rgba(0,0,0,0.1);
+            box-shadow: 0 25px 80px rgba(0,0,0,0.15);
+        }
+        [data-theme="light"] .analytics-modal-header {
+            border-bottom-color: rgba(0,0,0,0.08);
+            background: linear-gradient(135deg, rgba(79,70,229,0.04) 0%, transparent 100%);
+        }
+        [data-theme="light"] .analytics-modal-close:hover {
+            background: rgba(0,0,0,0.05);
+        }
+        [data-theme="light"] .formula-box-modal {
+            background: rgba(79,70,229,0.04);
+            border-color: rgba(79,70,229,0.15);
+        }
+        [data-theme="light"] .formula-box-modal code {
+            background: rgba(0,0,0,0.06);
+        }
+        [data-theme="light"] .modal-data-table th {
+            background: rgba(0,0,0,0.02);
+            border-bottom-color: rgba(0,0,0,0.08);
+        }
+        [data-theme="light"] .modal-data-table td {
+            border-bottom-color: rgba(0,0,0,0.04);
+        }
+        [data-theme="light"] .modal-data-table tr:hover td {
+            background: rgba(0,0,0,0.02);
+        }
+        [data-theme="light"] .modal-stat-card {
+            background: rgba(79,70,229,0.06);
+        }
+        [data-theme="light"] .modal-stat-card.warning {
+            background: rgba(217,119,6,0.06);
+        }
+        [data-theme="light"] .alert-box-modal.info {
+            background: rgba(79,70,229,0.08);
+        }
+        [data-theme="light"] .alert-box-modal.warning {
+            background: rgba(217,119,6,0.08);
+        }
+
+        /* MODO SOLID DARK */
+        .solid .analytics-modal-content {
+            background: #16181f;
+            border-color: rgba(255,255,255,0.08);
+        }
+        .solid .analytics-modal-header {
+            background: #16181f;
+            border-bottom-color: rgba(255,255,255,0.05);
+        }
+        .solid .analytics-modal-close:hover {
+            background: rgba(255,255,255,0.04);
+        }
+        .solid .formula-box-modal {
+            background: rgba(99,102,241,0.06);
+            border-color: rgba(99,102,241,0.2);
+        }
+        .solid .formula-box-modal code {
+            background: rgba(0,0,0,0.3);
+        }
+        .solid .modal-data-table th {
+            background: rgba(255,255,255,0.02);
+            border-bottom-color: rgba(255,255,255,0.06);
+        }
+        .solid .modal-data-table td {
+            border-bottom-color: rgba(255,255,255,0.03);
+        }
+        .solid .modal-data-table tr:hover td {
+            background: rgba(255,255,255,0.02);
+        }
+        .solid .modal-stat-card {
+            background: rgba(99,102,241,0.08);
+        }
+        .solid .modal-stat-card.warning {
+            background: rgba(251,191,36,0.08);
+        }
+        .solid .alert-box-modal.info {
+            background: rgba(99,102,241,0.12);
+        }
+        .solid .alert-box-modal.warning {
+            background: rgba(251,191,36,0.12);
+        }
+
+        /* MODO SOLID LIGHT */
+        .solid[data-theme="light"] .analytics-modal {
+            background-color: rgba(0,0,0,0.35);
+        }
+        .solid[data-theme="light"] .analytics-modal-content {
+            background: #ffffff;
+            border-color: #e4e8f0;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.12);
+        }
+        .solid[data-theme="light"] .analytics-modal-header {
+            background: #ffffff;
+            border-bottom-color: #e4e8f0;
+        }
+        .solid[data-theme="light"] .analytics-modal-close:hover {
+            background: #f7f8fc;
+        }
+        .solid[data-theme="light"] .formula-box-modal {
+            background: rgba(79,70,229,0.05);
+            border-color: rgba(79,70,229,0.18);
+        }
+        .solid[data-theme="light"] .formula-box-modal code {
+            background: rgba(0,0,0,0.05);
+        }
+        .solid[data-theme="light"] .modal-data-table th {
+            background: #f7f8fc;
+            border-bottom-color: #e4e8f0;
+        }
+        .solid[data-theme="light"] .modal-data-table td {
+            border-bottom-color: #f1f5f9;
+        }
+        .solid[data-theme="light"] .modal-data-table tr:hover td {
+            background: #fafbfd;
+        }
+        .solid[data-theme="light"] .modal-stat-card {
+            background: rgba(79,70,229,0.07);
+        }
+        .solid[data-theme="light"] .modal-stat-card.warning {
+            background: rgba(217,119,6,0.07);
+        }
+        .solid[data-theme="light"] .alert-box-modal.info {
+            background: rgba(79,70,229,0.09);
+        }
+        .solid[data-theme="light"] .alert-box-modal.warning {
+            background: rgba(217,119,6,0.09);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .analytics-modal-content {
+                width: 96%;
+                margin: 2% auto;
+                max-height: 94vh;
+            }
+            .analytics-modal-header {
+                padding: 18px 20px;
+            }
+            .analytics-modal-body {
+                padding: 20px;
+            }
+            .analytics-modal-title {
+                font-size: 17px;
+            }
+            .modal-stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <!-- Tema inline: se ejecuta ANTES de pintar nada -->
+    <script>
+        // ── Session guard ── redirige a login si no hay sesión válida (8h)
+        (function() {
+            try {
+                // 1. Sesión válida en sessionStorage → continuar

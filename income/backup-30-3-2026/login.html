@@ -4,46 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Acceso — Grupo TDM</title>
-    <!-- Token auto-login: se ejecuta primero, antes de cualquier otro script -->
-    <script>
-    (function() {
-        var token = new URLSearchParams(window.location.search).get('token');
-        if (!token) return;
-        // Ocultar página mientras validamos
-        document.documentElement.style.visibility = 'hidden';
-        var GAS = 'https://script.google.com/macros/s/AKfycbzFkQsoAMCfnkoBHSTMMx4evKkAkwkBVlCu3eHIMVcam41GR2Q1_9YffhJSf8SeOC3_/exec';
-        fetch(GAS, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'action=validate_token&token=' + encodeURIComponent(token)
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-            if (d && d.ok && d.valid) {
-                // Sesión temporal — solo sessionStorage, sin localStorage
-                var session = {
-                    usuario:  d.usuario  || 'INVITADO',
-                    nombre:   d.nombre   || 'INVITADO',
-                    correo:   d.correo   || '',
-                    telefono: d.tel      || '',
-                    rol:      d.rol      || 'ADMIN',
-                    id_device: '',
-                    ts: Date.now(),
-                    temporary: true  // marca para identificar sesión temporal
-                };
-                sessionStorage.setItem('tdm_session', JSON.stringify(session));
-                // NO guardar en localStorage para que no persista
-                window.location.replace('index.html');
-            } else {
-                document.documentElement.style.visibility = '';
-                history.replaceState(null, '', window.location.pathname);
-            }
-        })
-        .catch(function() {
-            document.documentElement.style.visibility = '';
-        });
-    })();
-    </script>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2563eb">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -879,62 +839,6 @@ const LOCKOUT_MS     = 5 * 60 * 1000;        // 5 minutos
             window.location.replace('index.html');
         }
     } catch(_) {}
-})();
-
-// ─── Auto-login por token ──────────────────────────────────────────────────────
-(async function checkTokenLogin() {
-    console.log('[TOKEN] URL completa:', window.location.href);
-    console.log('[TOKEN] search:', window.location.search);
-    const params = new URLSearchParams(window.location.search);
-    const token  = params.get('token');
-    console.log('[TOKEN] token extraído:', token);
-    if (!token) return;
-
-    // Mostrar indicador de carga mientras se valida
-    const btn = document.getElementById('loginBtn');
-    if (btn) { btn.classList.add('loading'); btn.disabled = true; }
-
-    try {
-        const body = new URLSearchParams({ action: 'validate_token', token });
-        const res  = await fetch(GAS_URL, {
-            method: 'POST',
-            body: body.toString(),
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        });
-        const data = await res.json();
-        console.log('[TOKEN LOGIN] validate response:', JSON.stringify(data));
-
-        if (data.ok && data.valid) {
-            // Token válido — crear sesión y redirigir
-            const session = {
-                usuario:   data.usuario,
-                nombre:    data.nombre,
-                correo:    data.correo  || '',
-                telefono:  data.tel     || '',
-                rol:       data.rol     || 'ADMIN',
-                id_device: getDeviceId(),
-                ts:        Date.now()
-            };
-            sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-            localStorage.setItem('tdm_user_name', session.nombre);
-            sessionStorage.setItem('tdm_show_welcome', 'true');
-            window.location.replace('index.html');
-        } else {
-            // Token vencido o inválido — mostrar mensaje y dejar el formulario normal
-            if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
-            const errEl = document.getElementById('errorMsg');
-            const errTx = document.getElementById('errorText');
-            if (errTx) errTx.textContent = data.reason === 'expired'
-                ? 'El enlace de acceso ha vencido. Ingresa con tus credenciales.'
-                : 'Enlace de acceso inválido. Ingresa con tus credenciales.';
-            if (errEl) errEl.classList.add('show');
-            // Limpiar token de la URL sin recargar
-            history.replaceState(null, '', window.location.pathname);
-        }
-    } catch (e) {
-        console.warn('Error validando token:', e);
-        if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
-    }
 })();
 
 // ─── Theme ────────────────────────────────────────────────────────────────────

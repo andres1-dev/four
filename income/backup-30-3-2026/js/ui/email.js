@@ -36,7 +36,7 @@ async function sendEmailReport(silent = false) {
         }
         if (emailBtn) emailBtn.style.pointerEvents = 'none';
 
-        const emailContent = await generateEmailContent();
+        const emailContent = generateEmailContent();
         
         if (!silent && loadingText) loadingText.textContent = "Enviando correo...";
         else showSilentToast('Enviando correo...');
@@ -79,16 +79,8 @@ async function sendEmailReport(silent = false) {
     }
 }
 
-async function generateEmailContent() {
+function generateEmailContent() {
     if (!currentReportData) return { subject: "", body: "" };
-
-    // Generar token de acceso temporal
-    let appUrl = APP_BASE_URL;
-    try {
-        if (typeof generateAndSaveToken === 'function') {
-            appUrl = await generateAndSaveToken();
-        }
-    } catch (_) {}
 
     const diaData = currentReportData.dia.actual;
     const mesData = currentReportData.mes.actual;
@@ -293,7 +285,7 @@ async function generateEmailContent() {
                                 <table cellpadding="0" cellspacing="0">
                                     <tr>
                                         <td style="background-color: #2563eb; border-radius: 8px; padding: 12px 24px;">
-                                            <a href="${appUrl}" 
+                                            <a href="https://andres1-dev.github.io/four/income/index.html" 
                                                style="color: #ffffff; text-decoration: none; font-weight: 600; display: block;">
                                                 Abrir Sistema de Ingresos
                                             </a>
