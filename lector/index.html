@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Conteo Rápido</title>
+
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="container">
+  <!-- Header con estadísticas -->
+  <div class="header">
+    <h1><i class="fas fa-barcode"></i>Sistema de Conteo</h1>
+    <div class="stats">
+      <div class="stat-box timer-box">
+        <span class="number" id="sessionTimer">00:00:00</span>
+        <span class="label">Tiempo Sesión</span>
+      </div>
+      <div class="stat-box">
+        <span class="number" id="totalScans">0</span>
+        <span class="label">Total Escaneos</span>
+      </div>
+      <div class="stat-box">
+        <span class="number" id="uniqueItems">0</span>
+        <span class="label">Items Únicos</span>
+      </div>
+      <div class="stat-box">
+        <span class="number" id="scanSpeed">0</span>
+        <span class="label">Escaneos/min</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Área de escaneo -->
+  <div class="scan-area">
+    <div class="session-controls">
+      <button class="btn btn-success" id="startBtn" onclick="startSession()">
+        <i class="fas fa-play"></i> Iniciar Sesión
+      </button>
+      <button class="btn btn-danger" id="endBtn" onclick="endSession()" disabled>
+        <i class="fas fa-stop"></i> Finalizar Sesión
+      </button>
+    </div>
+    <input 
+      type="text" 
+      id="barcodeInput" 
+      placeholder="Escanea aquí..." 
+      autocomplete="off"
+      disabled
+    />
+    <div class="status idle" id="status">
+      <i class="fas fa-info-circle"></i> Presiona "Iniciar Sesión" para comenzar
+    </div>
+  </div>
+
+  <!-- Grid de contenido -->
+  <div class="content-grid">
+    <!-- Último escaneo -->
+    <div class="panel">
+      <h2><i class="fas fa-clock-rotate-left"></i>Último Escaneo</h2>
+      <div id="lastScanArea">
+        <div class="empty-state">
+          <i class="fas fa-inbox"></i>
+          Esperando primer escaneo...
+        </div>
+      </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="panel">
+      <h2><i class="fas fa-sliders"></i>Acciones</h2>
+      <div class="actions">
+        <button class="btn" onclick="exportToCSV()" id="exportCsvBtn" disabled>
+          <i class="fas fa-file-csv"></i> Exportar CSV
+        </button>
+        <button class="btn" onclick="exportToJSON()" id="exportJsonBtn" disabled>
+          <i class="fas fa-file-code"></i> Exportar JSON
+        </button>
+        <button class="btn btn-danger" onclick="clearAll()" id="clearBtn" disabled>
+          <i class="fas fa-trash"></i> Limpiar Todo
+        </button>
+      </div>
+      <div class="info-box">
+        <strong><i class="fas fa-info-circle"></i> Instrucciones</strong>
+        <ul>
+          <li>Presiona "Iniciar Sesión" para comenzar</li>
+          <li>Escanea códigos con tu lector</li>
+          <li>El sistema consolida automáticamente</li>
+          <li>Presiona "Finalizar Sesión" al terminar</li>
+          <li>Exporta los datos cuando lo necesites</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lista consolidada -->
+  <div class="panel">
+    <h2><i class="fas fa-list-check"></i>Inventario Consolidado</h2>
+    <div class="consolidated-list" id="consolidatedList">
+      <div class="empty-state">
+        <i class="fas fa-box-open"></i>
+        No hay items escaneados
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Supabase -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+<!-- Scripts de la aplicación -->
+<script src="js/utils/utils.js"></script>
+<script src="js/managers/audio-manager.js"></script>
+<script src="js/managers/ui-manager.js"></script>
+<script src="js/managers/data-manager.js"></script>
+<script src="js/managers/export-manager.js"></script>
+<script src="js/core/session.js"></script>
+<script src="js/core/scanner.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
