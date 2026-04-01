@@ -13,12 +13,14 @@ async function processScan(code) {
       .from('BARRAS')
       .select('*')
       .eq('barcode', code)
-      .maybeSingle();
+      .single();
 
-    if (error) throw error;
-
-    if (!barra) {
-      UIManager.showError("Código no encontrado");
+    if (error) {
+      if (error.code === 'PGRST116') {
+        UIManager.showError("Código no encontrado");
+      } else {
+        throw error;
+      }
       AudioManager.playBeep(400, 200);
       return;
     }

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administrador - Sistema de Inventario</title>
+
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-content">
+      <h1><i class="fas fa-database"></i>Administrador de Inventario</h1>
+      <p class="header-subtitle">Carga masiva de productos desde Excel</p>
+    </div>
+    <a href="../index.html" class="btn btn-secondary">
+      <i class="fas fa-arrow-left"></i> Volver al Lector
+    </a>
+  </div>
+
+  <!-- Upload Area -->
+  <div class="upload-section">
+    <div class="upload-card-full">
+      <div class="upload-icon">
+        <i class="fas fa-cloud-upload-alt"></i>
+      </div>
+      <h2>Cargar Archivo Excel</h2>
+      <p>Selecciona un archivo .xls o .xlsx para procesarlo automáticamente</p>
+      
+      <div class="file-input-wrapper">
+        <input 
+          type="file" 
+          id="fileInput" 
+          accept=".xls,.xlsx"
+          onchange="handleFileSelect(event)"
+        />
+        <label for="fileInput" class="btn btn-primary btn-large">
+          <i class="fas fa-file-excel"></i> Seleccionar Archivo Excel
+        </label>
+      </div>
+
+      <div id="fileInfo" class="file-info hidden">
+        <i class="fas fa-file-check"></i>
+        <span id="fileName"></span>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-card">
+          <i class="fas fa-table"></i>
+          <h3>Columnas Requeridas</h3>
+          <ul>
+            <li><strong>A:</strong> Referencia</li>
+            <li><strong>B:</strong> Talla</li>
+            <li><strong>C:</strong> ID Color</li>
+            <li><strong>L:</strong> Barcode</li>
+          </ul>
+        </div>
+        <div class="info-card">
+          <i class="fas fa-check-circle"></i>
+          <h3>Proceso Automático</h3>
+          <ul>
+            <li>Validación contra BD</li>
+            <li>Detección de duplicados</li>
+            <li>Subida en lotes</li>
+            <li>Reporte detallado</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer Info -->
+  <div class="footer-info">
+    <div class="info-item">
+      <i class="fas fa-shield-alt"></i>
+      <span>Solo se suben registros únicos</span>
+    </div>
+    <div class="info-item">
+      <i class="fas fa-bolt"></i>
+      <span>Procesamiento rápido en lotes</span>
+    </div>
+    <div class="info-item">
+      <i class="fas fa-chart-line"></i>
+      <span>Estadísticas en tiempo real</span>
+    </div>
+  </div>
+</div>
+
+<!-- SheetJS para leer Excel -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+<!-- Supabase -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+<!-- Scripts -->
+<script src="js/config.js"></script>
+<script src="js/csv-generator.js"></script>
+<script src="js/file-handler.js"></script>
+<script src="js/data-validator.js"></script>
+<script src="js/database-uploader.js"></script>
+<script src="js/ui-controller.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
