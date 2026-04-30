@@ -373,17 +373,14 @@ function initUIListeners() {
                     let iconClass = 'fas fa-user';
                     let bgColor = 'var(--primary)';
 
-                    if (role === 'OWNER') {
-                        iconClass = 'fas fa-user-tie';
-                        bgColor = '#fbbf24'; // Dorado para el propietario
-                    } else if (role === 'ADMIN') {
+                    if (role === 'ADMIN') {
                         iconClass = 'fas fa-user-shield';
                         bgColor = '#ef4444';
                     } else if (role === 'MODERATOR') {
                         iconClass = 'fas fa-user-cog';
                         bgColor = '#f59e0b';
                     } else if (role === 'GUEST') {
-                        iconClass = 'fas fa-user-secret';
+                        iconClass = 'fas fa-user-tag';
                         bgColor = '#6b7280';
                     }
 
@@ -398,17 +395,14 @@ function initUIListeners() {
                     let iconClass = 'fas fa-user';
                     let bgColor = 'var(--primary)';
 
-                    if (role === 'OWNER') {
-                        iconClass = 'fas fa-user-tie';
-                        bgColor = '#fbbf24'; // Dorado para el propietario
-                    } else if (role === 'ADMIN') {
+                    if (role === 'ADMIN') {
                         iconClass = 'fas fa-user-shield';
                         bgColor = '#ef4444';
                     } else if (role === 'MODERATOR') {
                         iconClass = 'fas fa-user-cog';
                         bgColor = '#f59e0b';
                     } else if (role === 'GUEST') {
-                        iconClass = 'fas fa-user-secret';
+                        iconClass = 'fas fa-user-tag';
                         bgColor = '#6b7280';
                     }
 

@@ -102,7 +102,7 @@ function renderUserTable(users) {
         const role = user.rol.toUpperCase();
 
         if (role === 'OWNER') {
-            roleIcon = '<i class="fa-solid fa-user-tie"></i>';
+            roleIcon = '<i class="fa-solid fa-crown"></i>';
         } else if (role === 'ADMIN') {
             roleIcon = '<i class="fa-solid fa-user-shield"></i>';
         } else if (role === 'MODERATOR') {

@@ -3,7 +3,6 @@ class QRScanner {
   constructor() {
     this.scanner = null;
     this.isScanning = false;
-    this.isProcessingCode = false; // ✅ Flag para prevenir lecturas múltiples
     this.currentCameraId = null;
     this.cameras = [];
     this.cameraIndex = 0;
@@ -109,9 +108,6 @@ class QRScanner {
 
   async openScanner() {
     try {
-      // ✅ Resetear flag de procesamiento al abrir
-      this.isProcessingCode = false;
-      
       // Mostrar modal y overlay
       if (this.qrScannerModal) {
         this.qrScannerModal.style.display = 'flex';
@@ -430,24 +426,10 @@ class QRScanner {
   }
 
   onScanSuccess(decodedText) {
-    // ✅ PREVENIR LECTURAS REPETIDAS - Detener inmediatamente después de la primera lectura
-    if (this.isProcessingCode) {
-      console.log('⏭️ Lectura duplicada ignorada (ya procesando)');
-      return;
-    }
-    
     console.log('✅ QR escaneado:', decodedText);
-    
-    // Marcar como procesando para bloquear lecturas adicionales
-    this.isProcessingCode = true;
 
-    // 1. DETENER ESCÁNER INMEDIATAMENTE para evitar más lecturas
-    if (this.scanner && this.isScanning) {
-      this.scanner.stop().then(() => {
-        this.isScanning = false;
-        console.log('Escáner detenido después de lectura exitosa');
-      }).catch(err => console.warn("Error al detener escáner:", err));
-    }
+    // 1. CERRAR ESCÁNER INMEDIATAMENTE (Prioridad Máxima)
+    this.closeScanner().catch(err => console.warn("Error background closing:", err));
 
     // 2. Limpiar timeout
     if (this.scanTimeout) clearTimeout(this.scanTimeout);
@@ -460,7 +442,7 @@ class QRScanner {
     // 4. Reproducir sonido y feedback visual (sin bloquear)
     this.playScanSuccessSound();
 
-    // 5. Procesar el código
+    // 5. Procesar el código (Pequeño delay para permitir que el UI se renderice cerrado)
     setTimeout(() => {
       if (this.barcodeInput) {
         // Disparar eventos
@@ -469,12 +451,10 @@ class QRScanner {
 
         // Enfocar para siguiente lectura
         this.barcodeInput.focus();
+
+        // Limpiar input visualmente (opcional, depende de lógica de negocio)
+        // setTimeout(() => { this.barcodeInput.value = ''; }, 100); 
       }
-      
-      // 6. Cerrar modal después de procesar
-      setTimeout(() => {
-        this.closeScanner().catch(err => console.warn("Error al cerrar escáner:", err));
-      }, 100);
     }, 50);
   }
 
@@ -562,9 +542,6 @@ class QRScanner {
       // Limpiar escáner
       this.scanner = null;
 
-      // ✅ Resetear flag de procesamiento
-      this.isProcessingCode = false;
-
       // Limpiar contenedor
       if (this.qrReader) {
         this.qrReader.innerHTML = '';
@@ -602,8 +579,6 @@ class QRScanner {
         this.qrScannerModal.style.display = 'none';
         this.qrScannerModal.classList.remove('active');
       }
-      // Asegurar reset del flag incluso en error
-      this.isProcessingCode = false;
     }
   }
 

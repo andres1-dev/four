@@ -295,10 +295,10 @@
             <form id="loginForm">
                 <div id="manualFields">
                     <div class="form-group">
-                        <label for="userId">Correo</label>
+                        <label for="userId">Email</label>
                         <div class="input-wrapper">
                             <i class="fas fa-envelope"></i>
-                            <input type="email" id="userId" placeholder="tu@correo.com" autocomplete="username"
+                            <input type="email" id="userId" placeholder="tu@email.com" autocomplete="username"
                                 inputmode="email">
                         </div>
                     </div>
@@ -529,7 +529,7 @@
             e.preventDefault();
             const email = userIdInput.value.trim();
             if (!email) {
-                showError('Ingresa tu correo primero.');
+                showError('Ingresa tu email primero.');
                 userIdInput.focus();
                 return;
             }

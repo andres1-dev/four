@@ -1,4 +1,6 @@
-// Módulo de Administración de Usuarios (Solo Admin y Owner)
+// Módulo de Administración de Usuarios con Supabase Auth
+
+const EDGE_FUNCTION_URL = `${CONFIG.SUPABASE_URL}/functions/v1/manage-users`;
 
 // Jerarquía de roles (de mayor a menor)
 const ROLE_HIERARCHY = {
@@ -6,27 +8,24 @@ const ROLE_HIERARCHY = {
     'ADMIN': 4,
     'MODERATOR': 3,
     'USER': 2,
-    'DELIVERY': 2, // Mismo nivel que USER
+    'DELIVERY': 2,
     'GUEST': 1
 };
 
-// Obtener nivel jerárquico de un rol
 function getRoleLevel(role) {
     return ROLE_HIERARCHY[role.toUpperCase()] || 0;
 }
 
-// Verificar si puede gestionar un rol
 function canManageRole(managerRole, targetRole) {
     return getRoleLevel(managerRole) > getRoleLevel(targetRole);
 }
 
-// Obtener roles que puede asignar el usuario actual
 function getAssignableRoles(currentRole) {
     const currentLevel = getRoleLevel(currentRole);
     const assignable = [];
     
     for (const [role, level] of Object.entries(ROLE_HIERARCHY)) {
-        if (level < currentLevel && role !== 'DELIVERY') { // DELIVERY no se asigna manualmente
+        if (level < currentLevel && role !== 'DELIVERY') {
             assignable.push(role);
         }
     }
@@ -35,7 +34,6 @@ function getAssignableRoles(currentRole) {
 }
 
 async function openUserAdmin() {
-    // Verificar permisos (ADMIN y OWNER)
     if (!currentUser || (currentUser.rol !== 'ADMIN' && currentUser.rol !== 'OWNER')) {
         alert("Acceso denegado. Solo administradores.");
         return;
@@ -62,14 +60,26 @@ async function loadUsersList() {
     listContainer.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Cargando usuarios...</div>';
 
     try {
-        // Cargar usuarios directamente desde Sheets
-        let users = await obtenerUsuariosDeSheets();
+        const response = await fetch(EDGE_FUNCTION_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ action: 'list' })
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(result.error);
+        }
+
+        let users = result.users;
         
-        // FILTRAR POR JERARQUÍA: Solo mostrar usuarios de nivel inferior
+        // Filtrar por jerarquía
         const currentLevel = getRoleLevel(currentUser.rol);
         users = users.filter(u => {
             const userLevel = getRoleLevel(u.rol);
-            // Solo mostrar usuarios de nivel estrictamente inferior
             return userLevel < currentLevel;
         });
         
@@ -102,7 +112,7 @@ function renderUserTable(users) {
         const role = user.rol.toUpperCase();
 
         if (role === 'OWNER') {
-            roleIcon = '<i class="fa-solid fa-user-tie"></i>';
+            roleIcon = '<i class="fa-solid fa-crown"></i>';
         } else if (role === 'ADMIN') {
             roleIcon = '<i class="fa-solid fa-user-shield"></i>';
         } else if (role === 'MODERATOR') {
@@ -135,10 +145,10 @@ function renderUserTable(users) {
                 ${user.phone ? `<div class="user-detail-item"><i class="fas fa-phone"></i> <span>${user.phone}</span></div>` : ''}
             </div>
             <div class="user-card-footer">
-                <button class="action-btn edit-btn" onclick="editUser('${user.id}')" title="Editar">
+                <button class="action-btn edit-btn" onclick="editUser('${user.auth_id}')" title="Editar">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button class="action-btn delete-btn" onclick="deleteUser('${user.id}', '${user.nombre}')" title="Eliminar">
+                <button class="action-btn delete-btn" onclick="deleteUser('${user.auth_id}', '${user.nombre}')" title="Eliminar">
                     <i class="fas fa-trash-alt"></i>
                 </button>
             </div>
@@ -149,7 +159,6 @@ function renderUserTable(users) {
     html += '</div>';
     listContainer.innerHTML = html;
 
-    // Guardar usuarios en memoria para edición
     window.currentUsersList = users;
 }
 
@@ -157,55 +166,48 @@ function openCreateUserModal() {
     document.getElementById('userForm').reset();
     document.getElementById('userFormTitle').textContent = "Nuevo Usuario";
     document.getElementById('userId').readOnly = false;
+    document.getElementById('userAuthId').value = '';
     
-    // Actualizar opciones de roles según jerarquía
     updateRoleOptions();
     
     document.getElementById('userModalOverlay').style.display = 'flex';
 }
 
-// Actualizar opciones de roles disponibles según jerarquía
 function updateRoleOptions() {
     const roleSelect = document.getElementById('userRole');
     if (!roleSelect) return;
     
     const assignableRoles = getAssignableRoles(currentUser.rol);
     
-    // Limpiar opciones actuales
     roleSelect.innerHTML = '';
     
-    // Agregar solo roles que puede asignar
     assignableRoles.forEach(role => {
         const option = document.createElement('option');
         option.value = role;
         option.textContent = role.charAt(0) + role.slice(1).toLowerCase();
         roleSelect.appendChild(option);
     });
-    
-    console.log(`Roles asignables para ${currentUser.rol}:`, assignableRoles);
 }
 
-function editUser(userId) {
-    const user = window.currentUsersList.find(u => u.id === userId);
+function editUser(authId) {
+    const user = window.currentUsersList.find(u => u.auth_id === authId);
     if (!user) return;
     
-    // Verificar que puede editar este usuario (jerarquía)
     if (!canManageRole(currentUser.rol, user.rol)) {
         alert('No tienes permisos para editar este usuario.');
         return;
     }
 
     document.getElementById('userId').value = user.id;
-    document.getElementById('userId').readOnly = true; // No permitir cambiar ID al editar
+    document.getElementById('userId').readOnly = true;
+    document.getElementById('userAuthId').value = user.auth_id;
     document.getElementById('userName').value = user.nombre;
     document.getElementById('userEmail').value = user.email || '';
     document.getElementById('userPhone').value = user.phone || '';
-    document.getElementById('userPassword').value = user.password; // Mostrar contraseña actual (seguridad baja pero solicitado)
+    document.getElementById('userPassword').value = '';
+    document.getElementById('userPassword').placeholder = 'Dejar vacío para no cambiar';
 
-    // Actualizar opciones de roles según jerarquía
     updateRoleOptions();
-    
-    // Seleccionar el rol actual del usuario
     document.getElementById('userRole').value = user.rol;
 
     document.getElementById('userFormTitle').textContent = "Editar Usuario";
@@ -224,6 +226,9 @@ async function saveUser(e) {
     saveBtn.disabled = true;
     saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
 
+    const authId = document.getElementById('userAuthId').value.trim();
+    const isEdit = authId !== '';
+
     const userData = {
         id: document.getElementById('userId').value.trim(),
         nombre: document.getElementById('userName').value.trim(),
@@ -233,37 +238,34 @@ async function saveUser(e) {
         password: document.getElementById('userPassword').value.trim()
     };
 
-    // VALIDACIÓN DE JERARQUÍA: No puede asignar roles iguales o superiores
     if (!canManageRole(currentUser.rol, userData.rol)) {
-        alert(`No puedes asignar el rol ${userData.rol}. Solo puedes asignar roles inferiores a ${currentUser.rol}.`);
+        alert(`No puedes asignar el rol ${userData.rol}.`);
         saveBtn.disabled = false;
         saveBtn.innerHTML = originalText;
         return;
     }
 
-    console.log('Guardando usuario:', userData);
-
     try {
-        const formData = new FormData();
-        formData.append('action', 'saveUser');
-        formData.append('userData', JSON.stringify(userData));
-
-        console.log('Enviando a:', API_URL_POST);
-
-        const response = await fetch(API_URL_POST, {
+        const response = await fetch(EDGE_FUNCTION_URL, {
             method: 'POST',
-            body: formData
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: isEdit ? 'update' : 'create',
+                userId: authId,
+                userData: userData
+            })
         });
 
         const result = await response.json();
-        console.log('Respuesta del servidor:', result);
 
         if (result.success) {
             alert("Usuario guardado correctamente");
             closeUserFormModal();
             loadUsersList();
         } else {
-            alert("Error: " + result.message);
+            alert("Error: " + result.error);
         }
 
     } catch (error) {
@@ -275,15 +277,13 @@ async function saveUser(e) {
     }
 }
 
-async function deleteUser(userId, userName) {
-    // Buscar el usuario para verificar jerarquía
-    const user = window.currentUsersList.find(u => u.id === userId);
+async function deleteUser(authId, userName) {
+    const user = window.currentUsersList.find(u => u.auth_id === authId);
     if (!user) {
         alert('Usuario no encontrado.');
         return;
     }
     
-    // Verificar que puede eliminar este usuario (jerarquía)
     if (!canManageRole(currentUser.rol, user.rol)) {
         alert('No tienes permisos para eliminar este usuario.');
         return;
@@ -291,28 +291,25 @@ async function deleteUser(userId, userName) {
     
     if (!confirm(`¿Estás seguro de eliminar al usuario ${userName}?`)) return;
 
-    console.log('Eliminando usuario:', userId);
-
     try {
-        const formData = new FormData();
-        formData.append('action', 'deleteUser');
-        formData.append('id', userId);
-
-        console.log('Enviando a:', API_URL_POST);
-
-        const response = await fetch(API_URL_POST, {
+        const response = await fetch(EDGE_FUNCTION_URL, {
             method: 'POST',
-            body: formData
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'delete',
+                userId: authId
+            })
         });
 
         const result = await response.json();
-        console.log('Respuesta del servidor:', result);
 
         if (result.success) {
             alert("Usuario eliminado correctamente");
             loadUsersList();
         } else {
-            alert("Error al eliminar: " + result.message);
+            alert("Error al eliminar: " + result.error);
         }
 
     } catch (error) {
@@ -321,8 +318,16 @@ async function deleteUser(userId, userName) {
     }
 }
 
-// Inicialización de Listeners
+// Inicialización
 document.addEventListener('DOMContentLoaded', () => {
     const userForm = document.getElementById('userForm');
     if (userForm) userForm.addEventListener('submit', saveUser);
+    
+    // Agregar campo oculto para auth_id si no existe
+    if (!document.getElementById('userAuthId')) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.id = 'userAuthId';
+        userForm.appendChild(input);
+    }
 });

@@ -365,11 +365,6 @@
   cursor: pointer;
 }
 
-/* Select con icono (dentro de form-input-wrapper) */
-.form-input-wrapper .form-select {
-  padding-left: 40px;
-}
-
 .user-form-footer {
   padding: 20px 28px 24px;
   border-top: 1px solid var(--border-light);
