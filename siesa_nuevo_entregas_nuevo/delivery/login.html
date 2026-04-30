@@ -295,11 +295,11 @@
             <form id="loginForm">
                 <div id="manualFields">
                     <div class="form-group">
-                        <label for="userId">Identificación</label>
+                        <label for="userId">Email</label>
                         <div class="input-wrapper">
-                            <i class="fas fa-id-card"></i>
-                            <input type="text" id="userId" placeholder="Ingresa tu ID" autocomplete="username"
-                                inputmode="text">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="userId" placeholder="tu@email.com" autocomplete="username"
+                                inputmode="email">
                         </div>
                     </div>
 
@@ -333,8 +333,8 @@
         </div>
     </div>
 
-    <!-- Cargar módulo de autenticación con Sheets -->
-    <script src="./js/core/auth_sheets.js"></script>
+    <!-- Cargar módulo de autenticación con Supabase -->
+    <script type="module" src="./js/core/auth_supabase.js"></script>
 
     <script>
         const loginForm = document.getElementById('loginForm');
@@ -450,8 +450,8 @@
             spinner.style.display = 'block';
 
             try {
-                // Usar autenticación con Sheets
-                const result = await loginBiometricoSheets(userId);
+                // Usar autenticación con Supabase
+                const result = await loginBiometricoSupabase(userId);
                 
                 if (result.success) {
                     processLogin(result);
@@ -472,7 +472,14 @@
 
             // Guardar datos de usuario
             localStorage.setItem('user', JSON.stringify(result.user));
-            if (result.apiKey) localStorage.setItem('apiKey', result.apiKey);
+            
+            // Guardar API Key de Google Sheets (obtenida desde el servidor)
+            if (result.apiKey) {
+                localStorage.setItem('apiKey', result.apiKey);
+                console.log('✅ API Key guardada en localStorage');
+            } else {
+                console.warn('⚠️ No se recibió API Key del servidor');
+            }
 
             console.log("Sesión preparada. Redirigiendo...");
 
@@ -491,12 +498,12 @@
             btnText.style.display = 'none';
             spinner.style.display = 'block';
 
-            const id = userIdInput.value.trim();
+            const email = userIdInput.value.trim();
             const password = passwordInput.value.trim();
 
             try {
-                // Usar autenticación con Sheets
-                const result = await verificarCredencialesSheets(id, password);
+                // Usar autenticación con Supabase
+                const result = await verificarCredencialesSupabase(email, password);
 
                 if (result.success) {
                     // El login fue exitoso, vamos a ver si podemos ofrecer biometría
@@ -517,25 +524,25 @@
             }
         });
 
-        // Recuperación de contraseña (simplificada)
+        // Recuperación de contraseña
         document.getElementById('recoverLink').addEventListener('click', async (e) => {
             e.preventDefault();
-            const id = userIdInput.value.trim();
-            if (!id) {
-                showError('Ingresa tu identificación primero.');
+            const email = userIdInput.value.trim();
+            if (!email) {
+                showError('Ingresa tu email primero.');
                 userIdInput.focus();
                 return;
             }
 
             const originalText = document.getElementById('recoverLink').innerText;
-            document.getElementById('recoverLink').innerText = 'Verificando...';
+            document.getElementById('recoverLink').innerText = 'Enviando...';
 
             try {
-                // Verificar si el usuario existe en Sheets
-                const result = await recuperarContrasenaSheets(id);
+                // Enviar email de recuperación con Supabase
+                const result = await recuperarContrasenaSupabase(email);
                 
                 if (result.success) {
-                    alert(`Usuario encontrado: ${result.user.nombre}\nEmail: ${result.user.email}\n\nContacta al administrador para restablecer tu contraseña.`);
+                    alert(result.message);
                 } else {
                     alert(result.message);
                 }

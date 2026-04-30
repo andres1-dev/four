@@ -18,9 +18,12 @@ const CONFIG = {
     SESSION_TIMEOUT_MS: Infinity, // Sin timeout automático
     ACTIVITY_KEY: 'last_activity_timestamp',
     
-    // Configuración de Usuarios (Google Sheets)
-    USERS_SPREADSHEET_ID: "1VaPBwgRu1QWhmsV_Qgf7cgraSxiAWRX6-wBEyUlGoJw",
-    USERS_SHEET_NAME: "USERS"
+    // Configuración de Supabase
+    SUPABASE_URL: "https://iladaofarozipitwaeti.supabase.co",
+    SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsYWRhb2Zhcm96aXBpdHdhZXRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NjYzMDksImV4cCI6MjA5MzA0MjMwOX0.4fyiibeZS10DCgov62d7tIFVzJHsklsBrbokAJ9ptK8",
+    
+    // Google Sheets API Key
+    GOOGLE_SHEETS_API_KEY: "AIzaSyC7hjbRc0TGLgImv8gVZg8tsOeYWgXlPcM"
 };
 
 // Asegurar que CONFIG sea accesible globalmente en todos los scripts
@@ -40,7 +43,7 @@ const CLIENTS_MAP = {
 
 // Configuración de Usuario (con persistencia)
 const DEFAULT_SETTINGS = {
-    persistentFocus: true,
+    persistentFocus: false, // Se activa solo en modo PDA
     audioFeedback: true,
     filterEnabled: false,
     selectedClient: ""
@@ -52,7 +55,6 @@ let USER_SETTINGS = { ...DEFAULT_SETTINGS };
 try {
     const savedSettings = localStorage.getItem('userSettings');
     if (savedSettings) {
-        // Cargar ajustes pero siempre resetear persistentFocus a false al inicio
         const parsed = JSON.parse(savedSettings);
         USER_SETTINGS = { ...DEFAULT_SETTINGS, ...parsed };
     }
@@ -60,17 +62,13 @@ try {
     console.error("Error cargando configuración usuario:", e);
 }
 
-// SIEMPRE iniciar desactivado para no afectar otros inputs
-USER_SETTINGS.persistentFocus = false;
+// El persistentFocus se maneja dinámicamente según el modo
+// No se fuerza a false aquí
 
 function saveUserSettings() {
     try {
-        // Crear copia para guardar
-        const settingsToSave = { ...USER_SETTINGS };
-        // NO guardar persistentFocus (conflictivo)
-        delete settingsToSave.persistentFocus;
-
-        localStorage.setItem('userSettings', JSON.stringify(settingsToSave));
+        // Guardar todos los ajustes incluyendo persistentFocus
+        localStorage.setItem('userSettings', JSON.stringify(USER_SETTINGS));
     } catch (e) {
         console.error("Error guardando configuración:", e);
     }
@@ -112,9 +110,45 @@ let preventKeyboardTimer = null;
 let currentQRParts = null;
 let dataLoaded = false;
 
-// Constantes para la cola de carga
+// Constantes para la cola de carga - SISTEMA PROFESIONAL V2
 const UPLOAD_QUEUE_KEY = 'uploadQueue';
-const MAX_RETRIES = 9999; // Ilimitados intentos
+
+// Configuración de reintentos con estrategia exponencial backoff
+const RETRY_CONFIG = {
+  MAX_RETRIES: 5, // Máximo de reintentos antes de marcar como fallido
+  INITIAL_DELAY: 2000, // Delay inicial: 2 segundos
+  MAX_DELAY: 60000, // Delay máximo: 60 segundos
+  BACKOFF_MULTIPLIER: 2, // Multiplicador exponencial
+  JITTER: true, // Agregar variación aleatoria para evitar thundering herd
+  
+  // Errores que son recuperables (reintentar)
+  RECOVERABLE_ERRORS: [
+    'NetworkError',
+    'Failed to fetch',
+    'Network request failed',
+    'timeout',
+    'ECONNREFUSED',
+    'ETIMEDOUT',
+    'ENOTFOUND',
+    'offline',
+    '408', // Request Timeout
+    '429', // Too Many Requests
+    '500', // Internal Server Error
+    '502', // Bad Gateway
+    '503', // Service Unavailable
+    '504'  // Gateway Timeout
+  ],
+  
+  // Errores que NO son recuperables (fallar inmediatamente)
+  FATAL_ERRORS: [
+    '400', // Bad Request
+    '401', // Unauthorized
+    '403', // Forbidden
+    '404', // Not Found
+    '413', // Payload Too Large
+    '422'  // Unprocessable Entity
+  ]
+};
 
 // La cola de carga se inicializa globalmente en cola_carga.js (window.uploadQueue)
 // ya que cola_carga.js se cargará después de este archivo de configuración.

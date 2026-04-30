@@ -744,6 +744,8 @@ async function eliminarEntrega(factura) {
                     const item = doc.datosSiesa.find(s => s.factura === factura);
                     if (item) {
                         item.confirmacion = "PENDIENTE"; // Reset a pendiente
+                        item.fechaEntrega = ""; // Limpiar fecha de entrega
+                        item.Ih3 = ""; // Limpiar imagen
                         updated = true;
                         foundDoc = doc;
                         foundSiesa = item;
@@ -781,6 +783,24 @@ async function eliminarEntrega(factura) {
                         solapa.style.borderColor = '';
                         // Asegurar que no quede animación residual
                         solapa.style.animation = '';
+                    }
+
+                    // ELIMINAR IMAGEN DEL DOM (ih3-thumbnail-container)
+                    const thumbnailContainer = card.querySelector('.ih3-thumbnail-container');
+                    if (thumbnailContainer) {
+                        thumbnailContainer.remove();
+                    }
+
+                    // ELIMINAR FECHA DE ENTREGA DEL DOM
+                    const detailsGrid = card.querySelector('.details-grid');
+                    if (detailsGrid) {
+                        const miniDetails = detailsGrid.querySelectorAll('.mini-detail');
+                        miniDetails.forEach(detail => {
+                            const label = detail.querySelector('.mini-label')?.textContent.trim().toLowerCase();
+                            if (label && (label.includes('fechaentrega') || label.includes('fecha entrega'))) {
+                                detail.remove();
+                            }
+                        });
                     }
                 }
 

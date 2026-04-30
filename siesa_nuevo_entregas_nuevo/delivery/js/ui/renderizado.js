@@ -105,7 +105,14 @@ function displayFullResult(item, qrParts) {
                             <button class="action-btn-mini btn-delete contextual" style="display: ${(typeof currentUser !== 'undefined' && currentUser && (currentUser.rol === 'ADMIN' || currentUser.rol === 'OWNER')) ? 'flex' : 'none'}; background: transparent; box-shadow: none;" onclick="event.stopPropagation(); eliminarEntrega('${siesa.factura}')" title="Eliminar entrega">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
-                            <div class="status-icon-only success"><i class="fas fa-check-circle"></i></div>
+                            <div class="status-double-check">
+                                <div class="check-item success" title="Registro guardado">
+                                    <i class="fas fa-database"></i>
+                                </div>
+                                <div class="check-item ${tieneIh3 ? 'success' : 'warning'}" title="${tieneIh3 ? 'Imagen verificada' : 'Imagen no confirmada'}">
+                                    <i class="fas fa-${tieneIh3 ? 'image' : 'exclamation-triangle'}"></i>
+                                </div>
+                            </div>
                         </div>` :
                         estadoConf === "NO FACTURADO" ?
                             `<div class="status-icon-only error"><i class="fas fa-exclamation-triangle"></i></div>` :

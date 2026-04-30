@@ -50,6 +50,62 @@ Deno.serve(async (req) => {
       )
     }
 
+    // ⭐ VERIFICAR SI YA EXISTE EL REGISTRO
+    console.log(`🔍 Verificando si existe registro para factura: ${entrega.Factura}`)
+    
+    const { data: existingRecord, error: checkError } = await supabaseClient
+      .from('ENTREGAS')
+      .select('Factura, SoporteID, Url_Ih3')
+      .eq('Factura', entrega.Factura)
+      .maybeSingle()
+
+    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found (OK)
+      console.error('❌ Error verificando registro existente:', checkError)
+      throw checkError
+    }
+
+    // Si el registro ya existe
+    if (existingRecord) {
+      console.log('📋 Registro existente encontrado:', existingRecord)
+      
+      // Verificar si ya tiene imagen
+      const hasImage = existingRecord.Url_Ih3 && existingRecord.Url_Ih3.trim() !== ''
+      
+      if (hasImage) {
+        // ✅ Ya existe con imagen completa - retornar éxito sin hacer nada
+        console.log('✅ Registro ya existe con imagen completa - omitiendo subida')
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: existingRecord,
+            soporteID: existingRecord.SoporteID,
+            urlImagen: existingRecord.Url_Ih3,
+            alreadyExists: true,
+            message: 'Registro ya existe con imagen'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      } else if (entrega.imagen) {
+        // ⚠️ Existe pero sin imagen - actualizar con la nueva imagen
+        console.log('⚠️ Registro existe sin imagen - actualizando...')
+        // Continuar con el flujo normal para subir la imagen y actualizar
+      } else {
+        // Existe sin imagen y no se envió imagen nueva
+        console.log('⚠️ Registro existe sin imagen y no se envió imagen nueva')
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: existingRecord,
+            soporteID: existingRecord.SoporteID,
+            urlImagen: existingRecord.Url_Ih3,
+            alreadyExists: true,
+            message: 'Registro existe sin imagen'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
     let soporteID = null
     let urlImagen = null
 
@@ -67,10 +123,14 @@ Deno.serve(async (req) => {
         const imageBytes = decode(base64Data)
 
         // Generar nombre único para la imagen con estructura de carpetas por fecha
+        // Usar hora de Colombia (UTC-5)
         const now = new Date()
-        const year = now.getFullYear()
-        const month = String(now.getMonth() + 1).padStart(2, '0')
-        const day = String(now.getDate()).padStart(2, '0')
+        const colombiaOffset = -5 * 60 // Colombia es UTC-5 en minutos
+        const colombiaTime = new Date(now.getTime() + (colombiaOffset * 60 * 1000))
+        
+        const year = colombiaTime.getUTCFullYear()
+        const month = String(colombiaTime.getUTCMonth() + 1).padStart(2, '0')
+        const day = String(colombiaTime.getUTCDate()).padStart(2, '0')
         const timestamp = Date.now()
         
         // Limpiar nombre de archivo y obtener extensión
@@ -130,9 +190,24 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Insertar registro en ENTREGAS
+    // Insertar o actualizar registro en ENTREGAS
+    // Generar fecha en zona horaria de Colombia (UTC-5) sin milisegundos
+    const now = new Date()
+    const colombiaOffset = -5 * 60 // Colombia es UTC-5 en minutos
+    const colombiaTime = new Date(now.getTime() + (colombiaOffset * 60 * 1000))
+    
+    // Formatear como YYYY-MM-DD HH:MM:SS
+    const year = colombiaTime.getUTCFullYear()
+    const month = String(colombiaTime.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(colombiaTime.getUTCDate()).padStart(2, '0')
+    const hours = String(colombiaTime.getUTCHours()).padStart(2, '0')
+    const minutes = String(colombiaTime.getUTCMinutes()).padStart(2, '0')
+    const seconds = String(colombiaTime.getUTCSeconds()).padStart(2, '0')
+    
+    const registroFecha = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+    
     const entregaRecord = {
-      "Registro": new Date().toISOString(), // Timestamp actual
+      "Registro": registroFecha, // Timestamp en hora de Colombia sin milisegundos
       "Documento": entrega.Documento,
       "Lote": entrega.Lote,
       "Referencia": entrega.Referencia,
@@ -144,22 +219,48 @@ Deno.serve(async (req) => {
       "Usuario": entrega.Usuario || null
     }
 
-    console.log('💾 Insertando registro en ENTREGAS...')
+    console.log('💾 Guardando registro en ENTREGAS...')
 
-    const { data, error } = await supabaseClient
-      .from('ENTREGAS')
-      .insert([entregaRecord])
-      .select()
+    let data, error
+
+    if (existingRecord && !existingRecord.Url_Ih3) {
+      // ACTUALIZAR registro existente que no tiene imagen
+      console.log('🔄 Actualizando registro existente con imagen...')
+      const updateResult = await supabaseClient
+        .from('ENTREGAS')
+        .update({
+          "SoporteID": soporteID,
+          "Url_Ih3": urlImagen,
+          "Usuario": entrega.Usuario || existingRecord.Usuario
+        })
+        .eq('Factura', entrega.Factura)
+        .select()
+
+      data = updateResult.data
+      error = updateResult.error
+    } else {
+      // INSERTAR nuevo registro
+      console.log('➕ Insertando nuevo registro...')
+      const insertResult = await supabaseClient
+        .from('ENTREGAS')
+        .insert([entregaRecord])
+        .select()
+
+      data = insertResult.data
+      error = insertResult.error
+    }
 
     if (error) {
-      console.error('❌ Error insertando entrega:', error)
+      console.error('❌ Error guardando entrega:', error)
       
-      // Si falla la inserción, eliminar la imagen subida
+      // Si falla el guardado, eliminar la imagen subida
       if (soporteID) {
         const now = new Date()
-        const year = now.getFullYear()
-        const month = String(now.getMonth() + 1).padStart(2, '0')
-        const day = String(now.getDate()).padStart(2, '0')
+        const colombiaOffset = -5 * 60
+        const colombiaTime = new Date(now.getTime() + (colombiaOffset * 60 * 1000))
+        const year = colombiaTime.getUTCFullYear()
+        const month = String(colombiaTime.getUTCMonth() + 1).padStart(2, '0')
+        const day = String(colombiaTime.getUTCDate()).padStart(2, '0')
         await supabaseClient
           .storage
           .from('soportes-entregas')
@@ -169,14 +270,15 @@ Deno.serve(async (req) => {
       throw error
     }
 
-    console.log('✅ Entrega registrada exitosamente')
+    console.log('✅ Entrega guardada exitosamente')
 
     return new Response(
       JSON.stringify({
         success: true,
         data: data[0],
         soporteID,
-        urlImagen
+        urlImagen,
+        wasUpdated: existingRecord && !existingRecord.Url_Ih3
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
