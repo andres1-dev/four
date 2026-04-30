@@ -608,25 +608,6 @@
   color: #d97706;
 }
 
-/* Error message in queue item */
-.queue-item-error {
-  margin-top: 6px;
-  padding: 6px 8px;
-  background: #fef2f2;
-  border-radius: 6px;
-  font-size: 10px;
-  color: #dc2626;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  border: 1px solid #fee2e2;
-}
-
-.queue-item-error i {
-  font-size: 10px;
-  flex-shrink: 0;
-}
-
 /* Custom Spinner for Queue */
 .queue-spinner {
   width: 16px;

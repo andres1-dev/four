@@ -90,7 +90,10 @@ class UploadQueue {
       retries: 0,
       timestamp: new Date().toISOString(),
       status: 'pending',
-      addedAt: new Date().toLocaleTimeString()
+      addedAt: new Date().toLocaleTimeString(),
+      lastError: null,
+      lastAttempt: null,
+      nextRetryAt: null
     });
     this.saveQueue();
     this.updateQueueUI();
@@ -221,18 +224,29 @@ class UploadQueue {
       let statusIcon = '';
       let statusText = '';
 
+      const maxRetries = typeof RETRY_CONFIG !== 'undefined' ? RETRY_CONFIG.MAX_RETRIES : 5;
+
       if (item.status === 'processing') {
         statusClass = 'processing';
         statusIcon = '<div class="queue-spinner"></div>';
         statusText = 'Procesando...';
-      } else if (item.retries >= MAX_RETRIES) {
+      } else if (item.status === 'failed') {
         statusClass = 'error';
         statusIcon = '<i class="fas fa-exclamation-triangle"></i>';
-        statusText = 'Error crítico';
-      } else if (item.status === 'retrying') {
+        statusText = 'Error permanente';
+      } else if (item.retries >= maxRetries) {
+        statusClass = 'error';
+        statusIcon = '<i class="fas fa-times-circle"></i>';
+        statusText = 'Máx. reintentos';
+      } else if (item.status === 'waiting_retry') {
+        statusClass = 'retrying';
+        statusIcon = '<i class="fas fa-clock"></i>';
+        const waitTime = item.nextRetryAt ? Math.ceil((new Date(item.nextRetryAt) - Date.now()) / 1000) : 0;
+        statusText = waitTime > 0 ? `Reintento en ${waitTime}s` : 'Reintentando...';
+      } else if (item.retries > 0) {
         statusClass = 'retrying';
         statusIcon = '<i class="fas fa-redo-alt"></i>';
-        statusText = `Reintentando (${item.retries}/${MAX_RETRIES})`;
+        statusText = `Reintento ${item.retries}/${maxRetries}`;
       } else {
         statusClass = 'pending';
         statusIcon = '<i class="fas fa-clock"></i>';
@@ -254,6 +268,9 @@ class UploadQueue {
 
       const titleText = item.factura || (item.data && item.data.documento) || 'Elemento sin ID';
       const detailText = item.type === 'photo' ? 'Soporte fotográfico' : 'Documento de datos';
+      
+      // Mostrar último error si existe
+      const errorInfo = item.lastError ? `<div class="queue-item-error" title="${item.lastError}"><i class="fas fa-info-circle"></i> ${this.truncateError(item.lastError)}</div>` : '';
 
       itemElement.innerHTML = `
         <div class="queue-item-main">
@@ -268,6 +285,7 @@ class UploadQueue {
               <span class="queue-item-dot">•</span>
               <span class="queue-item-time">${item.addedAt}</span>
             </div>
+            ${errorInfo}
           </div>
           <div class="queue-item-status-icon">${statusIcon}</div>
         </div>
@@ -275,6 +293,12 @@ class UploadQueue {
 
       queueItemsList.appendChild(itemElement);
     });
+  }
+
+  truncateError(error) {
+    if (!error) return '';
+    const maxLength = 40;
+    return error.length > maxLength ? error.substring(0, maxLength) + '...' : error;
   }
 
   toggleQueueModal() {
@@ -350,8 +374,28 @@ class UploadQueue {
     while (this.queue.length > 0 && navigator.onLine) {
       const job = this.queue[0];
 
+      // Verificar si el job está esperando para reintentar
+      if (job.nextRetryAt && new Date(job.nextRetryAt) > new Date()) {
+        // Aún no es tiempo de reintentar, pasar al siguiente
+        const nextJob = this.queue.shift();
+        this.queue.push(nextJob); // Mover al final
+        this.saveQueue();
+        continue;
+      }
+
+      // Verificar si ya alcanzó el máximo de reintentos
+      if (job.retries >= RETRY_CONFIG.MAX_RETRIES) {
+        job.status = 'failed';
+        this.queue.shift(); // Eliminar de la cola
+        this.saveQueue();
+        this.showNotification(`Error permanente: ${job.factura || 'Elemento'}`, 'error');
+        this.updateQueueUI();
+        continue;
+      }
+
       // Marcar como procesando
       job.status = 'processing';
+      job.lastAttempt = new Date().toISOString();
       this.updateQueueUI();
 
       try {
@@ -371,31 +415,49 @@ class UploadQueue {
       } catch (error) {
         console.error("Error al procesar trabajo:", error);
 
-        // Manejar error
+        // Analizar el error para determinar si es recuperable
+        const errorAnalysis = this.analyzeError(error);
+        
+        job.lastError = errorAnalysis.message;
         job.retries++;
-        job.lastError = error.message;
-        job.lastAttempt = new Date().toISOString();
-        job.status = 'pending'; // Volver a pendiente para reintento
 
-        if (job.retries >= MAX_RETRIES) {
-          // Máximo de reintentos alcanzado - eliminar
-          this.queue.shift();
-          this.showNotification(`Error máximo en: ${job.factura || 'Elemento'}`, 'error');
-        } else {
-          // Mover al final de la cola para reintentar más tarde
+        if (errorAnalysis.isRecoverable && job.retries < RETRY_CONFIG.MAX_RETRIES) {
+          // Error recuperable - programar reintento con backoff exponencial
+          const delay = this.calculateBackoffDelay(job.retries);
+          job.nextRetryAt = new Date(Date.now() + delay).toISOString();
+          job.status = 'waiting_retry';
+          
+          // Mover al final de la cola
           this.queue.push(this.queue.shift());
-          job.status = 'retrying';
-          this.showNotification(`Reintentando: ${job.factura || 'Elemento'} (${job.retries}/${MAX_RETRIES})`, 'warning');
+          this.saveQueue();
+          
+          console.log(`⏳ Reintento programado para ${job.factura} en ${delay}ms (intento ${job.retries}/${RETRY_CONFIG.MAX_RETRIES})`);
+          
+          // Esperar el delay antes de continuar
+          await new Promise(resolve => setTimeout(resolve, delay));
+        } else {
+          // Error fatal, duplicado o máximo de reintentos alcanzado
+          job.status = 'failed';
+          this.queue.shift();
+          this.saveQueue();
+          
+          // Si es duplicado, no mostrar como error crítico
+          if (errorAnalysis.isDuplicate) {
+            console.log(`ℹ️ Registro duplicado para ${job.factura} - eliminando de cola`);
+            // No mostrar notificación de error para duplicados
+          } else {
+            this.showNotification(
+              `Error en ${job.factura || 'Elemento'}: ${errorAnalysis.userMessage}`, 
+              'error'
+            );
+          }
         }
 
-        this.saveQueue();
-        break; // Pausar procesamiento temporalmente
+        this.updateQueueUI();
       }
 
-      this.updateQueueUI();
-
-      // Pequeña pausa entre trabajos
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Pequeña pausa entre trabajos para no saturar
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
 
     this.isProcessing = false;
@@ -406,12 +468,91 @@ class UploadQueue {
     }
   }
 
+  /**
+   * Analiza un error para determinar si es recuperable
+   */
+  analyzeError(error) {
+    const errorString = error.toString().toLowerCase();
+    const errorMessage = error.message || errorString;
+
+    // ⭐ Verificar si es un error de duplicado (Primary Key violation)
+    // Códigos comunes: 23505 (PostgreSQL unique violation), "duplicate key"
+    if (errorString.includes('23505') || 
+        errorString.includes('duplicate key') || 
+        errorString.includes('unique constraint') ||
+        errorString.includes('already exists')) {
+      return {
+        isRecoverable: false,
+        message: 'Registro duplicado',
+        userMessage: 'El registro ya existe en la base de datos',
+        isDuplicate: true
+      };
+    }
+
+    // Verificar si es un error fatal
+    const isFatal = RETRY_CONFIG.FATAL_ERRORS.some(code => 
+      errorString.includes(code.toLowerCase())
+    );
+
+    if (isFatal) {
+      return {
+        isRecoverable: false,
+        message: errorMessage,
+        userMessage: 'Error de validación o permisos'
+      };
+    }
+
+    // Verificar si es un error recuperable
+    const isRecoverable = RETRY_CONFIG.RECOVERABLE_ERRORS.some(pattern => 
+      errorString.includes(pattern.toLowerCase())
+    );
+
+    if (isRecoverable) {
+      return {
+        isRecoverable: true,
+        message: errorMessage,
+        userMessage: 'Error de conexión (reintentando)'
+      };
+    }
+
+    // Error desconocido - tratarlo como recuperable por defecto
+    return {
+      isRecoverable: true,
+      message: errorMessage,
+      userMessage: 'Error temporal (reintentando)'
+    };
+  }
+
+  /**
+   * Calcula el delay para el siguiente reintento usando exponential backoff
+   */
+  calculateBackoffDelay(retryCount) {
+    // Fórmula: delay = min(INITIAL_DELAY * (BACKOFF_MULTIPLIER ^ retryCount), MAX_DELAY)
+    let delay = RETRY_CONFIG.INITIAL_DELAY * Math.pow(RETRY_CONFIG.BACKOFF_MULTIPLIER, retryCount - 1);
+    
+    // Aplicar límite máximo
+    delay = Math.min(delay, RETRY_CONFIG.MAX_DELAY);
+    
+    // Agregar jitter (variación aleatoria del ±25%) para evitar thundering herd
+    if (RETRY_CONFIG.JITTER) {
+      const jitterRange = delay * 0.25;
+      const jitter = (Math.random() * jitterRange * 2) - jitterRange;
+      delay = delay + jitter;
+    }
+    
+    return Math.floor(delay);
+  }
+
   retryFailedJobs() {
     let retried = 0;
+    const maxRetries = RETRY_CONFIG.MAX_RETRIES;
+    
     this.queue.forEach(job => {
-      if (job.retries > 0 && job.retries < MAX_RETRIES) {
+      if ((job.status === 'failed' || job.status === 'waiting_retry') && job.retries < maxRetries) {
         job.retries = 0;
         job.status = 'pending';
+        job.lastError = null;
+        job.nextRetryAt = null;
         retried++;
       }
     });
@@ -419,111 +560,190 @@ class UploadQueue {
     if (retried > 0) {
       this.saveQueue();
       this.updateQueueUI();
-      this.showNotification(`${retried} trabajos reiniciados para reintento`, 'info');
+      this.showNotification(`${retried} trabajo${retried > 1 ? 's' : ''} reiniciado${retried > 1 ? 's' : ''}`, 'info');
       this.processQueue();
+    } else {
+      this.showNotification('No hay trabajos fallidos para reintentar', 'info');
     }
   }
 
   async processPhotoJob(job) {
-    console.log(`[UploadQueue] Procesando trabajo: ${job.factura} de tipo ${job.type}`);
+    console.log(`[UploadQueue] Procesando trabajo: ${job.factura} de tipo ${job.type} (intento ${job.retries + 1})`);
     console.log(`[UploadQueue] API URL: ${API_URL_POST}`);
 
-    const formData = new FormData();
-    Object.keys(job.data).forEach(key => {
-      // No enviar la propiedad esSinFactura al servidor
-      if (key !== 'esSinFactura') {
-        formData.append(key, job.data[key]);
+    // Preparar payload en formato JSON para Supabase
+    const payload = {
+      entrega: {
+        Documento: job.data.documento,
+        Lote: job.data.lote,
+        Referencia: job.data.referencia,
+        Cantidad: parseFloat(job.data.cantidad) || 0,
+        Factura: job.data.factura,
+        Nit: job.data.nit,
+        Usuario: job.data.usuario || null,
+        imagen: job.data.fotoBase64, // Base64 de la imagen
+        imagenNombre: job.data.fotoNombre
+      }
+    };
+
+    console.log('[UploadQueue] Enviando payload:', {
+      ...payload,
+      entrega: {
+        ...payload.entrega,
+        imagen: `[BASE64 ${payload.entrega.imagen?.length || 0} chars]`
       }
     });
 
-    // Log keys being sent
-    // for(let pair of formData.entries()) { console.log(pair[0]); } 
+    // Crear AbortController para timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos timeout
 
-    // Añadir token de sesión
-    const token = sessionStorage.getItem('token') || '';
-    formData.append('token', token);
+    try {
+      const response = await fetch(API_URL_POST, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
 
-    const response = await fetch(API_URL_POST, {
-      method: 'POST',
-      body: formData
-    });
+      clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      throw new Error(`HTTP error: ${response.status}`);
-    }
+      console.log('[UploadQueue] Response status:', response.status);
 
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.message || "Error en la respuesta del servidor");
-    }
+      // Manejar diferentes códigos de estado HTTP
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[UploadQueue] Error response:', errorText);
+        
+        // Crear error con código de estado para análisis
+        const error = new Error(`HTTP ${response.status}: ${errorText}`);
+        error.statusCode = response.status;
+        throw error;
+      }
 
-    // Actualizar UI si el elemento todavía está visible
-    if (job.btnElementId) {
-      // Buscar el elemento por data-factura (puede ser button o div ahora)
-      const element = document.querySelector(`[data-factura="${job.btnElementId}"]`);
+      const result = await response.json();
+      console.log('[UploadQueue] Result:', result);
+      
+      if (!result.success) {
+        throw new Error(result.error || "Error en la respuesta del servidor");
+      }
 
-      // Solo actualizar si el elemento existe y no es una entrega sin factura
-      if (element && !job.esSinFactura) {
-        // Comprobar rol de admin para mostrar botón de eliminar
-        const isAdmin = (typeof currentUser !== 'undefined' && currentUser && currentUser.rol === 'ADMIN');
-        const displayStyle = isAdmin ? 'flex' : 'none';
-
-        // HTML para el contenedor de acciones (Delete + Check)
-        const newContent = `
-              <button class="action-btn-mini btn-delete contextual" style="display: ${displayStyle}; background: transparent; box-shadow: none;" onclick="event.stopPropagation(); eliminarEntrega('${job.btnElementId}')" title="Eliminar entrega">
-                  <i class="fas fa-trash-alt"></i>
-              </button>
-              <div class="status-icon-only success"><i class="fas fa-check-circle"></i></div>
-          `;
-
-        if (element.tagName === 'BUTTON') {
-          // Crear contenedor si era un botón
-          const statusContainer = document.createElement('div');
-          statusContainer.className = 'status-actions';
-          statusContainer.setAttribute('data-factura', job.btnElementId);
-          statusContainer.innerHTML = newContent;
-
-          if (element.parentNode) {
-            element.parentNode.replaceChild(statusContainer, element);
-          }
+      // ⭐ Verificar si el registro ya existía
+      if (result.alreadyExists) {
+        console.log(`ℹ️ Registro ya existe para factura ${job.factura}:`, result.message);
+        
+        // Si ya existe con imagen completa, es un éxito
+        if (result.urlImagen && result.urlImagen.trim() !== '') {
+          console.log(`✅ Registro completo encontrado - marcando como exitoso`);
         } else {
-          // Si ya es un div/icono, reemplazamos su contenido o el elemento entero
-          // Mejor reemplazar el elemento entero para asegurar la estructura correcta
-          const statusContainer = document.createElement('div');
-          statusContainer.className = 'status-actions';
-          statusContainer.setAttribute('data-factura', job.btnElementId);
-          statusContainer.innerHTML = newContent;
+          console.log(`⚠️ Registro existe pero sin imagen`);
+        }
+      } else if (result.wasUpdated) {
+        console.log(`🔄 Registro actualizado con imagen para factura ${job.factura}`);
+      } else {
+        console.log(`✅ Nuevo registro creado para factura ${job.factura}`);
+      }
 
-          if (element.parentNode) {
-            // Si el elemento es parte de un status-actions ya existente, reemplazamos el contenedor padre
-            if (element.classList.contains('status-actions')) {
-              element.innerHTML = newContent;
-            } else if (element.parentNode.classList.contains('status-actions')) {
-              element.parentNode.innerHTML = newContent;
-            } else {
+      console.log(`✅ Entrega procesada en Supabase:`, result);
+
+      // Actualizar UI si el elemento todavía está visible
+      if (job.btnElementId) {
+        // Buscar el elemento por data-factura (puede ser button o div ahora)
+        const element = document.querySelector(`[data-factura="${job.btnElementId}"]`);
+
+        // Solo actualizar si el elemento existe y no es una entrega sin factura
+        if (element && !job.esSinFactura) {
+          // Comprobar rol de admin o owner para mostrar botón de eliminar
+          const isAdminOrOwner = (typeof currentUser !== 'undefined' && currentUser && (currentUser.rol === 'ADMIN' || currentUser.rol === 'OWNER'));
+          const displayStyle = isAdminOrOwner ? 'flex' : 'none';
+
+          // CONFIRMACIÓN DOBLE: Verificar que tanto el registro como la imagen se guardaron
+          const hasImageConfirmation = result.urlImagen && result.urlImagen.trim() !== '';
+          
+          // HTML para el contenedor de acciones (Delete + Double Check)
+          const newContent = `
+                <button class="action-btn-mini btn-delete contextual" style="display: ${displayStyle}; background: transparent; box-shadow: none;" onclick="event.stopPropagation(); eliminarEntrega('${job.btnElementId}')" title="Eliminar entrega">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+                <div class="status-double-check">
+                    <div class="check-item success" title="Registro guardado">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <div class="check-item ${hasImageConfirmation ? 'success' : 'warning'}" title="${hasImageConfirmation ? 'Imagen verificada' : 'Imagen no confirmada'}">
+                        <i class="fas fa-${hasImageConfirmation ? 'image' : 'exclamation-triangle'}"></i>
+                    </div>
+                </div>
+            `;
+
+          if (element.tagName === 'BUTTON') {
+            // Crear contenedor si era un botón
+            const statusContainer = document.createElement('div');
+            statusContainer.className = 'status-actions';
+            statusContainer.setAttribute('data-factura', job.btnElementId);
+            statusContainer.innerHTML = newContent;
+
+            if (element.parentNode) {
               element.parentNode.replaceChild(statusContainer, element);
+            }
+          } else {
+            // Si ya es un div/icono, reemplazamos su contenido o el elemento entero
+            // Mejor reemplazar el elemento entero para asegurar la estructura correcta
+            const statusContainer = document.createElement('div');
+            statusContainer.className = 'status-actions';
+            statusContainer.setAttribute('data-factura', job.btnElementId);
+            statusContainer.innerHTML = newContent;
+
+            if (element.parentNode) {
+              // Si el elemento es parte de un status-actions ya existente, reemplazamos el contenedor padre
+              if (element.classList.contains('status-actions')) {
+                element.innerHTML = newContent;
+              } else if (element.parentNode.classList.contains('status-actions')) {
+                element.parentNode.innerHTML = newContent;
+              } else {
+                element.parentNode.replaceChild(statusContainer, element);
+              }
+            }
+          }
+
+          // ACTUALIZACIÓN VISUAL TARJETA: Cambiar a VERDE (Entregado) solo si imagen está confirmada
+          const card = document.querySelector(`[data-factura="${job.btnElementId}"]`).closest('.siesa-item');
+          if (card) {
+            card.classList.remove('status-processing', 'status-pendiente', 'status-nofacturado');
+            if (hasImageConfirmation) {
+              card.classList.add('status-entregado');
+              // Forzar estilo verde por si acaso CSS falla
+              card.style.background = '#f0fdf4';
+              card.style.borderColor = '#bbf7d0';
+            } else {
+              // Si no hay imagen, usar estado de advertencia
+              card.classList.add('status-warning');
+              card.style.background = '#fffbeb';
+              card.style.borderColor = '#fde68a';
             }
           }
         }
-
-        // ACTUALIZACIÓN VISUAL TARJETA: Cambiar a VERDE (Entregado)
-        const card = document.querySelector(`[data-factura="${job.btnElementId}"]`).closest('.siesa-item');
-        if (card) {
-          card.classList.remove('status-processing', 'status-pendiente', 'status-nofacturado');
-          card.classList.add('status-entregado');
-          // Forzar estilo verde por si acaso CSS falla
-          card.style.background = '#f0fdf4';
-          card.style.borderColor = '#bbf7d0';
-        }
       }
-    }
 
-    // Actualizar base de datos local para persistencia inmediata (sin recarga)
-    this.updateLocalDatabase(job.factura);
+      // Actualizar base de datos local para persistencia inmediata (sin recarga)
+      this.updateLocalDatabase(job.factura, result.urlImagen);
 
-    // Iniciar recarga silenciosa de datos desde Sheets
-    if (typeof silentReloadData === 'function') {
-      silentReloadData();
+      // Iniciar recarga silenciosa de datos desde Sheets
+      if (typeof silentReloadData === 'function') {
+        silentReloadData();
+      }
+
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      // Manejar error de timeout específicamente
+      if (error.name === 'AbortError') {
+        throw new Error('Timeout: La solicitud tardó demasiado (30s)');
+      }
+      
+      // Re-lanzar el error para que sea manejado por processQueue
+      throw error;
     }
   }
 
@@ -533,7 +753,7 @@ class UploadQueue {
   }
 
   // Método para actualizar la BD local en memoria y caché
-  updateLocalDatabase(factura) {
+  updateLocalDatabase(factura, urlImagen = null) {
     if (typeof database !== 'undefined' && Array.isArray(database)) {
       let updated = false;
       for (const doc of database) {
@@ -541,6 +761,25 @@ class UploadQueue {
           const item = doc.datosSiesa.find(s => s.factura === factura);
           if (item) {
             item.confirmacion = "ENTREGADO"; // Marcamos como entregado
+            
+            // Generar fecha en zona horaria de Colombia (UTC-5) sin milisegundos
+            const now = new Date();
+            const colombiaOffset = -5 * 60; // Colombia es UTC-5
+            const localTime = new Date(now.getTime() + (colombiaOffset * 60 * 1000));
+            
+            // Formatear como YYYY-MM-DD HH:MM:SS
+            const year = localTime.getUTCFullYear();
+            const month = String(localTime.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(localTime.getUTCDate()).padStart(2, '0');
+            const hours = String(localTime.getUTCHours()).padStart(2, '0');
+            const minutes = String(localTime.getUTCMinutes()).padStart(2, '0');
+            const seconds = String(localTime.getUTCSeconds()).padStart(2, '0');
+            
+            item.fechaEntrega = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+            
+            if (urlImagen) {
+              item.Ih3 = urlImagen; // Agregar URL de la imagen si está disponible
+            }
             updated = true;
             break;
           }

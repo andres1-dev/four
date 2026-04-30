@@ -697,18 +697,16 @@ async function eliminarEntrega(factura) {
 
     try {
         // 2. Enviar petición de eliminación al GAS
-        // Preparar datos para eliminar por factura
-        const payload = {
-            facturas: [factura] // Array de facturas a eliminar
-        };
+        const formData = new FormData();
+        formData.append('action', 'delete');
+        formData.append('factura', factura);
+        formData.append('token', sessionStorage.getItem('token') || '');
 
-        // Usar el endpoint correcto de delivery-operations con action=delete
-        const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/delivery-operations?action=delete`, {
+        // Usar fetch para llamar al API
+        // Nota: API_URL_POST está definida en configuracion.js
+        const response = await fetch(API_URL_POST, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
+            body: formData
         });
 
         if (!response.ok) {
@@ -718,7 +716,7 @@ async function eliminarEntrega(factura) {
         const result = await response.json();
 
         if (!result.success) {
-            throw new Error(result.error || "Error al eliminar en el servidor");
+            throw new Error(result.message || "Error al eliminar en el servidor");
         }
 
         // 3. Éxito: Actualizar base de datos local y UI
@@ -744,8 +742,6 @@ async function eliminarEntrega(factura) {
                     const item = doc.datosSiesa.find(s => s.factura === factura);
                     if (item) {
                         item.confirmacion = "PENDIENTE"; // Reset a pendiente
-                        item.fechaEntrega = ""; // Limpiar fecha de entrega
-                        item.Ih3 = ""; // Limpiar imagen
                         updated = true;
                         foundDoc = doc;
                         foundSiesa = item;
@@ -783,24 +779,6 @@ async function eliminarEntrega(factura) {
                         solapa.style.borderColor = '';
                         // Asegurar que no quede animación residual
                         solapa.style.animation = '';
-                    }
-
-                    // ELIMINAR IMAGEN DEL DOM (ih3-thumbnail-container)
-                    const thumbnailContainer = card.querySelector('.ih3-thumbnail-container');
-                    if (thumbnailContainer) {
-                        thumbnailContainer.remove();
-                    }
-
-                    // ELIMINAR FECHA DE ENTREGA DEL DOM
-                    const detailsGrid = card.querySelector('.details-grid');
-                    if (detailsGrid) {
-                        const miniDetails = detailsGrid.querySelectorAll('.mini-detail');
-                        miniDetails.forEach(detail => {
-                            const label = detail.querySelector('.mini-label')?.textContent.trim().toLowerCase();
-                            if (label && (label.includes('fechaentrega') || label.includes('fecha entrega'))) {
-                                detail.remove();
-                            }
-                        });
                     }
                 }
 

@@ -102,17 +102,10 @@ function displayFullResult(item, qrParts) {
                     `<div class="status-icon-only processing contextual" data-factura="${siesa.factura}"><div class="premium-spinner"></div></div>` :
                     estadoConf === "ENTREGADO" ?
                         `<div class="status-actions" data-factura="${siesa.factura}">
-                            <button class="action-btn-mini btn-delete contextual" style="display: ${(typeof currentUser !== 'undefined' && currentUser && (currentUser.rol === 'ADMIN' || currentUser.rol === 'OWNER')) ? 'flex' : 'none'}; background: transparent; box-shadow: none;" onclick="event.stopPropagation(); eliminarEntrega('${siesa.factura}')" title="Eliminar entrega">
+                            <button class="action-btn-mini btn-delete contextual" style="display: ${(typeof currentUser !== 'undefined' && currentUser && currentUser.rol === 'ADMIN') ? 'flex' : 'none'}; background: transparent; box-shadow: none;" onclick="event.stopPropagation(); eliminarEntrega('${siesa.factura}')" title="Eliminar entrega">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
-                            <div class="status-double-check">
-                                <div class="check-item success" title="Registro guardado">
-                                    <i class="fas fa-database"></i>
-                                </div>
-                                <div class="check-item ${tieneIh3 ? 'success' : 'warning'}" title="${tieneIh3 ? 'Imagen verificada' : 'Imagen no confirmada'}">
-                                    <i class="fas fa-${tieneIh3 ? 'image' : 'exclamation-triangle'}"></i>
-                                </div>
-                            </div>
+                            <div class="status-icon-only success"><i class="fas fa-check-circle"></i></div>
                         </div>` :
                         estadoConf === "NO FACTURADO" ?
                             `<div class="status-icon-only error"><i class="fas fa-exclamation-triangle"></i></div>` :
@@ -169,19 +162,12 @@ function displayFullResult(item, qrParts) {
 
             if (tieneIh3) {
                 let thumbnailUrl;
-                let fullImageUrl = siesa.Ih3;
-                
-                // Si es URL de Google Drive (ih3)
+                // Si es URL de Google Drive
                 if (siesa.Ih3.includes('googleusercontent.com/d/')) {
                     const imageId = siesa.Ih3.split('/').pop();
                     thumbnailUrl = `https://lh3.googleusercontent.com/d/${imageId}=s200`;
                 }
-                // Si es URL de Supabase Storage
-                else if (siesa.Ih3.includes('supabase.co/storage')) {
-                    // Usar la URL directamente (ya es pública)
-                    thumbnailUrl = siesa.Ih3;
-                }
-                // Si es Blob o Data URL (Local)
+                // Si es Blob o Data URL (Local) o URL directa
                 else {
                     thumbnailUrl = siesa.Ih3;
                 }
@@ -191,8 +177,7 @@ function displayFullResult(item, qrParts) {
             <img src="${thumbnailUrl}" 
                  class="ih3-thumbnail" 
                  alt="Comprobante de entrega"
-                 onclick="mostrarImagenCompleta('${fullImageUrl}')"
-                 onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E📷%3C/text%3E%3C/svg%3E';">
+                 onclick="mostrarImagenCompleta('${siesa.Ih3}')">
           </div>
         `;
             }

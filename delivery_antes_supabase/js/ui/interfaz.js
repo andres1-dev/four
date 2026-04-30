@@ -169,14 +169,6 @@ function esMovil() {
 function initUIListeners() {
     const barcodeInput = document.getElementById('barcode');
 
-    // ⭐ INICIALIZAR APP_MODE ANTES DE TODO
-    // Recuperar modo guardado o usar CAMERA por defecto
-    if (typeof window.APP_MODE === 'undefined') {
-        const savedMode = (typeof getSavedAppMode === 'function') ? getSavedAppMode() : 'CAMERA';
-        window.APP_MODE = savedMode;
-        console.log('🔧 Modo inicial cargado:', window.APP_MODE);
-    }
-
     // Inicializar Modos de Interacción (PDA, Manual, Cámara)
     initPDAModes();
 
@@ -326,8 +318,8 @@ function initUIListeners() {
         }
     }, { passive: false });
 
-    // Global State for Modes - Ya inicializado en initUIListeners
-    // window.APP_MODE ya tiene el valor correcto del localStorage
+    // Global State for Modes
+    window.APP_MODE = 'PDA'; // 'PDA', 'MANUAL', 'CAMERA'
 
     function initPDAModes() {
         let focusTimer = null; // Timer para control de foco
@@ -464,11 +456,11 @@ function initUIListeners() {
                 }
             }
 
-            // Show/Hide Upload based on role (Admin/Moderator/Owner)
+            // Show/Hide Upload based on role (Admin/Moderator)
             const navUpload = document.getElementById('navUploadItem');
             if (navUpload) {
                 if (typeof currentUser !== 'undefined' && currentUser) {
-                    if (currentUser.rol === 'ADMIN' || currentUser.rol === 'MODERATOR' || currentUser.rol === 'OWNER') {
+                    if (currentUser.rol === 'ADMIN' || currentUser.rol === 'MODERATOR') {
                         navUpload.style.display = 'flex';
                     } else {
                         navUpload.style.display = 'none';
@@ -496,48 +488,7 @@ function initUIListeners() {
             }
 
             window.APP_MODE = mode;
-            console.log('💾 Guardando modo:', mode);
-            if (typeof saveAppMode === 'function') {
-                saveAppMode(mode);
-                console.log('✅ Modo guardado en localStorage');
-            } else {
-                console.error('❌ saveAppMode no está definida');
-            }
-
-            // ⭐ GESTIÓN DE FOCO PERSISTENTE SEGÚN MODO
-            if (mode === 'PDA') {
-                // ✅ MODO PDA: SIEMPRE activar foco persistente
-                console.log('🔒 Modo PDA - ACTIVANDO foco persistente');
-                USER_SETTINGS.persistentFocus = true;
-                if (typeof saveUserSettings === 'function') saveUserSettings();
-                
-                // Actualizar toggle en la UI
-                if (typeof window.updateFocusToggleUI === 'function') {
-                    window.updateFocusToggleUI();
-                }
-                
-                // Actualizar icono
-                if (inputIcon) {
-                    inputIcon.title = "Foco Activo (Tocar para desactivar)";
-                    inputIcon.style.color = "var(--primary)";
-                }
-            } else {
-                // ❌ OTROS MODOS: SIEMPRE desactivar foco persistente
-                console.log('🔓 Modo no-PDA - DESACTIVANDO foco persistente');
-                USER_SETTINGS.persistentFocus = false;
-                if (typeof saveUserSettings === 'function') saveUserSettings();
-                
-                // Actualizar toggle en la UI
-                if (typeof window.updateFocusToggleUI === 'function') {
-                    window.updateFocusToggleUI();
-                }
-                
-                // Detener el loop de foco
-                if (focusTimer) {
-                    clearTimeout(focusTimer);
-                    focusTimer = null;
-                }
-            }
+            if (typeof saveAppMode === 'function') saveAppMode(mode);
 
             // Visual Updates (Grid Cards)
             document.querySelectorAll('.mode-option-card').forEach(b => b.classList.remove('active'));
@@ -563,20 +514,16 @@ function initUIListeners() {
                 if (barcodeInput) {
                     barcodeInput.placeholder = "Escanear con PDA (Laser)...";
                 }
-                
-                // ⭐ Actualizar icono (siempre activo en PDA)
                 if (inputIcon) {
                     inputIcon.className = "fa-solid fa-barcode";
-                    inputIcon.title = "Foco Activo (Tocar para desactivar)";
-                    inputIcon.style.color = "var(--primary)";
+                    inputIcon.title = USER_SETTINGS.persistentFocus ? "Foco Activo (Tocar para desactivar)" : "Foco Inactivo (Tocar para activar)";
+                    inputIcon.style.color = USER_SETTINGS.persistentFocus ? "var(--primary)" : "var(--text-secondary)";
                 }
 
                 if (typeof window.updateStatusDisplay === 'function') {
                     window.updateStatusDisplay("MODO PDA: LISTO");
                 }
 
-                // ⭐ SIEMPRE iniciar loop de foco en modo PDA
-                console.log('🎯 Iniciando loop de foco persistente');
                 enforceFocusLoop();
 
             } else if (mode === 'MANUAL') {
@@ -625,19 +572,7 @@ function initUIListeners() {
         function handleInputInteraction(e) {
             if (window.APP_MODE === 'PDA') {
                 if (typeof USER_SETTINGS !== 'undefined') {
-                    // Toggle manual del usuario
                     USER_SETTINGS.persistentFocus = !USER_SETTINGS.persistentFocus;
-                    
-                    // Guardar el estado con marca de que fue cambiado manualmente
-                    if (typeof saveUserSettings === 'function') {
-                        saveUserSettings();
-                        console.log('💾 Foco persistente guardado (cambio manual):', USER_SETTINGS.persistentFocus);
-                    }
-
-                    // Actualizar toggle en la UI
-                    if (typeof window.updateFocusToggleUI === 'function') {
-                        window.updateFocusToggleUI();
-                    }
 
                     const msg = USER_SETTINGS.persistentFocus ? "Foco Persistente: ACTIVADO" : "Foco Persistente: DESACTIVADO";
                     if (typeof window.updateStatusDisplay === 'function') {
@@ -649,16 +584,7 @@ function initUIListeners() {
                         inputIcon.style.color = USER_SETTINGS.persistentFocus ? "var(--primary)" : "var(--text-secondary)";
                     }
 
-                    if (USER_SETTINGS.persistentFocus && barcodeInput) {
-                        barcodeInput.focus();
-                        enforceFocusLoop(); // Iniciar el loop
-                    } else {
-                        // Detener el loop si se desactiva
-                        if (focusTimer) {
-                            clearTimeout(focusTimer);
-                            focusTimer = null;
-                        }
-                    }
+                    if (USER_SETTINGS.persistentFocus && barcodeInput) barcodeInput.focus();
                 }
             }
             else if (window.APP_MODE === 'MANUAL') {
@@ -811,7 +737,7 @@ function initUIListeners() {
             clearTimeout(focusTimer);
 
             if (window.APP_MODE !== 'PDA') return;
-            // ⭐ En modo PDA SIEMPRE mantener foco (sin verificar USER_SETTINGS.persistentFocus)
+            if (typeof USER_SETTINGS !== 'undefined' && !USER_SETTINGS.persistentFocus) return;
 
             const barcodeInput = document.getElementById('barcode');
             if (!barcodeInput) return;
@@ -860,9 +786,10 @@ function initUIListeners() {
         // Immediate refocus on blur (Aggressive)
         if (barcodeInput) {
             barcodeInput.addEventListener('blur', (e) => {
-                if (window.APP_MODE === 'PDA') {
-                    // En modo PDA SIEMPRE refocus
+                if (window.APP_MODE === 'PDA' && USER_SETTINGS.persistentFocus) {
+                    // Wait slightly to allow legitimate clicks (like buttons)
                     setTimeout(() => {
+                        // Check again if we should refocus by calling the smart loop
                         enforceFocusLoop();
                     }, 50);
                 }
@@ -870,7 +797,7 @@ function initUIListeners() {
 
             // Re-focus on click outside
             document.addEventListener('click', (e) => {
-                if (window.APP_MODE === 'PDA') {
+                if (window.APP_MODE === 'PDA' && USER_SETTINGS.persistentFocus) {
                     const target = e.target;
                     const isButton = target.tagName === 'BUTTON' || target.closest('button') || target.tagName === 'A';
                     const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
@@ -921,21 +848,16 @@ function initUIListeners() {
             });
         }
 
-        // Start Default: Aplicar modo guardado
-        const savedMode = window.APP_MODE; // Ya se cargó en initUIListeners
-        console.log('🎯 Aplicando modo guardado:', savedMode);
-        
+        // Start Default: Recobrar modo anterior o PDA por defecto
+        const savedMode = (typeof getSavedAppMode === 'function') ? getSavedAppMode() : 'PDA';
         if (savedMode === 'MANUAL') {
             const hasClient = (typeof USER_SETTINGS !== 'undefined' && USER_SETTINGS.filterEnabled && USER_SETTINGS.selectedClient);
             if (hasClient) {
-                console.log('✅ Activando modo MANUAL con cliente:', USER_SETTINGS.selectedClient);
                 setMode('MANUAL');
             } else {
-                console.log('⚠️ Modo MANUAL requiere cliente seleccionado, cambiando a CAMERA');
-                setMode('CAMERA');
+                setMode('PDA');
             }
         } else {
-            console.log('✅ Activando modo:', savedMode);
             setMode(savedMode);
         }
     }
@@ -1041,15 +963,6 @@ function initSettingsUI() {
             });
         }
     }
-
-    // ⭐ Función global para actualizar el toggle desde cualquier parte
-    window.updateFocusToggleUI = function() {
-        const focusToggle = document.getElementById('persistentFocusToggle');
-        if (focusToggle) {
-            focusToggle.checked = USER_SETTINGS.persistentFocus;
-            console.log('🔄 Toggle actualizado:', USER_SETTINGS.persistentFocus);
-        }
-    };
 
     // Expose for refresh
     window.refreshSettingsUI = loadToUI;
@@ -1375,7 +1288,7 @@ async function showDetailedReport(target, skipUpdate = false) {
         const existingFab = document.getElementById('reportFab');
         if (existingFab) existingFab.remove();
 
-        if (user && (user.rol === 'ADMIN' || user.rol === 'OWNER')) {
+        if (user && user.rol === 'ADMIN') {
             const sendBtn = document.createElement('button');
             sendBtn.id = 'reportFab';
             sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';

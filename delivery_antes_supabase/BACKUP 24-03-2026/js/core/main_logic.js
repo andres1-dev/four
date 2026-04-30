@@ -1,7 +1,7 @@
 // principal.js - Datos con Factura Optimizado
 // Configuración de Sheets
-// Usar API Key desde CONFIG
-const API_KEY = CONFIG.GOOGLE_SHEETS_API_KEY;
+// Configuración de Sheets - Obtenida dinámicamente tras login
+const API_KEY = localStorage.getItem('apiKey') || '';
 
 // Fuentes de datos
 const SOURCE_SPREADSHEET_ID_DATA2 = "133NiyjNApZGkEFs4jUvpJ9So-cSEzRVeW2FblwOCrjI";
@@ -15,11 +15,8 @@ const SOURCE_SHEET_NAME_SIESA_2 = "SIESA_V2";
 const SOURCE_SPREADSHEET_ID_REC = "1esc5REq0c03nHLpGcLwZRW29yq2gZnrpbz75gCCjrqc";
 const SOURCE_SHEET_NAME_REC = "DataBase";
 
-// ⚠️ OBSOLETO: Ya no se usa Google Sheets para SOPORTES, ahora se usa Supabase
-// const SOPORTES_SPREADSHEET_ID = "1VaPBwgRu1QWhmsV_Qgf7cgraSxiAWRX6-wBEyUlGoJw";
-// const SOPORTES_SHEET_NAME = "SOPORTES";
-
-// URL base para imágenes antiguas de Google Drive (compatibilidad con datos legacy)
+const SOPORTES_SPREADSHEET_ID = "1VaPBwgRu1QWhmsV_Qgf7cgraSxiAWRX6-wBEyUlGoJw";
+const SOPORTES_SHEET_NAME = "SOPORTES";
 const BASE_IMAGE_URL = "https://lh3.googleusercontent.com/d/";
 
 // Función principal para obtener datos
@@ -284,10 +281,7 @@ function construirObjetoFactura(filaSiesa, documento, loteDoc, referenciaDoc, da
         confirmacion = "ENTREGADO";
 
         if (soporte.imageId) {
-            // Detectar si es URL completa o solo ID de Google Drive
-            ih3 = soporte.imageId.includes('http') 
-              ? soporte.imageId 
-              : BASE_IMAGE_URL + soporte.imageId;
+            ih3 = BASE_IMAGE_URL + soporte.imageId;
         }
 
         fechaEntrega = soporte.fechaEntrega || "";
@@ -305,7 +299,7 @@ function construirObjetoFactura(filaSiesa, documento, loteDoc, referenciaDoc, da
         // Solo validar referencia si NO es RefVar
         if (referenciaFinal !== "RefVar" &&
             soporte.referencia &&
-            String(soporte.referencia) !== String(referenciaFinal)) {
+            soporte.referencia !== referenciaFinal) {
             console.warn(`⚠️ Discrepancia referencia en factura ${factura}:`, {
                 siesa: referenciaFinal,
                 soporte: soporte.referencia
@@ -313,7 +307,7 @@ function construirObjetoFactura(filaSiesa, documento, loteDoc, referenciaDoc, da
         }
 
         // Validar NIT (opcional)
-        if (soporte.nit && String(soporte.nit) !== String(nitCliente)) {
+        if (soporte.nit && soporte.nit !== nitCliente) {
             console.warn(`⚠️ Discrepancia NIT en factura ${factura}:`, {
                 siesa: nitCliente,
                 soporte: soporte.nit
@@ -426,57 +420,54 @@ async function obtenerDatosRecFiltrados() {
 
 async function obtenerDatosSoportes() {
     try {
-        console.log('📦 Cargando entregas desde Supabase...');
-        
-        // El backend maneja la paginación automáticamente
-        const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/delivery-operations?action=get`);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error: ${response.status}`);
-        }
+        const rangeSoportes = `${SOPORTES_SHEET_NAME}!A:H`;
+        const allValuesSoportes = await obtenerDatosDeSheet(SOPORTES_SPREADSHEET_ID, rangeSoportes);
 
-        const result = await response.json();
-        
-        if (!result.entregas || result.entregas.length === 0) {
-            console.log('📊 No hay entregas en Supabase');
+        if (!allValuesSoportes || allValuesSoportes.length <= 1) {
             return {};
         }
-
-        console.log(`✅ Recibidas ${result.entregas.length} entregas desde Supabase`);
 
         // Mapa principal: POR FACTURA (NO por clave compuesta)
         const mapaSoportes = {};
 
-        result.entregas.forEach((entrega, index) => {
-            const factura = String(entrega.Factura || '').trim();
-            
-            // Validación: DEBE tener factura (es lo único realmente obligatorio)
-            if (factura) {
-                // Si ya existe una factura duplicada, loguear warning
-                if (mapaSoportes[factura]) {
-                    console.warn(`⚠️ Factura duplicada en soportes: ${factura}`);
-                }
+        allValuesSoportes.slice(1).forEach((row, index) => {
+            if (row.length >= 7) {
+                const fechaEntrega = row[0] || '';                // Columna A: Timestamp
+                const documento = String(row[1] || '').trim();    // Columna B: Documento
+                const lote = String(row[2] || '').trim();         // Columna C: Lote
+                const referencia = String(row[3] || '').trim();   // Columna D: Referencia
+                const cantidad = String(row[4] || '').trim();     // Columna E: Cantidad
+                const factura = String(row[5] || '').trim();      // Columna F: FACTURA (¡IDENTIFICADOR PRINCIPAL!)
+                const nit = String(row[6] || '').trim();          // Columna G: NIT
+                const imageId = row.length >= 8 ? String(row[7] || '').trim() : ''; // Columna H: ImageId
 
-                // Guardar por FACTURA (con metadata adicional útil)
-                mapaSoportes[factura] = {
-                    fechaEntrega: entrega.Registro,
-                    imageId: entrega.Url_Ih3 || '', // URL completa de la imagen
-                    estado: 'ENTREGADO',
-                    // Metadata adicional (útil para validaciones)
-                    documento: entrega.Documento,
-                    lote: entrega.Lote,
-                    referencia: entrega.Referencia,
-                    cantidad: entrega.Cantidad,
-                    nit: entrega.Nit,
-                    usuario: entrega.Usuario,
-                    // Para debugging
-                    _id: entrega.id,
-                    _timestamp: new Date().toISOString()
-                };
+                // Validación: DEBE tener factura (es lo único realmente obligatorio)
+                if (factura) {
+                    // Si ya existe una factura duplicada, loguear warning
+                    if (mapaSoportes[factura]) {
+                        console.warn(`⚠️ Factura duplicada en soportes: ${factura} (fila ${index + 2})`);
+                    }
+
+                    // Guardar por FACTURA (con metadata adicional útil)
+                    mapaSoportes[factura] = {
+                        fechaEntrega,
+                        imageId,
+                        estado: 'ENTREGADO',
+                        // Metadata adicional (útil para validaciones)
+                        documento,
+                        lote,
+                        referencia,
+                        cantidad,
+                        nit,
+                        // Para debugging
+                        _fila: index + 2,
+                        _timestamp: new Date().toISOString()
+                    };
+                }
             }
         });
 
-        console.log(`✅ Procesadas ${Object.keys(mapaSoportes).length} facturas únicas de ${result.entregas.length} registros totales`);
+        console.log(`📊 Soportes cargados: ${Object.keys(mapaSoportes).length} facturas entregadas`);
         return mapaSoportes;
 
     } catch (error) {
@@ -613,10 +604,7 @@ function obtenerConfirmacionIh3(soportesMap, documento, lote, referencia, cantid
 
     const soporte = soportesMap[clave];
     const confirmacion = soporte.factura ? "ENTREGADO" : "ENTREGADO, PENDIENTE FACTURA";
-    // Detectar si es URL completa o solo ID de Google Drive
-    const ih3 = soporte.imageId 
-      ? (soporte.imageId.includes('http') ? soporte.imageId : BASE_IMAGE_URL + soporte.imageId)
-      : "";
+    const ih3 = soporte.imageId ? BASE_IMAGE_URL + soporte.imageId : "";
 
     return { confirmacion, ih3, fechaEntrega: soporte.fechaEntrega || "" };
 }

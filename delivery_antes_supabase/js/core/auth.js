@@ -61,12 +61,6 @@ function showApp() {
 
 function logout() {
     console.log("Cerrando sesión del sistema...");
-    
-    // Cerrar sesión en Supabase
-    if (typeof cerrarSesionSupabase === 'function') {
-        cerrarSesionSupabase();
-    }
-    
     currentUser = null;
     localStorage.removeItem(AUTH_KEY);
     localStorage.removeItem('apiKey');

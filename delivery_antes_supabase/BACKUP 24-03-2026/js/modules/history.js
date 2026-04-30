@@ -256,11 +256,7 @@ function renderDataTable(data) {
                 data: 'ih3',
                 render: function (data, type, row) {
                     if (data) {
-                        // Detectar si es URL completa o solo ID de Google Drive
-                        const url = data.includes('http') 
-                          ? data 
-                          : "https://lh3.googleusercontent.com/d/" + data;
-                        
+                        const url = "https://lh3.googleusercontent.com/d/" + data;
                         return `<button class="img-preview-btn" onclick="openPreviewImage('${url}')"><i class="fas fa-image"></i> Ver</button>`;
                     }
                     return '<span style="color: #cbd5e1;"><i class="fas fa-ban"></i></span>';

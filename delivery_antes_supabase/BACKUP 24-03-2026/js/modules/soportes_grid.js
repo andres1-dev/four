@@ -244,7 +244,7 @@ const SoportesGrid = {
     }
   },
 
-  // Cargar datos desde Supabase
+  // Cargar datos desde Google Sheets
   cargarDatos: async function (background = false) {
     if (this.isLoading && this.entregas.length > 0 && !background) return;
 
@@ -1042,7 +1042,7 @@ const SoportesGrid = {
     div.innerHTML = `
       ${item.tieneImagen ? `
         <div class="grid-item-image" onclick="SoportesGrid.previewImage('${item.ih3}', '${item.factura}')" style="background: #f1f5f9;">
-          <img src="${item.ih3.includes('http') ? item.ih3 : 'https://lh3.googleusercontent.com/d/' + item.ih3 + '=s600-c'}" 
+          <img src="https://lh3.googleusercontent.com/d/${item.ih3}=s600-c" 
                alt="Soporte" 
                loading="lazy" 
                style="opacity: 0; transition: opacity 0.4s ease-in-out;" 
@@ -1315,11 +1315,7 @@ const SoportesGrid = {
   previewImage: function (imageId, factura) {
     if (!imageId) return;
 
-    // Detectar si es URL completa o solo ID de Google Drive
-    const url = imageId.includes('http') 
-      ? imageId 
-      : `https://lh3.googleusercontent.com/d/${imageId}`;
-    
+    const url = `https://lh3.googleusercontent.com/d/${imageId}`;
     const modal = document.getElementById('soportesImageModal');
     const modalImg = document.getElementById('soportesModalImage');
 
@@ -1401,7 +1397,7 @@ const SoportesGrid = {
         'Cantidad': item.cantidad,
         'Cliente': item.cliente,
         'NIT': item.nit,
-        'Soporte': item.ih3 ? (item.ih3.includes('http') ? item.ih3 : `https://lh3.googleusercontent.com/d/${item.ih3}`) : ''
+        'Soporte': item.ih3 ? `https://lh3.googleusercontent.com/d/${item.ih3}` : ''
       }));
 
       const wb = XLSX.utils.book_new();
