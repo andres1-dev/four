@@ -81,10 +81,10 @@ const SoportesGrid = {
       });
     }
 
-    // Filtro de Fechas con Flatpickr
+    // Filtro de Fechas con Flatpickr (SOLO para KPIs, no afecta el grid de imágenes)
     if (this.soportesDateFilter && typeof flatpickr !== 'undefined') {
       const hoy = new Date();
-      // Empezar mostrando el mes actual
+      // Por defecto: MES ACTUAL
       const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
 
       this.flatpickrInstance = flatpickr(this.soportesDateFilter, {
@@ -98,7 +98,8 @@ const SoportesGrid = {
           if (selectedDates.length === 2 || selectedDates.length === 1) {
             const start = selectedDates[0];
             const end = selectedDates.length === 2 ? selectedDates[1] : selectedDates[0];
-            this.triggerUnifiedFilters(start, end);
+            // Solo actualizar KPIs, NO el grid de imágenes
+            this.updateKPIs(start, end);
           }
         }
       });
@@ -115,10 +116,52 @@ const SoportesGrid = {
     const kpiFilterProvider = document.getElementById('kpiFilterProvider');
 
     if (kpiFilterClient) {
-      kpiFilterClient.addEventListener('change', () => this.triggerUnifiedFilters());
+      kpiFilterClient.addEventListener('change', () => {
+        // Obtener el rango de fechas actual para KPIs
+        let start, end;
+        if (this.flatpickrInstance && this.flatpickrInstance.selectedDates.length > 0) {
+          start = this.flatpickrInstance.selectedDates[0];
+          end = this.flatpickrInstance.selectedDates.length === 2 ? this.flatpickrInstance.selectedDates[1] : start;
+        } else {
+          // Mes actual por defecto
+          const hoy = new Date();
+          start = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+          end = hoy;
+        }
+        
+        // Filtrar grid de imágenes por cliente (sin fecha)
+        this.aplicarFiltros({
+          cliente: kpiFilterClient.value,
+          proveedor: kpiFilterProvider ? kpiFilterProvider.value : ''
+        });
+        
+        // Actualizar KPIs con el rango de fechas
+        this.updateKPIs(start, end);
+      });
     }
     if (kpiFilterProvider) {
-      kpiFilterProvider.addEventListener('change', () => this.triggerUnifiedFilters());
+      kpiFilterProvider.addEventListener('change', () => {
+        // Obtener el rango de fechas actual para KPIs
+        let start, end;
+        if (this.flatpickrInstance && this.flatpickrInstance.selectedDates.length > 0) {
+          start = this.flatpickrInstance.selectedDates[0];
+          end = this.flatpickrInstance.selectedDates.length === 2 ? this.flatpickrInstance.selectedDates[1] : start;
+        } else {
+          // Mes actual por defecto
+          const hoy = new Date();
+          start = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+          end = hoy;
+        }
+        
+        // Filtrar grid de imágenes por proveedor (sin fecha)
+        this.aplicarFiltros({
+          cliente: kpiFilterClient ? kpiFilterClient.value : '',
+          proveedor: kpiFilterProvider.value
+        });
+        
+        // Actualizar KPIs con el rango de fechas
+        this.updateKPIs(start, end);
+      });
     }
 
     if (this.resetFilterBtn) {
@@ -126,6 +169,7 @@ const SoportesGrid = {
         const hoy = new Date();
         const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
 
+        // Resetear el selector de fechas al mes actual
         if (this.flatpickrInstance) {
           this.flatpickrInstance.setDate([primerDiaMes, hoy]);
         }
@@ -134,7 +178,21 @@ const SoportesGrid = {
         if (kpiFilterClient) kpiFilterClient.value = '';
         if (kpiFilterProvider) kpiFilterProvider.value = '';
 
-        this.triggerUnifiedFilters(primerDiaMes, hoy);
+        // Resetear grid de imágenes - mostrar TODAS sin filtro de fecha
+        this.filteredEntregas = [...this.entregas];
+        this.currentPage = 1;
+        this.hasMore = this.filteredEntregas.length > this.itemsPerPage;
+        this.container.innerHTML = '';
+        this.render();
+        this.hideEmpty();
+        if (this.sentinelEl) {
+          this.sentinelEl.style.display = this.hasMore ? 'flex' : 'none';
+        }
+        this.updateStats();
+        
+        // Actualizar KPIs con mes actual
+        this.updateKPIs(primerDiaMes, hoy);
+        
         this.toggleFilterModal(false);
       });
     }
@@ -206,20 +264,27 @@ const SoportesGrid = {
     let start = fInicio;
     let end = fFin;
 
+    // Si no se pasan fechas, usar el MES ACTUAL para KPIs
     if (!start || !end) {
       if (this.flatpickrInstance && this.flatpickrInstance.selectedDates.length > 0) {
         start = this.flatpickrInstance.selectedDates[0];
         end = this.flatpickrInstance.selectedDates.length === 2 ? this.flatpickrInstance.selectedDates[1] : start;
+      } else {
+        // Rango por defecto: MES ACTUAL
+        const hoy = new Date();
+        start = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        end = hoy;
       }
     }
 
-    // Aplicar a la visualización del Grid (Fotos)
+    // IMPORTANTE: El grid de imágenes NO se filtra por fecha
+    // Solo aplicar filtros de cliente/proveedor/búsqueda
     this.aplicarFiltros({
-      fechaInicio: start,
-      fechaFin: end
+      // NO pasar fechaInicio/fechaFin para que muestre todas las imágenes
+      busqueda: this.searchInput ? this.searchInput.value : ''
     });
 
-    // Aplicar a la visualización de KPIs (Tarjetas y Tabla)
+    // Los KPIs SÍ usan el rango de fechas
     this.updateKPIs(start, end);
   },
 
@@ -281,8 +346,18 @@ const SoportesGrid = {
       // Limpiar contenedor y renderizar primera página
       this.container.innerHTML = '';
 
-      // Aplicar filtros iniciales (Mes actual o selección previa)
-      this.triggerUnifiedFilters();
+      // Renderizar TODAS las imágenes sin filtros de fecha
+      this.filteredEntregas = [...this.entregas];
+      this.currentPage = 1;
+      this.hasMore = this.filteredEntregas.length > this.itemsPerPage;
+      this.render();
+      
+      // Actualizar KPIs con rango del MES ACTUAL (primero del mes hasta hoy)
+      const hoy = new Date();
+      const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      console.log('🔄 Cargando KPIs con rango del mes actual:', primerDiaMes, 'a', hoy);
+      await this.updateKPIs(primerDiaMes, hoy);
+      console.log('✅ KPIs cargados');
 
 
     } catch (error) {
@@ -328,6 +403,8 @@ const SoportesGrid = {
   updateKPIs: async function (fechaInicio, fechaFin) {
     if (!this.kpiContainer) return;
 
+    console.log('📊 updateKPIs llamado con:', fechaInicio, fechaFin);
+
     let start = fechaInicio;
     let end = fechaFin;
 
@@ -346,7 +423,11 @@ const SoportesGrid = {
     }
     end.setHours(23, 59, 59, 999);
 
+    console.log('📅 Rango normalizado:', start, 'a', end);
+
     const data = await this.cargarDatosKPI();
+    
+    console.log('📦 Datos KPI recibidos:', data ? data.length : 0, 'documentos');
 
     // ===========================================
     // 1. Crear mapa de facturas únicas
@@ -588,6 +669,9 @@ const SoportesGrid = {
     // ===========================================
     this.facturasPendientesGlobal = facturasPendientesArr;
 
+    console.log('👥 Clientes encontrados:', clientesSet.size);
+    console.log('🏭 Proveedores encontrados:', proveedoresSet.size);
+
     // Poblar Filtros (si no se han poblado manualmente)
     const clientSelect = document.getElementById('kpiFilterClient');
     if (clientSelect) {
@@ -597,6 +681,9 @@ const SoportesGrid = {
         clientSelect.innerHTML += `<option value="${cliente}">${cliente}</option>`;
       });
       clientSelect.value = currentClient || '';
+      console.log('✅ Select de clientes poblado con', clientesSet.size, 'opciones');
+    } else {
+      console.warn('⚠️ No se encontró el select kpiFilterClient');
     }
 
     const providerSelect = document.getElementById('kpiFilterProvider');
@@ -607,6 +694,9 @@ const SoportesGrid = {
         providerSelect.innerHTML += `<option value="${prov}">${prov}</option>`;
       });
       providerSelect.value = currentProvider || '';
+      console.log('✅ Select de proveedores poblado con', proveedoresSet.size, 'opciones');
+    } else {
+      console.warn('⚠️ No se encontró el select kpiFilterProvider');
     }
 
     this.renderPendingTable();
@@ -1182,10 +1272,10 @@ const SoportesGrid = {
   },
 
   // =========================================
-  // FILTROS - CORREGIDO
+  // FILTROS - CORREGIDO (Solo para grid de imágenes, NO afecta KPIs)
   // =========================================
   aplicarFiltros: function (filtros = {}) {
-    console.log('Aplicando filtros:', filtros);
+    console.log('Aplicando filtros al grid de imágenes:', filtros);
 
     let resultados = [...this.entregas];
 
@@ -1193,17 +1283,8 @@ const SoportesGrid = {
     const filterClient = filtros.cliente !== undefined ? filtros.cliente : (document.getElementById('kpiFilterClient')?.value || '');
     const filterProvider = filtros.proveedor !== undefined ? filtros.proveedor : (document.getElementById('kpiFilterProvider')?.value || '');
 
-    // Filtro por fecha
-    if (filtros.fechaInicio && filtros.fechaFin) {
-      const inicio = this.normalizarFecha(filtros.fechaInicio);
-      const fin = this.normalizarFecha(filtros.fechaFin);
-      fin.setHours(23, 59, 59, 999);
-
-      resultados = resultados.filter(item => {
-        if (!item.fechaObj) return false;
-        return item.fechaObj >= inicio && item.fechaObj <= fin;
-      });
-    }
+    // IMPORTANTE: NO filtrar por fecha en el grid de imágenes
+    // Las imágenes siempre se muestran todas, sin importar la fecha
 
     // Filtro por Cliente
     if (filterClient && filterClient !== '') {
