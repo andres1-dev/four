@@ -428,8 +428,20 @@ async function obtenerDatosSoportes() {
     try {
         console.log('📦 Cargando entregas desde Supabase...');
         
+        // Obtener sesión actual para autenticación
+        const { data: { session } } = await window.supabase.auth.getSession();
+        
+        if (!session) {
+            console.error('❌ No hay sesión activa');
+            return {};
+        }
+        
         // El backend maneja la paginación automáticamente
-        const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/delivery-operations?action=get`);
+        const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/delivery-operations?action=get`, {
+            headers: {
+                'Authorization': `Bearer ${session.access_token}`
+            }
+        });
         
         if (!response.ok) {
             throw new Error(`HTTP error: ${response.status}`);
