@@ -1174,3 +1174,34 @@ span.flatpickr-weekday {
 [data-theme="light"] .flatpickr-day.flatpickr-disabled {
     color: rgba(0,0,0,0.15) !important;
 }
+
+/* ── Range mode styles ── */
+.flatpickr-day.inRange {
+    background: rgba(224,85,96,0.2) !important;
+    border-color: transparent !important;
+    box-shadow: -5px 0 0 rgba(224,85,96,0.2), 5px 0 0 rgba(224,85,96,0.2) !important;
+}
+
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+    background: #e05560 !important;
+    color: #fff !important;
+    border-color: #e05560 !important;
+}
+
+.flatpickr-day.startRange.startRange,
+.flatpickr-day.endRange.endRange {
+    border-radius: 8px !important;
+}
+
+[data-theme="light"] .flatpickr-day.inRange {
+    background: rgba(210,23,35,0.15) !important;
+    box-shadow: -5px 0 0 rgba(210,23,35,0.15), 5px 0 0 rgba(210,23,35,0.15) !important;
+}
+
+[data-theme="light"] .flatpickr-day.startRange,
+[data-theme="light"] .flatpickr-day.endRange {
+    background: #D21723 !important;
+    color: #fff !important;
+    border-color: #D21723 !important;
+}

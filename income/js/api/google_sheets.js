@@ -74,9 +74,33 @@ function _parseMainRows(rows) {
         try {
             const j = JSON.parse(row[0]);
             const linea = (j.LINEA || '').toUpperCase();
+            
+            // Calcular cantidad correcta: HR + ANEXOS tipo PROMO
+            let cantidad = 0;
+            
+            // 1. Sumar HR (todas las cantidades)
+            if (j.HR && Array.isArray(j.HR)) {
+                cantidad = j.HR.reduce((sum, item) => {
+                    // HR formato: [codigo, color, talla, cantidad]
+                    const cant = Number(item[3]) || 0;
+                    return sum + cant;
+                }, 0);
+            }
+            
+            // 2. Sumar ANEXOS tipo PROMO
+            if (j.ANEXOS && Array.isArray(j.ANEXOS)) {
+                const cantidadPromo = j.ANEXOS.reduce((sum, anexo) => {
+                    if (anexo.TIPO === 'PROMO') {
+                        return sum + (Number(anexo.CANTIDAD) || 0);
+                    }
+                    return sum;
+                }, 0);
+                cantidad += cantidadPromo;
+            }
+            
             return {
                 FECHA: normalizeDate(j.FECHA || ''),
-                CANTIDAD: Number(j.CANTIDAD) || 0,
+                CANTIDAD: cantidad,
                 ANO: '2025',
                 PROVEEDOR: linea.includes('ANGELES') ? 'ANGELES' : 'UNIVERSO'
             };
@@ -124,6 +148,30 @@ function _parseDbData2(rows) {
             const j = JSON.parse(row[0]);
             const pvp = _normalizePVP(j.PVP || '');
             const linea = j.LINEA || '';
+            
+            // Calcular cantidad correcta: HR + ANEXOS tipo PROMO
+            let cantidad = 0;
+            
+            // 1. Sumar HR (todas las cantidades)
+            if (j.HR && Array.isArray(j.HR)) {
+                cantidad = j.HR.reduce((sum, item) => {
+                    // HR formato: [codigo, color, talla, cantidad]
+                    const cant = Number(item[3]) || 0;
+                    return sum + cant;
+                }, 0);
+            }
+            
+            // 2. Sumar ANEXOS tipo PROMO
+            if (j.ANEXOS && Array.isArray(j.ANEXOS)) {
+                const cantidadPromo = j.ANEXOS.reduce((sum, anexo) => {
+                    if (anexo.TIPO === 'PROMO') {
+                        return sum + (Number(anexo.CANTIDAD) || 0);
+                    }
+                    return sum;
+                }, 0);
+                cantidad += cantidadPromo;
+            }
+            
             return {
                 DOCUMENTO:   _normalizeDocumento(j.A || ''),
                 FECHA:       normalizeDate(j.FECHA || ''),
@@ -134,7 +182,7 @@ function _parseDbData2(rows) {
                 LOTE:        Number(j.LOTE) || 0,
                 REFPROV:     String(j.REFPROV || ''),
                 DESCRIPCION: j.DESCRIPCIÓN || '',
-                CANTIDAD:    Number(j.CANTIDAD) || 0,
+                CANTIDAD:    cantidad,
                 REFERENCIA:  j.REFERENCIA || '',
                 TIPO:        j.TIPO || '',
                 PVP:         pvp,
