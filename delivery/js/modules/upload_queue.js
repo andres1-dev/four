@@ -599,14 +599,20 @@ class UploadQueue {
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos timeout
 
     try {
+      // Obtener token de autenticación
+      const { data: { session } } = await window.supabase.auth.getSession();
+      const authHeader = session ? { 'Authorization': `Bearer ${session.access_token}` } : {};
+
       const response = await fetch(API_URL_POST, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...authHeader
         },
         body: JSON.stringify(payload),
         signal: controller.signal
       });
+
 
       clearTimeout(timeoutId);
 

@@ -60,10 +60,15 @@ async function loadUsersList() {
     listContainer.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Cargando usuarios...</div>';
 
     try {
+        // Obtener token de autenticación
+        const { data: { session } } = await window.supabase.auth.getSession();
+        const authHeader = session ? { 'Authorization': `Bearer ${session.access_token}` } : {};
+
         const response = await fetch(EDGE_FUNCTION_URL, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...authHeader
             },
             body: JSON.stringify({ action: 'list' })
         });
@@ -246,10 +251,15 @@ async function saveUser(e) {
     }
 
     try {
+        // Obtener token de autenticación
+        const { data: { session } } = await window.supabase.auth.getSession();
+        const authHeader = session ? { 'Authorization': `Bearer ${session.access_token}` } : {};
+
         const response = await fetch(EDGE_FUNCTION_URL, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...authHeader
             },
             body: JSON.stringify({
                 action: isEdit ? 'update' : 'create',
@@ -292,10 +302,15 @@ async function deleteUser(authId, userName) {
     if (!confirm(`¿Estás seguro de eliminar al usuario ${userName}?`)) return;
 
     try {
+        // Obtener token de autenticación
+        const { data: { session } } = await window.supabase.auth.getSession();
+        const authHeader = session ? { 'Authorization': `Bearer ${session.access_token}` } : {};
+
         const response = await fetch(EDGE_FUNCTION_URL, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...authHeader
             },
             body: JSON.stringify({
                 action: 'delete',

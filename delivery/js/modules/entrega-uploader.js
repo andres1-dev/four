@@ -55,13 +55,19 @@ const EntregaUploader = {
       // Enviar a la Edge Function
       console.log('📤 Enviando entrega a Supabase...')
       
+      // Obtener token de autenticación
+      const { data: { session } } = await window.supabase.auth.getSession();
+      const authHeader = session ? { 'Authorization': `Bearer ${session.access_token}` } : {};
+
       const response = await fetch(this.FUNCTION_URL, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...authHeader
         },
         body: JSON.stringify(payload)
       })
+
 
       const result = await response.json()
 

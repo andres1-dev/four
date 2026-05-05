@@ -696,20 +696,28 @@ async function eliminarEntrega(factura) {
     });
 
     try {
-        // 2. Enviar petición de eliminación al GAS
-        // Preparar datos para eliminar por factura
+        // 2. Enviar petición de eliminación
         const payload = {
-            facturas: [factura] // Array de facturas a eliminar
+            facturas: [factura]
         };
+
+        // Obtener token de autenticación
+        const { data: { session } } = await window.supabase.auth.getSession();
+        if (!session) {
+            throw new Error('Sesión expirada. Por favor inicia sesión nuevamente.');
+        }
 
         // Usar el endpoint correcto de delivery-operations con action=delete
         const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/delivery-operations?action=delete`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`
             },
             body: JSON.stringify(payload)
         });
+
+
 
         if (!response.ok) {
             throw new Error(`Error HTTP: ${response.status}`);

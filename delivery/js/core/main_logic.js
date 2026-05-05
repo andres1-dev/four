@@ -29,7 +29,7 @@ async function obtenerDatosFacturados() {
 
         const [datosData2, datosSiesa, datosSoportes, datosRec] = await Promise.all([
             obtenerDatosDeData2(),
-            obtenerDatosSiesa(),
+            obtenerDatosSiesaSupabase(), // Cambiado de obtenerDatosSiesa a obtenerDatosSiesaSupabase
             obtenerDatosSoportes(),
             obtenerDatosRecFiltrados()
         ]);
@@ -498,116 +498,89 @@ async function obtenerDatosSoportes() {
 }
 
 // Obtener datos de SIESA (principal fuente de facturas)
-async function obtenerDatosSiesa() {
+/**
+ * Obtener datos de SIESA desde Supabase
+ */
+async function obtenerDatosSiesaSupabase() {
     try {
-        const [siesaData, siesaV2Data] = await Promise.all([
-            obtenerDatosDeSheet(SOURCE_SPREADSHEET_ID_SIESA, `${SOURCE_SHEET_NAME_SIESA}!A:G`),
-            obtenerDatosDeSheet(SOURCE_SPREADSHEET_ID_SIESA, `${SOURCE_SHEET_NAME_SIESA_2}!A:D`)
-        ]);
+        console.log('📦 Cargando facturas SIESA desde Supabase...');
+        
+        // Obtener sesión actual para autenticación
+        const { data: { session } } = await window.supabase.auth.getSession();
+        
+        if (!session) {
+            console.error('❌ No hay sesión activa para SIESA');
+            return [];
+        }
 
-        // ===========================================
-        // 1. PROCESAR AGREGACIONES DE SIESA_V2
-        // ===========================================
-        const agregaciones = {};
-        siesaV2Data.forEach(row => {
-            if (row.length >= 3) {
-                const key = String(row[0] || '').trim();      // Columna A: Número de factura
-                const valor1 = parseFloat(row[1]) || 0;        // Columna B: Valor acumulado
-                const valor2 = String(row[2] || '').trim();    // Columna C: Referencia (o "RefVar")
-                const valor3 = parseFloat(row[3]) || 0;        // Columna D: Cantidad acumulada
+        // Definir rango de fechas (90 días atrás hasta hoy para asegurar cobertura)
+        const hoy = new Date();
+        const hace90Dias = new Date();
+        hace90Dias.setDate(hoy.getDate() - 90);
 
-                if (key) {
-                    if (!agregaciones[key]) {
-                        agregaciones[key] = {
-                            sumValor1: valor1,
-                            itemsValor2: [valor2],
-                            sumValor3: valor3
-                        };
-                    } else {
-                        agregaciones[key].sumValor1 += valor1;
-                        agregaciones[key].itemsValor2.push(valor2);
-                        agregaciones[key].sumValor3 += valor3;
-                    }
-                }
+        const fechaInicio = hace90Dias.toISOString().split('T')[0];
+        const fechaFin = hoy.toISOString().split('T')[0];
+
+        // Usar la misma Edge Function que el panel de Siesa
+        const url = `${SUPABASE_FUNCTIONS_URL}/delivery-operations?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
+        
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${session.access_token}`
             }
         });
 
-        // ===========================================
-        // 2. CONFIGURACIÓN DE FILTROS
-        // ===========================================
-        const estadosExcluir = ["Anuladas", "En elaboración"];
-        const prefijosFactura = ["017", "FEV", "029", "FVE"];
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.status}`);
+        }
 
-        // Mapa de clientes (desde configuracion.js)
-        const mapaClientes = typeof CLIENTS_MAP !== 'undefined' ? CLIENTS_MAP : {
-            "INVERSIONES URBANA SAS": "901920844",
-            "EL TEMPLO DE LA MODA FRESCA SAS": "900047252",
-            "EL TEMPLO DE LA MODA SAS": "805027653",
-            "ARISTIZABAL LOPEZ JESUS MARIA": "70825517",
-            "QUINTERO ORTIZ JOSE ALEXANDER": "14838951",
-            "QUINTERO ORTIZ PATRICIA YAMILET": "67006141",
-            "ZULUAGA GOMEZ RUBEN ESTEBAN": "1007348825",
-            "SON Y LIMON SAS": "900355664"
-        };
-        const clientesPermitidos = new Set(Object.keys(mapaClientes));
+        const result = await response.json();
+        
+        if (!result.success || !result.data) {
+            console.warn('⚠️ No se obtuvieron datos de SIESA desde Supabase');
+            return [];
+        }
 
-        // ===========================================
-        // 3. FILTRAR Y MAPEAR SIESA
-        // ===========================================
-        return siesaData
-            .filter(row => row.length >= 4)
-            .filter(row => {
-                const estado = row[0] || '';
-                return !estadosExcluir.includes(estado);
-            })
-            .filter(row => {
-                const factura = row[1] || '';
-                return prefijosFactura.some(prefijo => factura.startsWith(prefijo));
-            })
-            .map(row => {
-                const clienteOriginal = row[3] || '';
-                const clienteNormalizado = clienteOriginal
-                    .replace(/S\.A\.S\.?/g, 'SAS')
-                    .replace(/\s+/g, ' ')
-                    .trim();
+        console.log(`✅ Recibidas ${result.data.length} facturas desde Supabase`);
 
-                if (!clientesPermitidos.has(clienteNormalizado)) {
-                    return null;
-                }
+        // Mapeo de clientes a NIT
+        const mapaClientes = typeof CLIENTS_MAP !== 'undefined' ? CLIENTS_MAP : {};
 
-                const codProveedor = row[6] || '';
-                const lote = codProveedor === "5" ? (row[4] || '') :
-                    codProveedor === "3" ? (row[5] || '') : '';
+        // Mapear al formato esperado por combinarDatosFacturados
+        // Estructura esperada en construirObjetoFactura:
+        // [0]: Estado, [1]: Factura, [2]: Fecha, [3]: Lote, [4]: CodProveedor, 
+        // [5]: Cliente, [6]: Valor, [7]: Refs (Array), [8]: Cantidad, [9]: NIT
+        return result.data.map(f => {
+            const refs = f.referencias_detalle 
+                ? (typeof f.referencias_detalle === 'string' ? JSON.parse(f.referencias_detalle) : f.referencias_detalle).map(d => d.referencia)
+                : [f.Referencia];
 
-                const factura = row[1] || '';
-
-                // Obtener agregaciones para esta factura
-                const agregacion = agregaciones[factura] || {
-                    sumValor1: 0,
-                    itemsValor2: [],
-                    sumValor3: 0
-                };
-
-                return [
-                    row[0],                    // Estado
-                    factura,                    // Factura
-                    formatearFecha(row[2]),     // Fecha formateada
-                    lote,                        // Lote
-                    codProveedor,                // Código proveedor
-                    clienteNormalizado,           // Cliente normalizado
-                    agregacion.sumValor1,         // ← VALOR AGREGADO
-                    agregacion.itemsValor2,       // ← ARRAY DE REFERENCIAS (¡NO string!)
-                    agregacion.sumValor3,         // ← CANTIDAD AGREGADA
-                    mapaClientes[clienteNormalizado] || "" // NIT
-                ];
-            })
-            .filter(row => row !== null);
+            return [
+                f.Estado || 'Aprobadas',
+                f['Nro documento'],
+                f.Fecha,
+                f.op || '',
+                f.compania || '',
+                f['Razón social cliente factura'],
+                f['Valor subtotal local'] || 0,
+                refs,
+                f['Cantidad inv.'] || 0,
+                mapaClientes[f['Razón social cliente factura']] || ""
+            ];
+        });
 
     } catch (error) {
-        console.error("❌ Error en obtenerDatosSiesa:", error);
+        console.error("❌ Error en obtenerDatosSiesaSupabase:", error);
         return [];
     }
 }
+
+// Función antigua de Sheets (Mantener comentada o como fallback si fuera necesario)
+/*
+async function obtenerDatosSiesa() {
+    // ... (código anterior)
+}
+*/
 
 // Funciones helper
 function formatearFecha(fechaStr) {
