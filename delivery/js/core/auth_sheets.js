@@ -3,28 +3,28 @@
 
 // Función para obtener usuarios desde Google Sheets
 async function obtenerUsuariosDeSheets() {
-    const API_KEY = 'AIzaSyC7hjbRc0TGLgImv8gVZg8tsOeYWgXlPcM';
+    const API_KEY = 'AIzaSyC1QqwUAZmDbOVrOo3Iwq90J_lJ5PmAYVg';
     const SPREADSHEET_ID = CONFIG.USERS_SPREADSHEET_ID;
     const SHEET_NAME = CONFIG.USERS_SHEET_NAME;
     const range = `${SHEET_NAME}!A:F`; // id, nombre, rol, email, phone, password
-    
+
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`;
-    
+
     try {
         const response = await fetch(url, { cache: 'no-store' });
-        
+
         if (!response.ok) {
             throw new Error(`Error HTTP ${response.status}`);
         }
-        
+
         const data = await response.json();
         const values = data.values || [];
-        
+
         if (values.length <= 1) {
             console.warn("No hay usuarios en la hoja USERS");
             return [];
         }
-        
+
         // Convertir filas a objetos (saltar header)
         const users = [];
         for (let i = 1; i < values.length; i++) {
@@ -40,10 +40,10 @@ async function obtenerUsuariosDeSheets() {
                 });
             }
         }
-        
+
         console.log(`✅ Usuarios cargados desde Sheets: ${users.length}`);
         return users;
-        
+
     } catch (error) {
         console.error("❌ Error obteniendo usuarios de Sheets:", error);
         throw error;
@@ -58,15 +58,15 @@ async function verificarCredencialesSheets(id, password) {
             message: 'Credenciales incompletas'
         };
     }
-    
+
     try {
         const users = await obtenerUsuariosDeSheets();
-        
-        const userFound = users.find(u => 
-            u.id === String(id).trim() && 
+
+        const userFound = users.find(u =>
+            u.id === String(id).trim() &&
             u.password === String(password).trim()
         );
-        
+
         if (userFound) {
             return {
                 success: true,
@@ -85,7 +85,7 @@ async function verificarCredencialesSheets(id, password) {
                 message: 'ID o contraseña incorrectos'
             };
         }
-        
+
     } catch (error) {
         console.error("Error en verificación:", error);
         return {
@@ -103,12 +103,12 @@ async function loginBiometricoSheets(id) {
             message: 'ID no proporcionado'
         };
     }
-    
+
     try {
         const users = await obtenerUsuariosDeSheets();
-        
+
         const userFound = users.find(u => u.id === String(id).trim());
-        
+
         if (userFound) {
             return {
                 success: true,
@@ -127,7 +127,7 @@ async function loginBiometricoSheets(id) {
                 message: 'Usuario biométrico no reconocido'
             };
         }
-        
+
     } catch (error) {
         console.error("Error en login biométrico:", error);
         return {
@@ -145,12 +145,12 @@ async function recuperarContrasenaSheets(id) {
             message: 'Se requiere ID'
         };
     }
-    
+
     try {
         const users = await obtenerUsuariosDeSheets();
-        
+
         const userFound = users.find(u => u.id === String(id).trim());
-        
+
         if (userFound) {
             if (!userFound.email) {
                 return {
@@ -158,7 +158,7 @@ async function recuperarContrasenaSheets(id) {
                     message: 'El usuario no tiene email registrado'
                 };
             }
-            
+
             return {
                 success: true,
                 user: userFound,
@@ -170,7 +170,7 @@ async function recuperarContrasenaSheets(id) {
                 message: 'Usuario no encontrado'
             };
         }
-        
+
     } catch (error) {
         console.error("Error en recuperación:", error);
         return {
@@ -186,6 +186,6 @@ if (typeof window !== 'undefined') {
     window.verificarCredencialesSheets = verificarCredencialesSheets;
     window.loginBiometricoSheets = loginBiometricoSheets;
     window.recuperarContrasenaSheets = recuperarContrasenaSheets;
-    
+
     console.log("auth_sheets.js cargado - Autenticación con Google Sheets activa");
 }

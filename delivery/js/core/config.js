@@ -17,13 +17,13 @@ const CONFIG = {
     // Configuración de Sesión - DESACTIVADA (solo logout manual)
     SESSION_TIMEOUT_MS: Infinity, // Sin timeout automático
     ACTIVITY_KEY: 'last_activity_timestamp',
-    
+
     // Configuración de Supabase
     SUPABASE_URL: "https://iladaofarozipitwaeti.supabase.co",
     SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsYWRhb2Zhcm96aXBpdHdhZXRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NjYzMDksImV4cCI6MjA5MzA0MjMwOX0.4fyiibeZS10DCgov62d7tIFVzJHsklsBrbokAJ9ptK8",
-    
+
     // Google Sheets API Key
-    GOOGLE_SHEETS_API_KEY: "AIzaSyC7hjbRc0TGLgImv8gVZg8tsOeYWgXlPcM"
+    GOOGLE_SHEETS_API_KEY: "AIzaSyDjvIGX1Y6RwJhqVflM-gS6teAm1id5v-k"
 };
 
 // Asegurar que CONFIG sea accesible globalmente en todos los scripts
@@ -115,39 +115,39 @@ const UPLOAD_QUEUE_KEY = 'uploadQueue';
 
 // Configuración de reintentos con estrategia exponencial backoff
 const RETRY_CONFIG = {
-  MAX_RETRIES: 5, // Máximo de reintentos antes de marcar como fallido
-  INITIAL_DELAY: 2000, // Delay inicial: 2 segundos
-  MAX_DELAY: 60000, // Delay máximo: 60 segundos
-  BACKOFF_MULTIPLIER: 2, // Multiplicador exponencial
-  JITTER: true, // Agregar variación aleatoria para evitar thundering herd
-  
-  // Errores que son recuperables (reintentar)
-  RECOVERABLE_ERRORS: [
-    'NetworkError',
-    'Failed to fetch',
-    'Network request failed',
-    'timeout',
-    'ECONNREFUSED',
-    'ETIMEDOUT',
-    'ENOTFOUND',
-    'offline',
-    '408', // Request Timeout
-    '429', // Too Many Requests
-    '500', // Internal Server Error
-    '502', // Bad Gateway
-    '503', // Service Unavailable
-    '504'  // Gateway Timeout
-  ],
-  
-  // Errores que NO son recuperables (fallar inmediatamente)
-  FATAL_ERRORS: [
-    '400', // Bad Request
-    '401', // Unauthorized
-    '403', // Forbidden
-    '404', // Not Found
-    '413', // Payload Too Large
-    '422'  // Unprocessable Entity
-  ]
+    MAX_RETRIES: 5, // Máximo de reintentos antes de marcar como fallido
+    INITIAL_DELAY: 2000, // Delay inicial: 2 segundos
+    MAX_DELAY: 60000, // Delay máximo: 60 segundos
+    BACKOFF_MULTIPLIER: 2, // Multiplicador exponencial
+    JITTER: true, // Agregar variación aleatoria para evitar thundering herd
+
+    // Errores que son recuperables (reintentar)
+    RECOVERABLE_ERRORS: [
+        'NetworkError',
+        'Failed to fetch',
+        'Network request failed',
+        'timeout',
+        'ECONNREFUSED',
+        'ETIMEDOUT',
+        'ENOTFOUND',
+        'offline',
+        '408', // Request Timeout
+        '429', // Too Many Requests
+        '500', // Internal Server Error
+        '502', // Bad Gateway
+        '503', // Service Unavailable
+        '504'  // Gateway Timeout
+    ],
+
+    // Errores que NO son recuperables (fallar inmediatamente)
+    FATAL_ERRORS: [
+        '400', // Bad Request
+        '401', // Unauthorized
+        '403', // Forbidden
+        '404', // Not Found
+        '413', // Payload Too Large
+        '422'  // Unprocessable Entity
+    ]
 };
 
 // La cola de carga se inicializa globalmente en cola_carga.js (window.uploadQueue)
