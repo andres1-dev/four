@@ -2,7 +2,7 @@
  * Constants and Configuration
  */
 
-const API_KEY = 'AIzaSyCrTSddJcCaJCqQ_Cr_PC2zt-eVZAihC38';
+const API_KEY = 'AIzaSyCYPxDH_Q9oaGC3fjM5OXm_ycXsbIe3KDA';
 
 const SPREADSHEET_IDS = {
     DATA2: "133NiyjNApZGkEFs4jUvpJ9So-cSEzRVeW2FblwOCrjI",

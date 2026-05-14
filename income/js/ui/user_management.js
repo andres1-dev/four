@@ -5,7 +5,7 @@
 
 // Configuración
 const USER_MANAGEMENT = {
-    API_KEY: 'AIzaSyCrTSddJcCaJCqQ_Cr_PC2zt-eVZAihC38',
+    API_KEY: 'AIzaSyCYPxDH_Q9oaGC3fjM5OXm_ycXsbIe3KDA',
     SPREADSHEET_ID: '133NiyjNApZGkEFs4jUvpJ9So-cSEzRVeW2FblwOCrjI',
     LOGIN_RANGE: 'LOGIN!A2:I',
     GAS_URL: 'https://script.google.com/macros/s/AKfycbzFkQsoAMCfnkoBHSTMMx4evKkAkwkBVlCu3eHIMVcam41GR2Q1_9YffhJSf8SeOC3_/exec'
@@ -26,14 +26,14 @@ async function fetchUsers() {
     try {
         const url = `https://sheets.googleapis.com/v4/spreadsheets/${USER_MANAGEMENT.SPREADSHEET_ID}/values/${encodeURIComponent(USER_MANAGEMENT.LOGIN_RANGE)}?key=${USER_MANAGEMENT.API_KEY}`;
         const response = await fetch(url);
-        
+
         if (!response.ok) {
             throw new Error(`Error al obtener usuarios: ${response.status}`);
         }
-        
+
         const data = await response.json();
         const rows = data.values || [];
-        
+
         // Mapear datos: A=USUARIO B=NOMBRE C=CORREO D=TELEFONO E=ROL F=CONTRASEÑA G=TIMESTAMP H=ID_DEVICE I=ACTIVO
         return rows.map((row, index) => ({
             rowIndex: index + 2, // +2 porque empezamos en A2
@@ -67,12 +67,12 @@ async function updateUser(userData) {
             formData.append('password', userData.password);
         }
         formData.append('activo', userData.activo);
-        
+
         const response = await fetch(USER_MANAGEMENT.GAS_URL, {
             method: 'POST',
             body: formData
         });
-        
+
         const result = await response.json();
         return result;
     } catch (error) {
@@ -92,12 +92,12 @@ async function createUser(userData) {
         formData.append('telefono', userData.telefono);
         formData.append('rol', userData.rol);
         formData.append('password', userData.password);
-        
+
         const response = await fetch(USER_MANAGEMENT.GAS_URL, {
             method: 'POST',
             body: formData
         });
-        
+
         const result = await response.json();
         return result;
     } catch (error) {
@@ -112,12 +112,12 @@ async function logoutUser(usuario) {
         const formData = new FormData();
         formData.append('action', 'logout_user');
         formData.append('usuario', usuario);
-        
+
         const response = await fetch(USER_MANAGEMENT.GAS_URL, {
             method: 'POST',
             body: formData
         });
-        
+
         const result = await response.json();
         return result;
     } catch (error) {
@@ -132,7 +132,7 @@ async function showUserManagementModal() {
         alert('Acceso denegado. Solo el OWNER puede gestionar usuarios.');
         return;
     }
-    
+
     // Crear modal
     const modal = document.createElement('div');
     modal.id = 'userManagementModal';
@@ -167,29 +167,29 @@ async function showUserManagementModal() {
             </div>
         </div>
     `;
-    
+
     document.body.appendChild(modal);
-    
+
     // Event listeners
     document.getElementById('closeUserManagement').addEventListener('click', () => {
         modal.remove();
     });
-    
+
     document.getElementById('addUserBtn').addEventListener('click', () => {
         showUserFormModal();
     });
-    
+
     document.getElementById('refreshUsersBtn').addEventListener('click', () => {
         loadUsersTable();
     });
-    
+
     // Cerrar al hacer clic fuera
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
             modal.remove();
         }
     });
-    
+
     // Cargar usuarios
     await loadUsersTable();
 }
@@ -197,16 +197,16 @@ async function showUserManagementModal() {
 // Cargar tarjetas de usuarios
 async function loadUsersTable() {
     const cardsContainer = document.getElementById('usersCardsContainer');
-    
+
     try {
         cardsContainer.innerHTML = `
             <div class="loading-cell">
                 <i class="fas fa-spinner fa-spin"></i> Cargando usuarios...
             </div>
         `;
-        
+
         const users = await fetchUsers();
-        
+
         if (users.length === 0) {
             cardsContainer.innerHTML = `
                 <div class="empty-cell">
@@ -220,13 +220,13 @@ async function loadUsersTable() {
             `;
             return;
         }
-        
+
         // Renderizar tarjetas
         cardsContainer.innerHTML = users.map(user => {
             const isActive = user.activo === '1';
             const hasSession = user.id_device && user.id_device.trim() !== '';
             const config = getRoleConfig(user.rol);
-            
+
             return `
                 <div class="user-card ${!isActive ? 'inactive' : ''}" data-usuario="${user.usuario}">
                     <div class="user-card-header">
@@ -293,7 +293,7 @@ async function loadUsersTable() {
                 </div>
             `;
         }).join('');
-        
+
     } catch (error) {
         cardsContainer.innerHTML = `
             <div class="error-cell">
@@ -323,7 +323,7 @@ function getRoleConfig(rol) {
 async function showUserFormModal(usuario = null) {
     const isEdit = usuario !== null;
     let userData = null;
-    
+
     if (isEdit) {
         const users = await fetchUsers();
         userData = users.find(u => u.usuario === usuario);
@@ -332,7 +332,7 @@ async function showUserFormModal(usuario = null) {
             return;
         }
     }
-    
+
     const modal = document.createElement('div');
     modal.className = 'user-form-modal';
     modal.innerHTML = `
@@ -398,13 +398,13 @@ async function showUserFormModal(usuario = null) {
             </div>
         </div>
     `;
-    
+
     document.body.appendChild(modal);
-    
+
     // Manejar envío del formulario
     document.getElementById('userForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         const formData = new FormData(e.target);
         const data = {
             usuario: formData.get('usuario'),
@@ -415,14 +415,14 @@ async function showUserFormModal(usuario = null) {
             password: formData.get('password'),
             activo: isEdit ? (formData.get('activo') ? '1' : '0') : '1'
         };
-        
+
         const submitBtn = e.target.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-        
+
         try {
             const result = isEdit ? await updateUser(data) : await createUser(data);
-            
+
             if (result.success) {
                 alert(isEdit ? 'Usuario actualizado correctamente' : 'Usuario creado correctamente');
                 modal.remove();
@@ -440,16 +440,16 @@ async function showUserFormModal(usuario = null) {
 }
 
 // Editar usuario
-window.editUser = async function(usuario) {
+window.editUser = async function (usuario) {
     await showUserFormModal(usuario);
 };
 
 // Forzar cierre de sesión
-window.forceLogout = async function(usuario) {
+window.forceLogout = async function (usuario) {
     if (!confirm(`¿Cerrar la sesión activa de ${usuario}?`)) {
         return;
     }
-    
+
     try {
         const result = await logoutUser(usuario);
         if (result.success) {
@@ -464,24 +464,24 @@ window.forceLogout = async function(usuario) {
 };
 
 // Activar/Desactivar usuario
-window.toggleUserStatus = async function(usuario, activate) {
+window.toggleUserStatus = async function (usuario, activate) {
     const action = activate ? 'activar' : 'desactivar';
     if (!confirm(`¿Está seguro de ${action} al usuario ${usuario}?`)) {
         return;
     }
-    
+
     try {
         const users = await fetchUsers();
         const userData = users.find(u => u.usuario === usuario);
-        
+
         if (!userData) {
             alert('Usuario no encontrado');
             return;
         }
-        
+
         userData.activo = activate ? '1' : '0';
         const result = await updateUser(userData);
-        
+
         if (result.success) {
             alert(`Usuario ${activate ? 'activado' : 'desactivado'} correctamente`);
             await loadUsersTable();
