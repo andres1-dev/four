@@ -25,6 +25,8 @@ const BASE_IMAGE_URL = "https://lh3.googleusercontent.com/d/";
 // Función principal para obtener datos
 async function obtenerDatosFacturados() {
     try {
+        console.log("Iniciando obtención de datos facturados...");
+
         const [datosData2, datosSiesa, datosSoportes, datosRec] = await Promise.all([
             obtenerDatosDeData2(),
             obtenerDatosSiesaSupabase(), // Cambiado de obtenerDatosSiesa a obtenerDatosSiesaSupabase
@@ -32,7 +34,18 @@ async function obtenerDatosFacturados() {
             obtenerDatosRecFiltrados()
         ]);
 
-        return combinarDatosFacturados(datosData2, datosSiesa, datosSoportes, datosRec);
+        console.log("Estadísticas iniciales:");
+        console.log("- DATA2:", datosData2.length, "registros");
+        console.log("- SIESA:", datosSiesa.length, "facturas");
+        console.log("- REC:", datosRec.length, "registros FULL");
+        console.log("- SOPORTES:", Object.keys(datosSoportes).length, "confirmaciones");
+
+        const resultado = combinarDatosFacturados(datosData2, datosSiesa, datosSoportes, datosRec);
+
+        console.log("Proceso completado exitosamente");
+        console.log("Resultado:", resultado.metadata.estadisticas);
+
+        return resultado;
 
     } catch (error) {
         console.error("Error en obtenerDatosFacturados:", error);
@@ -49,6 +62,11 @@ function combinarDatosFacturados(datosData2, datosSiesa, datosSoportes, datosRec
     const datosCombinados = [];
     const lotesProcesados = new Set();
     const facturasProcesadasSiesa = new Set();
+
+    console.log("🔄 Combinando datos...");
+    console.log(`📦 DATA2: ${datosData2.length} registros`);
+    console.log(`📦 REC: ${datosRec.length} registros`);
+    console.log(`✅ Soportes: ${Object.keys(datosSoportes).length} facturas entregadas`);
 
     // Paso 1: Procesar DATA2
     const resultadosData2 = procesarFuenteDATA2(datosData2, datosSiesa, datosSoportes, lotesProcesados, facturasProcesadasSiesa);
@@ -95,6 +113,12 @@ function combinarDatosFacturados(datosData2, datosSiesa, datosSoportes, datosRec
     const desdeDATA2 = resultadosData2.length;
     const desdeREC = resultadosREC.length;
     const desdeHuerfanas = huerfanasSiesa.length;
+
+    console.log("📊 Estadísticas finales:");
+    console.log(`   - Documentos: ${datosCombinados.length} (DATA2: ${desdeDATA2}, REC: ${desdeREC}, HUÉRFANAS: ${desdeHuerfanas})`);
+    console.log(`   - Facturas: ${totalFacturas}`);
+    console.log(`   - Entregadas: ${entregadas}`);
+    console.log(`   - Pendientes: ${totalFacturas - entregadas}`);
 
     return {
         success: true,
@@ -279,12 +303,9 @@ function construirObjetoFactura(filaSiesa, documento, loteDoc, referenciaDoc, da
         }
 
         // Solo validar referencia si NO es RefVar
-        const normSiesaRef = String(referenciaFinal || '').replace(/^0+/, '');
-        const normSoporteRef = String(soporte.referencia || '').replace(/^0+/, '');
-
         if (referenciaFinal !== "RefVar" &&
             soporte.referencia &&
-            normSoporteRef !== normSiesaRef) {
+            String(soporte.referencia) !== String(referenciaFinal)) {
             console.warn(`⚠️ Discrepancia referencia en factura ${factura}:`, {
                 siesa: referenciaFinal,
                 soporte: soporte.referencia
@@ -344,88 +365,29 @@ async function obtenerDatosDeSheet(spreadsheetId, range) {
     }
 }
 
-let _entregasIngresosCache = null;
-
-// Helper con paginación por bloques para consultar la totalidad de la tabla ingresos de Supabase en ENTREGAS
-async function fetchIngresosSupabaseForEntregas() {
-    if (_entregasIngresosCache && Array.isArray(_entregasIngresosCache) && _entregasIngresosCache.length > 0) {
-        return _entregasIngresosCache;
-    }
-
-    const PAGE_SIZE = 1000;
-    let allRows = [];
-    let offset = 0;
-
-    let token = CONFIG.SUPABASE_ANON_KEY;
-    try {
-        if (window.supabase?.auth) {
-            const { data: { session } } = await window.supabase.auth.getSession();
-            if (session?.access_token) token = session.access_token;
-        }
-    } catch (e) { }
-
-    while (true) {
-        try {
-            const url = `${CONFIG.SUPABASE_URL}/rest/v1/ingresos?select=*`;
-            const res = await fetch(url, {
-                headers: {
-                    'apikey': CONFIG.SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${token}`,
-                    'Range': `${offset}-${offset + PAGE_SIZE - 1}`,
-                    'Range-Unit': 'items'
-                }
-            });
-
-            if (!res.ok) {
-                console.error(`HTTP error ${res.status} al consultar ingresos en ENTREGAS:`, await res.text());
-                break;
-            }
-
-            const rows = await res.json();
-            if (!Array.isArray(rows)) break;
-            allRows = allRows.concat(rows);
-
-            if (rows.length < PAGE_SIZE) break;
-            offset += PAGE_SIZE;
-        } catch (e) {
-            console.error('Error cargando ingresos en ENTREGAS:', e);
-            break;
-        }
-    }
-
-    _entregasIngresosCache = allRows;
-    return _entregasIngresosCache;
-}
-
-// Obtener datos de DATA2 desde la tabla ingresos de Supabase
+// Obtener datos de DATA2
 async function obtenerDatosDeData2() {
     try {
-        const rows = await fetchIngresosSupabaseForEntregas();
+        const range = `${SOURCE_SHEET_NAME_DATA2}!${SOURCE_DATA2_COLUMN}:${SOURCE_DATA2_COLUMN}`;
+        const allValues = await obtenerDatosDeSheet(SOURCE_SPREADSHEET_ID_DATA2, range);
 
-        return rows.reduce((filtrados, r) => {
-            const tipo = String(r.tipo || '').toUpperCase();
+        return allValues.reduce((filtrados, cellValue, index) => {
+            if (!cellValue || !cellValue[0]) return filtrados;
 
-            // Incluir todos los registros de la tabla ingresos (TIPO FULL o sin tipo explicito)
-            if (tipo === 'FULL' || !r.tipo) {
-                let anexos = r.anexos;
-                if (typeof anexos === 'string') {
-                    try { anexos = JSON.parse(anexos); } catch (e) { anexos = []; }
+            try {
+                const data = JSON.parse(cellValue[0]);
+                if (data.TIPO === "FULL") {
+                    filtrados.push({
+                        documento: data.A?.toString() || '',
+                        referencia: data.REFERENCIA || '',
+                        lote: data.LOTE?.toString() || '',
+                        proveedor: data.PROVEEDOR || '',
+                        anexos: data.ANEXOS || [],
+                        tipo: data.TIPO
+                    });
                 }
-                if (!Array.isArray(anexos)) anexos = [];
-
-                let rawDoc = String(r.id_ingreso || r.documento || r.id || '');
-                if (rawDoc.toUpperCase().startsWith('REC')) {
-                    rawDoc = rawDoc.substring(3);
-                }
-
-                filtrados.push({
-                    documento: rawDoc,
-                    referencia: String(r.referencia || r.refprov || ''),
-                    lote: String(r.lote || ''),
-                    proveedor: String(r.proveedor || r.productora || ''),
-                    anexos: anexos,
-                    tipo: r.tipo || 'FULL'
-                });
+            } catch (e) {
+                console.warn(`Fila ${index + 1} DATA2 no es JSON válido`);
             }
             return filtrados;
         }, []);
@@ -436,27 +398,25 @@ async function obtenerDatosDeData2() {
     }
 }
 
-// Obtener datos de REC filtrados desde la tabla ingresos de Supabase
+// Obtener datos de REC filtrados
 async function obtenerDatosRecFiltrados() {
     try {
-        const rows = await fetchIngresosSupabaseForEntregas();
+        const rangeRec = `${SOURCE_SHEET_NAME_REC}!A2:AB`;
+        const allValuesRec = await obtenerDatosDeSheet(SOURCE_SPREADSHEET_ID_REC, rangeRec);
 
-        return rows.reduce((filtrados, r) => {
-            const tipo = String(r.tipo || '').toUpperCase();
-            const fuente = String(r.fuente || '').toUpperCase();
-            const tieneReferencia = Boolean(r.referencia || r.refprov);
-            const tieneLote = Boolean(r.lote);
-
-            if ((tipo === 'FULL' || !r.tipo) && (fuente === 'BUSINT' || fuente === 'REC') && tieneReferencia && tieneLote) {
-                filtrados.push([
-                    String(r.id_ingreso || r.documento || r.id || ''),
-                    String(r.referencia || r.refprov || ''),
-                    String(r.lote || ''),
-                    String(r.linea || r.taller || '')
-                ]);
-            }
-            return filtrados;
-        }, []);
+        return allValuesRec
+            .filter(row => {
+                const tieneReferencia = row[6] && row[6].trim() !== '';
+                const esFULL = row[27] && row[27].trim().toUpperCase() === 'FULL';
+                const tieneLote = row[8] && row[8].trim() !== '';
+                return tieneReferencia && esFULL && tieneLote;
+            })
+            .map(row => [
+                row[0] || '',
+                row[6] || '',
+                row[8] || '',
+                row[3] || ''
+            ]);
 
     } catch (error) {
         console.error("Error en obtenerDatosRecFiltrados:", error);
@@ -466,6 +426,8 @@ async function obtenerDatosRecFiltrados() {
 
 async function obtenerDatosSoportes() {
     try {
+        console.log('📦 Cargando entregas desde Supabase...');
+        
         // Obtener sesión actual para autenticación
         const { data: { session } } = await window.supabase.auth.getSession();
         
@@ -488,31 +450,45 @@ async function obtenerDatosSoportes() {
         const result = await response.json();
         
         if (!result.entregas || result.entregas.length === 0) {
+            console.log('📊 No hay entregas en Supabase');
             return {};
         }
+
+        console.log(`✅ Recibidas ${result.entregas.length} entregas desde Supabase`);
 
         // Mapa principal: POR FACTURA (NO por clave compuesta)
         const mapaSoportes = {};
 
-        result.entregas.forEach((entrega) => {
+        result.entregas.forEach((entrega, index) => {
             const factura = String(entrega.Factura || '').trim();
+            
+            // Validación: DEBE tener factura (es lo único realmente obligatorio)
             if (factura) {
+                // Si ya existe una factura duplicada, loguear warning
+                if (mapaSoportes[factura]) {
+                    console.warn(`⚠️ Factura duplicada en soportes: ${factura}`);
+                }
+
+                // Guardar por FACTURA (con metadata adicional útil)
                 mapaSoportes[factura] = {
                     fechaEntrega: entrega.Registro,
-                    imageId: entrega.Url_Ih3 || '',
+                    imageId: entrega.Url_Ih3 || '', // URL completa de la imagen
                     estado: 'ENTREGADO',
+                    // Metadata adicional (útil para validaciones)
                     documento: entrega.Documento,
                     lote: entrega.Lote,
                     referencia: entrega.Referencia,
                     cantidad: entrega.Cantidad,
                     nit: entrega.Nit,
                     usuario: entrega.Usuario,
+                    // Para debugging
                     _id: entrega.id,
                     _timestamp: new Date().toISOString()
                 };
             }
         });
 
+        console.log(`✅ Procesadas ${Object.keys(mapaSoportes).length} facturas únicas de ${result.entregas.length} registros totales`);
         return mapaSoportes;
 
     } catch (error) {
@@ -522,8 +498,13 @@ async function obtenerDatosSoportes() {
 }
 
 // Obtener datos de SIESA (principal fuente de facturas)
+/**
+ * Obtener datos de SIESA desde Supabase
+ */
 async function obtenerDatosSiesaSupabase() {
     try {
+        console.log('📦 Cargando facturas SIESA desde Supabase...');
+        
         // Obtener sesión actual para autenticación
         const { data: { session } } = await window.supabase.auth.getSession();
         
@@ -556,12 +537,19 @@ async function obtenerDatosSiesaSupabase() {
         const result = await response.json();
         
         if (!result.success || !result.data) {
+            console.warn('⚠️ No se obtuvieron datos de SIESA desde Supabase');
             return [];
         }
+
+        console.log(`✅ Recibidas ${result.data.length} facturas desde Supabase`);
 
         // Mapeo de clientes a NIT
         const mapaClientes = typeof CLIENTS_MAP !== 'undefined' ? CLIENTS_MAP : {};
 
+        // Mapear al formato esperado por combinarDatosFacturados
+        // Estructura esperada en construirObjetoFactura:
+        // [0]: Estado, [1]: Factura, [2]: Fecha, [3]: Lote, [4]: CodProveedor, 
+        // [5]: Cliente, [6]: Valor, [7]: Refs (Array), [8]: Cantidad, [9]: NIT
         return result.data.map(f => {
             const refs = f.referencias_detalle 
                 ? (typeof f.referencias_detalle === 'string' ? JSON.parse(f.referencias_detalle) : f.referencias_detalle).map(d => d.referencia)

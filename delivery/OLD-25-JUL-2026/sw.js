@@ -1,20 +1,15 @@
-// Silenciar logs informativos del Service Worker
-if (typeof self !== 'undefined' && self.console) {
-  self.console.log = function () {};
-  self.console.info = function () {};
-}
-
 // Service Worker para App - Versión optimizada para PWA
 
+// Configuración inline (no usar importScripts con módulos ES6)
 const CONFIG = {
     APP_NAME: "DeepScope",
     APP_SHORT_NAME: "DeepScope",
     APP_DESCRIPTION: "Professional QR Delivery System",
-    APP_VERSION: "7.3.15"
+    APP_VERSION: "7.3.14"
 };
 
 // CORREGIDO: Eliminadas notificaciones duplicadas
-const CACHE_NAME = 'entregas-cache-v7.3.15';
+const CACHE_NAME = `${CONFIG.APP_NAME}-v15.1`; // Updated icons for Android compatibility
 
 const BASE = (new URL('.', self.location)).href;
 

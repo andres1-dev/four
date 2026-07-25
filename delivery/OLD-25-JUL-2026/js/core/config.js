@@ -1,9 +1,3 @@
-// Silenciar logs informativos ruidosos de consola
-if (typeof window !== 'undefined') {
-    window.console.log = function () {};
-    window.console.info = function () {};
-}
-
 // Configuración y constantes globales
 const CONFIG = {
     APP_NAME: "DeepScope",
