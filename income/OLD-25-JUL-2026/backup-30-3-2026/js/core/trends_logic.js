@@ -5,26 +5,11 @@
 function analizarTendenciaDiaria(año, mes) {
     if (!consolidatedData || consolidatedData.length === 0) return null;
 
-    const targetMes = String(mes || '').toUpperCase();
     const datosMensuales = consolidatedData.filter(d =>
-        d.Año === año && String(d.Mes || '').toUpperCase() === targetMes
+        d.Año === año && d.Mes === mes
     );
 
-    if (datosMensuales.length === 0) {
-        // Fallback: usar los últimos registros disponibles en consolidatedData
-        const ultimosDatos = consolidatedData.slice(-31);
-        if (ultimosDatos.length > 0) {
-            ultimosDatos.sort((a, b) => parseDate(a.Fecha) - parseDate(b.Fecha));
-            return {
-                datosDiarios: ultimosDatos,
-                tendencia: calcularTendenciaLineal(ultimosDatos),
-                promedioMovil: calcularPromedioMovil(ultimosDatos, 7),
-                patronesSemanales: analizarPatronesSemanales(ultimosDatos),
-                proyeccion: calcularProyeccionDiaria(ultimosDatos)
-            };
-        }
-        return null;
-    }
+    if (datosMensuales.length === 0) return null;
 
     datosMensuales.sort((a, b) => parseDate(a.Fecha) - parseDate(b.Fecha));
 

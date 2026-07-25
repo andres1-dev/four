@@ -247,18 +247,10 @@ function findMin(data) {
 }
 
 function findClosestDateWithData(targetDate, year, data) {
-    const targetParsed = parseDate(targetDate);
-    if (!targetParsed) return null;
-    const targetTime = targetParsed.getTime();
+    const targetTime = parseDate(targetDate).getTime();
+    const yearData = data.filter(d => d.Año === year);
 
-    if (!data || data.length === 0) return null;
-
-    let yearData = data.filter(d => d.Año === year);
-
-    // Fallback: Si no hay registros para el año solicitado, usar todos los datos disponibles
-    if (yearData.length === 0) {
-        yearData = data;
-    }
+    if (yearData.length === 0) return null;
 
     const exactMatch = yearData.find(d => {
         const dDate = parseDate(d.Fecha);
@@ -304,8 +296,6 @@ function isAnulado(item) {
 }
 
 function procesarDatosConsolidados(incomeData, budget, baseDates = null) {
-    if (!incomeData || !Array.isArray(incomeData)) return [];
-
     const groupedByDate = incomeData.reduce((acc, item) => {
         let fecha = item.FECHA;
         // Normalize fecha to DD/MM/YYYY for consistency with baseDates if it's in YYYY-MM-DD
@@ -322,8 +312,6 @@ function procesarDatosConsolidados(incomeData, budget, baseDates = null) {
         acc[fecha].count++;
         return acc;
     }, {});
-
-    console.log(`procesarDatosConsolidados agrupó ${Object.keys(groupedByDate).length} fechas únicas de ingresos`);
 
     // Ensure all base dates are present (even with 0 income)
     if (baseDates && Array.isArray(baseDates)) {

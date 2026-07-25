@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es" data-theme="dark">
 
 <head>
@@ -484,20 +484,11 @@
 
     <!-- Tema inline: se ejecuta ANTES de pintar nada -->
     <script>
-        // ── Session guard — Supabase Auth ──────────────────────────────────────
-        // Verificación rápida con sessionStorage (sin esperar al SDK)
-        // El SDK de Supabase persiste la sesión en localStorage automáticamente
+        // ── Session guard ── solo sessionStorage, sin TTL
         (function() {
             try {
-                // Supabase guarda la sesión en localStorage con esta clave
-                const sbKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
-                if (sbKey) {
-                    const sbSession = JSON.parse(localStorage.getItem(sbKey) || 'null');
-                    if (sbSession && sbSession.access_token) return; // Sesión Supabase válida
-                }
-                // Fallback: también aceptar sesión legacy en sessionStorage
                 var s = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
-                if (s && s.usuario) return;
+                if (s && s.usuario) return; // Sesión válida
                 window.location.replace('login.html');
             } catch(_) {
                 window.location.replace('login.html');
@@ -1203,8 +1194,7 @@
     <script src="js/core/biometry.js"></script>
     <script src="js/utils/date_utils.js"></script>
     <script src="js/utils/formatters.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="js/api/supabase_data.js"></script>
+    <script src="js/api/google_sheets.js"></script>
     <script src="js/core/metrics.js"></script>
     <script src="js/core/trends_logic.js"></script>
     <script src="js/ui/render.js"></script>
@@ -1247,31 +1237,16 @@
             panel.setAttribute('aria-hidden', 'true');
             document.body.appendChild(panel);
 
-            // Cargar datos del usuario — Supabase Auth + fallback sessionStorage
+            // Cargar datos del usuario
             function loadUserData() {
                 try {
-                    // Intentar leer del localStorage de Supabase primero
-                    const sbKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
-                    if (sbKey) {
-                        const sbSession = JSON.parse(localStorage.getItem(sbKey) || 'null');
-                        if (sbSession?.user) {
-                            const meta = sbSession.user.user_metadata || {};
-                            return {
-                                nombre:  meta.display_name || sbSession.user.email || '-',
-                                usuario: sbSession.user.email || '-',
-                                rol:     (meta.role || 'USER').toUpperCase(),
-                                correo:  sbSession.user.email || '-'
-                            };
-                        }
-                    }
-                    // Fallback: sessionStorage legacy
                     var session = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
                     if (!session) return { nombre: '-', usuario: '-', rol: 'USER', correo: '-' };
                     return {
-                        nombre:  session.nombre  || '-',
+                        nombre: session.nombre || '-',
                         usuario: session.usuario || '-',
-                        rol:     (session.rol    || 'USER').toUpperCase(),
-                        correo:  session.correo  || '-'
+                        rol: (session.rol || 'USER').toUpperCase(),
+                        correo: session.correo || '-'
                     };
                 } catch(e) {
                     return { nombre: '-', usuario: '-', rol: 'USER', correo: '-' };
@@ -1353,25 +1328,20 @@
                 // Agregar evento de logout
                 var logoutBtn = panel.querySelector('#profileLogoutBtn');
                 if (logoutBtn) {
-                    logoutBtn.addEventListener('click', async function() {
+                    logoutBtn.addEventListener('click', function() {
                         closePanel();
                         if (!confirm('¿Cerrar sesión?')) return;
-
-                        // Cerrar sesión en Supabase Auth
-                        try {
-                            const _sbClient = window.supabase?.createClient
-                                ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON)
-                                : null;
-                            if (_sbClient) await _sbClient.auth.signOut();
-                        } catch(e) { console.warn('signOut error:', e); }
-
-                        // Limpiar storage local
+                        var s = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
+                        
+                        // Limpiar sessionStorage y localStorage
                         sessionStorage.removeItem('tdm_session');
                         sessionStorage.removeItem('tdm_preload_data');
-                        sessionStorage.removeItem('tdm_preload_data_v2');
-                        sessionStorage.removeItem('tdm_preload_data_v3');
                         localStorage.removeItem('tdm_user_name');
-
+                        
+                        if (s && s.usuario) {
+                            var body = 'action=logout&id_usuario=' + encodeURIComponent(s.usuario);
+                            navigator.sendBeacon(GAS_URL, new Blob([body], { type: 'application/x-www-form-urlencoded' }));
+                        }
                         window.location.replace('login.html');
                     });
                 }

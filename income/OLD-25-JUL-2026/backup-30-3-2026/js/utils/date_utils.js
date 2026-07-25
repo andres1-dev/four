@@ -28,28 +28,16 @@ function formatDate(date) {
 
 function parseDate(dateStr) {
     if (!dateStr) return null;
-    if (dateStr instanceof Date) return isNaN(dateStr.getTime()) ? null : dateStr;
+    if (dateStr instanceof Date) return dateStr;
     if (typeof dateStr === 'number') return new Date(dateStr);
     if (typeof dateStr === 'string') {
-        const cleanStr = dateStr.trim().split(' ')[0].split('T')[0];
-        if (cleanStr.includes('/')) {
-            const parts = cleanStr.split('/');
-            if (parts.length === 3) {
-                const [day, month, year] = parts;
-                const d = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00-05:00`);
-                if (!isNaN(d.getTime())) return d;
-            }
+        if (dateStr.includes('/')) {
+            const [day, month, year] = dateStr.split('/');
+            return new Date(`${year}-${month}-${day}T00:00:00-05:00`);
         }
-        if (cleanStr.includes('-')) {
-            const parts = cleanStr.split('-');
-            if (parts.length === 3) {
-                const [year, month, day] = parts;
-                const d = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00-05:00`);
-                if (!isNaN(d.getTime())) return d;
-            }
+        if (dateStr.includes('-')) {
+            return new Date(`${dateStr}T00:00:00-05:00`);
         }
-        const fallback = new Date(dateStr);
-        if (!isNaN(fallback.getTime())) return fallback;
     }
     console.error(`Formato de fecha no reconocido: ${dateStr}`);
     return null;

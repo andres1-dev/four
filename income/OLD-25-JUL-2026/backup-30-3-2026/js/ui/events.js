@@ -570,7 +570,7 @@ async function cargarDatosIniciales() {
 // Helper para verificar si hay datos precargados disponibles
 function checkPreloadedData() {
     try {
-        const preloadStr = sessionStorage.getItem('tdm_preload_data_v3');
+        const preloadStr = sessionStorage.getItem('tdm_preload_data');
         if (!preloadStr) return false;
         
         const preload = JSON.parse(preloadStr);
@@ -578,7 +578,7 @@ function checkPreloadedData() {
         
         // Datos válidos por 5 minutos
         if (age > 5 * 60 * 1000) {
-            sessionStorage.removeItem('tdm_preload_data_v3');
+            sessionStorage.removeItem('tdm_preload_data');
             return false;
         }
         
@@ -589,27 +589,10 @@ function checkPreloadedData() {
 }
 
 async function generarReporteCompleto(targetDate) {
-    const fechaObj = parseDate(targetDate) || new Date();
+    const fechaObj = parseDate(targetDate);
     const currentYear = fechaObj.getFullYear();
-    let currentResult = findClosestDateWithData(fechaObj, currentYear, consolidatedData);
-    if (!currentResult && consolidatedData && consolidatedData.length > 0) {
-        const lastItem = consolidatedData[consolidatedData.length - 1];
-        currentResult = { date: parseDate(lastItem.Fecha), isExact: false, data: lastItem };
-    }
-
-    if (!currentResult) {
-        console.warn("No hay datos consolidados disponibles para generar el reporte.");
-        const emptyMetrics = {
-            ingreso: 0, meta: 0, diferencia: 0, cumplimiento: '0%', porcentaje: 0, gestion: 0, registros: 0,
-            unidades: 0, metaAcumulada: 0, promedioDiario: 0, diasLaborados: 0, diasRestantes: 0
-        };
-        return {
-            filtros: { actual: formatDate(fechaObj), anterior: null },
-            dia: { actual: { ...emptyMetrics }, anterior: null },
-            mes: { actual: { ...emptyMetrics }, anterior: null },
-            año: { actual: { ...emptyMetrics }, anterior: null }
-        };
-    }
+    const currentResult = findClosestDateWithData(fechaObj, currentYear, consolidatedData);
+    if (!currentResult) throw new Error("No data");
 
     const previousYear = currentYear - 1;
     const previousYearDate = new Date(fechaObj);

@@ -1008,24 +1008,23 @@
         </div>
     </div>
 
-    <!-- Supabase JS -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-
     <script>
-        // ─── Config Supabase ──────────────────────────────────────────────────────────
-        const SUPABASE_URL  = 'https://iladaofarozipitwaeti.supabase.co';
-        const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsYWRhb2Zhcm96aXBpdHdhZXRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NjYzMDksImV4cCI6MjA5MzA0MjMwOX0.4fyiibeZS10DCgov62d7tIFVzJHsklsBrbokAJ9ptK8';
-        const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-
-        const SESSION_KEY  = 'tdm_session';
+        // ─── Config ───────────────────────────────────────────────────────────────────
+        const API_KEY = 'AIzaSyCYPxDH_Q9oaGC3fjM5OXm_ycXsbIe3KDA';
+        const SPREADSHEET_ID = '133NiyjNApZGkEFs4jUvpJ9So-cSEzRVeW2FblwOCrjI';
+        const LOGIN_RANGE = 'LOGIN!A2:I';  // A=USUARIO B=NOMBRE C=CORREO D=TELEFONO E=ROL F=CONTRASEÑA G=TIMESTAMP H=ID_DEVICE I=ACTIVO
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzFkQsoAMCfnkoBHSTMMx4evKkAkwkBVlCu3eHIMVcam41GR2Q1_9YffhJSf8SeOC3_/exec';
+        const SESSION_KEY = 'tdm_session';
         const MAX_ATTEMPTS = 5;
-        const LOCKOUT_MS   = 5 * 60 * 1000;
+        const LOCKOUT_MS = 5 * 60 * 1000;        // 5 minutos
 
-        // ─── Redirect si ya hay sesión activa de Supabase ─────────────────────────────
-        (async function checkSession() {
+        // ─── Redirect si ya hay sesión válida ─────────────────────────────────────────
+        (function checkSession() {
             try {
-                const { data: { session } } = await _sb.auth.getSession();
-                if (session) window.location.replace('index.html');
+                const s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
+                if (s && s.usuario && s.ts && (Date.now() - s.ts) < 8 * 60 * 60 * 1000) {
+                    window.location.replace('index.html');
+                }
             } catch (_) { }
         })();
 
@@ -1132,7 +1131,9 @@
                 if (elapsed < LOCKOUT_MS) {
                     startLockoutUI(Math.ceil((LOCKOUT_MS - elapsed) / 1000));
                     return true;
-                } else { clearAttempts(); }
+                } else {
+                    clearAttempts();
+                }
             }
             return false;
         }
@@ -1163,91 +1164,19 @@
             a.count = (a.count || 0) + 1;
             a.ts = Date.now();
             setAttempts(a);
-            if (a.count >= MAX_ATTEMPTS) startLockoutUI(Math.ceil(LOCKOUT_MS / 1000));
-        }
-
-        // ─── Helpers UI ───────────────────────────────────────────────────────────────
-        function showError(msg) {
-            const el = document.getElementById('errorMsg');
-            document.getElementById('errorText').textContent = msg;
-            el.classList.remove('show');
-            void el.offsetWidth;
-            el.classList.add('show');
-        }
-        function hideError() { document.getElementById('errorMsg').classList.remove('show'); }
-
-        // ─── LOGIN con Supabase Auth ──────────────────────────────────────────────────
-        document.getElementById('loginForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
-            hideError();
-            if (checkLockout()) return;
-
-            const usuarioInput = document.getElementById('usuario').value.trim();
-            const password     = document.getElementById('contrasena').value;
-
-            if (!usuarioInput || !password) { showError('Completa todos los campos.'); return; }
-
-            const btn = document.getElementById('loginBtn');
-            btn.classList.add('loading');
-            btn.disabled = true;
-
-            try {
-                // El email puede ser el usuario directo si es email, o construirlo
-                // El OWNER usa coordinadorlogisticocdi@gmail.com — para otros usuarios
-                // usamos usuario@tdm.internal como convención
-                const email = usuarioInput.includes('@')
-                    ? usuarioInput
-                    : usuarioInput + '@tdm.internal';
-
-                const { data, error } = await _sb.auth.signInWithPassword({ email, password });
-
-                if (error) {
-                    registerFailedAttempt();
-                    const a = getAttempts();
-                    const left = MAX_ATTEMPTS - a.count;
-                    if (left > 0) {
-                        showError(`Credenciales incorrectas. Intentos restantes: ${left}`);
-                    }
-                    return;
-                }
-
-                // Login exitoso — guardar sesión compatible con el resto del código
-                clearAttempts();
-                const meta = data.user.user_metadata || {};
-                const session = {
-                    usuario:   meta.display_name || data.user.email,
-                    nombre:    meta.display_name || data.user.email,
-                    correo:    data.user.email,
-                    telefono:  data.user.phone   || '',
-                    rol:       meta.role          || 'USER',
-                    id_device: '',
-                    ts:        Date.now()
-                };
-                sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-                localStorage.setItem('tdm_user_name', session.nombre);
-                // Guardar credenciales para biometría (email + password en localStorage cifrado simple)
-                localStorage.setItem('tdm_biometric_email', email);
-                localStorage.setItem('tdm_biometric_pass',  password);
-                sessionStorage.setItem('tdm_show_welcome', 'true');
-
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando datos...';
-
-                // Precargar datos en segundo plano
-                preloadAppData().catch(err => console.warn('Precarga fallida:', err));
-
-                btn.innerHTML = '<i class="fas fa-check"></i> Acceso concedido';
-                setTimeout(() => window.location.replace('index.html'), 300);
-
-            } catch (err) {
-                console.error(err);
-                showError('Error de conexión. Verifica tu red e intenta de nuevo.');
-            } finally {
-                if (!document.getElementById('loginBtn').innerHTML.includes('check')) {
-                    btn.classList.remove('loading');
-                    btn.disabled = checkLockout();
-                }
+            if (a.count >= MAX_ATTEMPTS) {
+                startLockoutUI(Math.ceil(LOCKOUT_MS / 1000));
             }
-        });
+        }
+
+        // ─── Sheets GET ───────────────────────────────────────────────────────────────
+        async function fetchLoginSheet() {
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(LOGIN_RANGE)}?key=${API_KEY}`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Sheets error ${res.status}`);
+            const json = await res.json();
+            return json.values || [];
+        }
 
         // ─── Device ID — fingerprint ligero persistido en localStorage ───────────────
         function getDeviceId() {
@@ -1380,40 +1309,51 @@
             btn.disabled = true;
 
             try {
-                // Con Supabase Auth la biometría solo verifica el gesto del dispositivo.
-                // El email guardado en localStorage se usa para identificar al usuario.
-                const savedEmail = localStorage.getItem('tdm_biometric_email') || usuario;
-                const savedPass  = localStorage.getItem('tdm_biometric_pass')  || '';
+                const rows = await fetchLoginSheet();
 
-                if (!savedEmail || !savedPass) {
-                    showError('No se encontraron credenciales biométricas. Inicia sesión con contraseña.');
+                // Buscar usuario
+                const match = rows.find(row => norm(row[0]) === norm(usuario));
+
+                if (!match) {
+                    showError('Usuario no encontrado. Contacte al administrador.');
                     return;
                 }
 
-                const { data, error } = await _sb.auth.signInWithPassword({
-                    email:    savedEmail,
-                    password: savedPass
-                });
+                // Validar sesión activa y device
+                const userRole = String(match[4] || 'USER').trim().toUpperCase();
+                const isOwnerOrAdmin = userRole === 'OWNER' || userRole === 'ADMIN';
+                const registeredDevice = String(match[7] || '').trim();
+                const isActivo = String(match[8] || '').trim() === '1';
+                const myDevice = getDeviceId();
 
-                if (error) {
-                    showError('Error de autenticación biométrica. Usa tu contraseña.');
+                if (!isOwnerOrAdmin && isActivo && registeredDevice && registeredDevice !== myDevice) {
+                    showError('Esta cuenta tiene una sesión activa en otro dispositivo.');
                     return;
                 }
 
+                // Login exitoso
                 clearAttempts();
-                const meta = data.user.user_metadata || {};
+
                 const session = {
-                    usuario:  meta.display_name || data.user.email,
-                    nombre:   meta.display_name || data.user.email,
-                    correo:   data.user.email,
-                    telefono: data.user.phone   || '',
-                    rol:      meta.role          || 'USER',
-                    id_device: getDeviceId(),
+                    usuario: match[0] || '',
+                    nombre: match[1] || '',
+                    correo: match[2] || '',
+                    telefono: match[3] || '',
+                    rol: match[4] || 'USER',
+                    id_device: myDevice,
                     ts: Date.now()
                 };
                 sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
                 localStorage.setItem('tdm_user_name', session.nombre);
                 sessionStorage.setItem('tdm_show_welcome', 'true');
+
+                // Fire & forget
+                fireAndForget({
+                    action: 'register_login',
+                    id_usuario: match[0],
+                    timestamp: new Date().toISOString(),
+                    id_device: myDevice
+                });
 
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando datos...';
                 btn.style.background = 'linear-gradient(135deg, var(--primary), var(--primary-dark))';
@@ -1534,86 +1474,179 @@
             });
         }
 
-        // ─── Precarga de datos desde Supabase (con paginación por Range header) ───────
-        async function preloadAppData() {
-            const base = SUPABASE_URL + '/rest/v1';
+        // ─── Login ────────────────────────────────────────────────────────────────────
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            document.getElementById('errorText').textContent = msg;
+            el.classList.remove('show');
+            void el.offsetWidth; // reflow para re-trigger animación
+            el.classList.add('show');
+        }
 
-            // Obtener token JWT si el usuario inició sesión previamente
-            let token = SUPABASE_ANON;
-            try {
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
-                        const sessionData = JSON.parse(localStorage.getItem(key));
-                        if (sessionData?.access_token) { token = sessionData.access_token; break; }
-                    }
-                }
-            } catch(e) {}
+        function hideError() {
+            document.getElementById('errorMsg').classList.remove('show');
+        }
 
-            const headers = {
-                'apikey':         SUPABASE_ANON,
-                'Authorization': `Bearer ${token}`
-            };
+        document.getElementById('loginForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            hideError();
 
-            // Helper: obtener TODOS los registros de una tabla con Range header
-            async function fetchAllRows(url) {
-                const PAGE_SIZE = 1000;
-                let allRows = [];
-                let offset = 0;
-                while (true) {
-                    const res = await fetch(url, {
-                        headers: {
-                            ...headers,
-                            'Range':         `${offset}-${offset + PAGE_SIZE - 1}`,
-                            'Range-Unit':    'items'
-                        }
-                    });
-                    if (!res.ok) {
-                        console.error('Error en fetchAllRows:', res.status, await res.text());
-                        break;
-                    }
-                    const rows = await res.json();
-                    if (!Array.isArray(rows)) break;
-                    allRows = allRows.concat(rows);
-                    if (rows.length < PAGE_SIZE) break;
-                    offset += PAGE_SIZE;
-                }
-                return allRows;
+            if (checkLockout()) return;
+
+            const usuario = document.getElementById('usuario').value.trim();
+            const password = document.getElementById('contrasena').value;
+
+            if (!usuario || !password) {
+                showError('Completa todos los campos.');
+                return;
             }
 
-            const [incomeRows, budgetRows] = await Promise.all([
-                fetchAllRows(`${base}/ingresos?select=*`),
-                fetch(`${base}/presupuesto?select=*`, { headers: h }).then(r => r.ok ? r.json() : [])
-            ]);
+            const btn = document.getElementById('loginBtn');
+            btn.classList.add('loading');
+            btn.disabled = true;
 
-            const income = (Array.isArray(incomeRows) ? incomeRows : [])
-                .map(r => {
-                    const rawFecha = r.fecha_traslado || r.created_at || r.fecha_ingreso || '';
-                    const fechaStr = typeof rawFecha === 'string' ? rawFecha.substring(0, 10) : '';
-                    const productora = String(r.productora || '');
-                    return {
-                        FECHA:     fechaStr,
-                        CANTIDAD:  Number(r.cantidad) || 0,
-                        ANO:       fechaStr ? fechaStr.substring(0, 4) : '',
-                        PROVEEDOR: String(productora) === '900692469' ? 'ANGELES' : 'UNIVERSO'
-                    };
-                })
-                .filter(r => r.CANTIDAD > 0 && r.FECHA)
-                .sort((a, b) => a.FECHA.localeCompare(b.FECHA));
+            try {
+                const rows = await fetchLoginSheet();
 
-            const budget = (Array.isArray(budgetRows) ? budgetRows : []).map(r => ({
-                MES: r.mes, ANO: String(r.ano), TOTAL: r.total, HABILES: r.habiles,
-                LINEAS: {
-                    ANGELES: r.angeles||0, BASICO: r.basico||0, DEPORTIVO: r.deportivo||0,
-                    MODAFRESCA: r.modafresca||0, URBANO: r.urbano||0, BOGOTA: r.bogota||0,
-                    INTIMA: r.intima||0, ESPECIALES: r.especiales||0,
-                    PRONTAMODA: r.prontamoda||0, DENIM: r.denim||0
+                // col[0]=USUARIO | col[1]=NOMBRE | col[2]=CORREO | col[3]=TELEFONO | col[4]=ROL | col[5]=CONTRASEÑA | col[6]=TIMESTAMP | col[7]=ID_DEVICE | col[8]=ACTIVO
+                const match = rows.find(row => {
+                    const rowUsuario = norm(row[0]);
+                    const rowPass = String(row[5] || '').trim();
+                    return rowUsuario === norm(usuario) && rowPass === password;
+                });
+
+                if (!match) {
+                    registerFailedAttempt();
+                    const a = getAttempts();
+                    const left = MAX_ATTEMPTS - a.count;
+                    if (left > 0) {
+                        showError(`Usuario o contraseña incorrectos. Intentos restantes: ${left}`);
+                    }
+                    return;
                 }
-            }));
 
-            if (income.length > 0) {
-                sessionStorage.setItem('tdm_preload_data_v3', JSON.stringify({ income, budget, timestamp: Date.now() }));
-                console.log(`✓ Datos precargados desde Supabase (${income.length} ingresos, ${budget.length} presupuestos)`);
+                // ── Validar sesión activa y device — OWNER y ADMIN tienen acceso multiplataforma ──
+                const userRole = String(match[4] || 'USER').trim().toUpperCase();
+                const isOwnerOrAdmin = userRole === 'OWNER' || userRole === 'ADMIN';
+                const registeredDevice = String(match[7] || '').trim();
+                const isActivo = String(match[8] || '').trim() === '1';
+                const myDevice = getDeviceId();
+
+                // Si NO es OWNER/ADMIN y hay sesión activa en otro dispositivo → rechazar
+                if (!isOwnerOrAdmin && isActivo && registeredDevice && registeredDevice !== myDevice) {
+                    showError('Esta cuenta tiene una sesión activa en otro dispositivo.');
+                    return;
+                }
+
+                // Login exitoso
+                clearAttempts();
+
+                const session = {
+                    usuario: match[0] || '',
+                    nombre: match[1] || '',
+                    correo: match[2] || '',
+                    telefono: match[3] || '',
+                    rol: match[4] || 'USER',
+                    id_device: myDevice,
+                    ts: Date.now()
+                };
+                sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+
+                // Guardar nombre de usuario en localStorage para persistencia
+                localStorage.setItem('tdm_user_name', session.nombre);
+
+                // Marcar que debe mostrar la bienvenida (solo esta vez)
+                sessionStorage.setItem('tdm_show_welcome', 'true');
+
+                // GAS fire & forget — no bloqueamos el redirect
+                fireAndForget({ action: 'register_login', id_usuario: match[0], timestamp: new Date().toISOString(), id_device: myDevice });
+
+                // Ofrecer registro biométrico si está disponible y no está registrado
+                if (window.PublicKeyCredential && typeof BIOMETRY !== 'undefined') {
+                    const isSupported = await BIOMETRY.isSupported();
+                    const isRegistered = BIOMETRY.isRegistered();
+
+                    if (isSupported && !isRegistered) {
+                        // Mostrar modal para ofrecer biometría
+                        await offerBiometricRegistration(session.nombre);
+                    }
+                }
+
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando datos...';
+                btn.style.background = 'linear-gradient(135deg, var(--primary), var(--primary-dark))';
+
+                // Precargar datos en segundo plano
+                preloadAppData().then(() => {
+                    btn.innerHTML = '<i class="fas fa-check"></i> Acceso concedido';
+                    setTimeout(() => window.location.replace('index.html'), 300);
+                }).catch(err => {
+                    console.warn('Error precargando datos, continuando sin precarga:', err);
+                    btn.innerHTML = '<i class="fas fa-check"></i> Acceso concedido';
+                    setTimeout(() => window.location.replace('index.html'), 300);
+                });
+
+            } catch (err) {
+                console.error(err);
+                showError('Error de conexión. Verifica tu red e intenta de nuevo.');
+            } finally {
+                if (!document.getElementById('loginBtn').style.background.includes('var(--primary)')) {
+                    btn.classList.remove('loading');
+                    btn.disabled = checkLockout();
+                }
+            }
+        });
+
+        // ─── Precarga de datos ────────────────────────────────────────────────────────
+        async function preloadAppData() {
+            try {
+                const API_KEY = 'AIzaSyCYPxDH_Q9oaGC3fjM5OXm_ycXsbIe3KDA';
+                const SPREADSHEET_IDS = {
+                    DATA2: '133NiyjNApZGkEFs4jUvpJ9So-cSEzRVeW2FblwOCrjI',
+                    REC: '1esc5REq0c03nHLpGcLwZRW29yq2gZnrpbz75gCCjrqc',
+                    REC2024: '1Gzwybsv6KjGBDc6UeAo57AV5W0gK-bjWTA-AcKLJOlY',
+                    BUDGETID: '10P1BtnwjUrSuM4ZajAdUiHXNEzpi4H2zsJvQVYp5jtQ'
+                };
+
+                // Función helper para batchGet
+                async function batchGetRanges(spreadsheetId, ranges) {
+                    const params = ranges.map(r => `ranges=${encodeURIComponent(r)}`).join('&');
+                    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?${params}&key=${API_KEY}`;
+                    const res = await fetch(url);
+                    if (!res.ok) throw new Error(`Sheets error ${res.status}`);
+                    const json = await res.json();
+                    return (json.valueRanges || []).map(vr => vr.values || []);
+                }
+
+                // Cargar datos en paralelo
+                const [incomeData, budgetData] = await Promise.all([
+                    // Income data
+                    Promise.all([
+                        batchGetRanges(SPREADSHEET_IDS.DATA2, ['DATA2!S2:S']).then(r => r[0]),
+                        batchGetRanges(SPREADSHEET_IDS.REC, ['DataBase!A2:AF']).then(r => r[0]),
+                        batchGetRanges(SPREADSHEET_IDS.REC2024, ['DataBase!A2:AF']).then(r => r[0])
+                    ]).then(results => ({ main: results[0], rec: results[1], rec2024: results[2] })),
+
+                    // Budget data
+                    batchGetRanges(SPREADSHEET_IDS.BUDGETID, [
+                        'PRESUPUESTO 2026!A1:Z',
+                        'PRESUPUESTO 2025!A1:Z',
+                        'PRESUPUESTO 2024!A1:Z'
+                    ]).then(results => ({ y2026: results[0], y2025: results[1], y2024: results[2] }))
+                ]);
+
+                // Guardar en sessionStorage con timestamp
+                const preloadData = {
+                    income: incomeData,
+                    budget: budgetData,
+                    timestamp: Date.now()
+                };
+
+                sessionStorage.setItem('tdm_preload_data', JSON.stringify(preloadData));
+                console.log('✓ Datos precargados exitosamente');
+
+            } catch (err) {
+                console.warn('Error en precarga de datos:', err);
+                throw err;
             }
         }
 
