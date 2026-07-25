@@ -554,6 +554,63 @@ function setProveedorActivo(id, nombre) {
     Logger.info('proveedor-selector', `Proveedor activo cambiado silenciosamente: ${id} - ${nombre}`);
 }
 
+/**
+ * Detecta automáticamente la línea a partir de los lotes/registros (consultando sisproMap/master)
+ * y actualiza inmediatamente el proveedor activo en el indicador UI (proveedorIndicatorText).
+ */
+function detectAndSetProveedorFromLotes(lotes = [], records = []) {
+    let lineaDetectada = '';
+
+    // 1. Intentar obtener la línea desde los registros si ya vienen procesados
+    if (records && records.length > 0) {
+        for (const r of records) {
+            const l = (r.cuento || r.linea || r.LINEA || '').toString().trim().toUpperCase();
+            if (l) {
+                lineaDetectada = l;
+                break;
+            }
+        }
+    }
+
+    // 2. Si no se encontró en los registros, consultar en window.sisproMap (catálogo master local)
+    if (!lineaDetectada && window.sisproMap && window.sisproMap instanceof Map) {
+        for (const op of lotes) {
+            const opStr = String(op).trim();
+            const baseOp = opStr.split('.')[0].split('_')[0].trim();
+            const sispro = window.sisproMap.get(opStr) || window.sisproMap.get(baseOp);
+            if (sispro && sispro.LINEA) {
+                lineaDetectada = sispro.LINEA.toString().trim().toUpperCase();
+                break;
+            }
+        }
+    }
+
+    if (!lineaDetectada) return null;
+
+    // Map de Línea → Productora (NIT y Nombre)
+    let productoraId = '900616124';
+    let nombreProd = 'TEXTILES Y CREACIONES EL UNIVERSO SAS';
+
+    if (lineaDetectada.includes('ANGELES') || lineaDetectada.includes('ÁNGELES')) {
+        productoraId = '900692469';
+        nombreProd = 'TEXTILES Y CREACIONES LOS ANGELES SAS';
+    } else if (lineaDetectada.includes('INVERSIONES')) {
+        productoraId = '901920844';
+        nombreProd = 'INVERSIONES URBANA S A S';
+    }
+
+    const actual = (typeof getProveedorActivo === 'function') ? getProveedorActivo() : null;
+    if (!actual || actual.id !== productoraId) {
+        setProveedorActivo(productoraId, nombreProd);
+        Logger.info('proveedor-selector', `🏢 Proveedor cambiado automáticamente por línea '${lineaDetectada}' → ${productoraId} (${nombreProd})`);
+        if (typeof showMessage === 'function') {
+            showMessage(`Proveedor cambiado a ${nombreProd} (Línea ${lineaDetectada})`, 'info', 2500);
+        }
+    }
+
+    return { productoraId, nombreProd, lineaDetectada };
+}
+
 // Exports
 window.showProveedorSelector = showProveedorSelector;
 window.closeProveedorSelector = closeProveedorSelector;
@@ -565,3 +622,5 @@ window.syncProveedorToSelect = syncProveedorToSelect;
 window.initProveedorSelector = initProveedorSelector;
 window.proveedorActivo = proveedorActivo;
 window.setProveedorActivo = setProveedorActivo;
+window.detectAndSetProveedorFromLotes = detectAndSetProveedorFromLotes;
+

@@ -918,20 +918,17 @@ async function loadData2FromSupabase(lotes = []) {
         Logger.info('supabase-service', 'Cargando ingresos confirmados desde Supabase...');
         const startTime = performance.now();
 
-        const proveedorActivo = (typeof getProveedorActivo === 'function') ? getProveedorActivo() : null;
-
         let result;
 
         if (lotes.length > 0) {
-            // Bajo demanda: solo los lotes del CSV — 1 sola request con filtro IN
+            // Bajo demanda: solo los lotes del CSV o Excel — 1 sola request con filtro IN
+            // NOTA: Se consulta la tabla 'ingresos' sin restringir por el proveedor seleccionado en la UI,
+            // para garantizar que la validación de OPs (confirmados / pendientes) funcione correctamente 
+            // con cualquier productora o línea.
             const lotesClean = [...new Set(lotes.map(l => String(l).trim()).filter(Boolean))];
-            // lote es numeric en Supabase — sin comillas en el filtro IN
-            let qs = `select=id_ingreso,lote,fecha_traslado,total,total_relativo,cantidad,diferencia,traslado,otros_traslados,anexos,total_general,detalle_cantidades` +
+            let qs = `select=id_ingreso,lote,fecha_traslado,total,total_relativo,cantidad,diferencia,traslado,otros_traslados,anexos,total_general,detalle_cantidades,productora` +
                      `&lote=in.(${lotesClean.join(',')})&order=created_at.asc`;
-            if (proveedorActivo) qs += `&productora=eq.${proveedorActivo.id}`;
             const url = `${SUPABASE_URL}/rest/v1/ingresos?${qs}`;
-            // Usar el token de sesión del usuario autenticado (requerido por RLS)
-            // supabase.getHeaders() ya incluye el access_token si el usuario está logueado
             const headers = supabase.getHeaders();
             const res = await fetch(url, { headers });
             if (!res.ok) {
