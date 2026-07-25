@@ -32,11 +32,12 @@ async function loadDataFromSheets(silent = false) {
             loadProveedoresData(),
             loadAuditoresData(),
             loadGestoresData(),
-            // Datos operativos (sin ingresos ni sispro — se cargan bajo demanda al subir CSV)
+            // Datos operativos
             loadColoresData(),
             loadBarrasData(),
             loadPreciosData(),
             loadHistoricasData(),
+            loadSisproData(), // Catálogo Master Local (sincronizado por Edge Function)
             // Tablas globales del proyecto secundario
             loadGlobalMaps().catch(err => Logger.warn('app-init', 'Tablas globales no disponibles', err))
         ]);
@@ -209,6 +210,7 @@ function updateDataStats() {
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     set('stat-colores',   coloresMap.size);
     set('stat-ops',       data2Map.size);
+    set('stat-master',    window.sisproMap?.size || 0);
     set('stat-precios',   preciosMap.size);
     set('stat-productos', barrasMap.size);  // Códigos de barras
     set('stat-clientes',  clientesMap.size);
