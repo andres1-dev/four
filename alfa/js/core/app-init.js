@@ -8,7 +8,7 @@ function initializeApp() {
 }
 
 async function loadDataFromSheets(silent = false) {
-    updateStatus('Cargando datos desde Google Sheets...', 'loading');
+    updateStatus('Cargando datos esenciales...', 'loading');
     statusTimingStart();
     
     const processBtn = document.getElementById('processBtn');
@@ -17,47 +17,48 @@ async function loadDataFromSheets(silent = false) {
         processBtn.innerHTML = '<span class="loading-spinner"></span> Cargando datos...';
     }
 
-    const loading = showQuickLoading('Cargando datos globales y configuración...');
+    const loading = showQuickLoading('Cargando configuración base...');
 
     try {
-        // Primero cargar datos de configuración dinámica
-        await loadAllConfigData();
+        // Inicializar selector de proveedor con proveedor por defecto
+        if (typeof window.initProveedorSelector === 'function') {
+            window.initProveedorSelector();
+        }
 
-        // Luego cargar el resto de datos en paralelo
+        // UN SOLO Promise.all — todas las tablas en paralelo simultáneo
         await Promise.all([
+            // Config (pequeñas, rápidas)
+            loadUsuariosData(),
+            loadProveedoresData(),
+            loadAuditoresData(),
+            loadGestoresData(),
+            // Datos operativos (sin ingresos ni sispro — se cargan bajo demanda al subir CSV)
             loadColoresData(),
-            loadData2Data(),
+            loadBarrasData(),
             loadPreciosData(),
-            loadSisproData(),
             loadHistoricasData(),
-            loadClientesData()
+            // Tablas globales del proyecto secundario
+            loadGlobalMaps().catch(err => Logger.warn('app-init', 'Tablas globales no disponibles', err))
         ]);
 
-        Logger.info('app-init', 'Datos base cargados, inicializando módulos...');
+        // Clientes en background — no bloquea la UI
+        loadClientesData().catch(err => Logger.warn('app-init', 'Clientes no cargados en background', err))
+            .then(() => updateDataStats());
+
+        Logger.info('app-init', 'Datos base cargados. Módulos se cargarán bajo demanda.');
 
         // Cargar opciones dinámicas en los selects
         if (typeof loadAllDynamicOptions === 'function') {
             loadAllDynamicOptions();
         }
 
-        // Inicializar módulos en paralelo
-        await Promise.all([
-            initializeDistribution(),
-            initOrdersModule().catch(err => {
-                console.error("Error cargando módulo de pedidos:", err);
-            }),
-            print_cargarDatos().catch(err => {
-                console.error("Error cargando módulo de impresión:", err);
-            })
-        ]);
-
         updateDataStats();
         revealStatItems();
         statusTimingEnd(true);
-        updateStatus('Datos cargados correctamente', 'success');
+        updateStatus('Sistema listo', 'success');
 
         if (!silent) {
-            showMessage('Sistema listo - Todos los módulos cargados', 'success', 2000);
+            showMessage('Sistema listo - Los módulos se cargarán cuando los abras', 'success', 2000);
         }
 
     } catch (error) {
@@ -83,20 +84,23 @@ async function loadDataAfterSave(silent = true) {
     updateStatus('Sincronizando datos...', 'loading');
 
     try {
-        // Solo recargar DATA2 (la única hoja que cambió al guardar la OP)
+        // Solo recargar DATA2 (ingresos confirmados — la única tabla que cambió al guardar la OP)
         await loadData2Data();
 
-        // Actualizar módulos dependientes en paralelo
-        await Promise.all([
-            initializeDistribution(),
-            print_cargarDatos().catch(err => {
-                console.error("Error cargando módulo de impresión:", err);
-            })
-        ]);
+        // Si el módulo de distribución está activo, recargarlo
+        if (window.distributionModuleLoaded) {
+            await initializeDistribution();
+        }
 
-        // Actualizar stats (solo DATA2 cambió)
-        const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-        set('stat-ops', data2Map.size);
+        // Si el módulo de impresión está activo, recargarlo
+        if (window.printingModuleLoaded) {
+            await print_cargarDatos().catch(err => {
+                console.error("Error cargando módulo de impresión:", err);
+            });
+        }
+
+        // Actualizar stats
+        updateDataStats();
 
         updateStatus('Datos sincronizados', 'success');
 
@@ -111,12 +115,102 @@ async function loadDataAfterSave(silent = true) {
     }
 }
 
+/**
+ * Carga datos necesarios para el procesador CSV y OPs pendientes
+ */
+async function loadProcessorModuleData() {
+    if (window.processorModuleLoaded) return;
+    
+    const loading = showQuickLoading('Cargando datos del procesador...');
+    try {
+        await Promise.all([
+            loadPreciosData()
+        ]);
+        window.processorModuleLoaded = true;
+        updateDataStats();
+        Logger.info('app-init', 'Módulo procesador cargado');
+    } catch (error) {
+        Logger.error('app-init', 'Error cargando módulo procesador', error);
+        throw error;
+    } finally {
+        loading.close();
+    }
+}
+
+/**
+ * Carga datos necesarios para el módulo de distribución
+ */
+async function loadDistributionModuleData() {
+    if (window.distributionModuleLoaded) return;
+    
+    const loading = showQuickLoading('Cargando datos de distribución...');
+    try {
+        // Asegurar que clientes esté cargado (puede venir del background o necesitar esperar)
+        if (!window.clientesMap || window.clientesMap.size === 0) {
+            await loadClientesData();
+        }
+        await Promise.all([
+            loadSisproData(),    // carga bajo demanda con las OPs del módulo
+            initializeDistribution()
+        ]);
+        window.distributionModuleLoaded = true;
+        updateDataStats();
+        Logger.info('app-init', 'Módulo distribución cargado');
+    } catch (error) {
+        Logger.error('app-init', 'Error cargando módulo distribución', error);
+        throw error;
+    } finally {
+        loading.close();
+    }
+}
+
+/**
+ * Carga datos necesarios para el módulo de impresión
+ */
+async function loadPrintingModuleData() {
+    if (window.printingModuleLoaded) return;
+    
+    const loading = showQuickLoading('Cargando datos de impresión...');
+    try {
+        await Promise.all([
+            print_cargarDatos()
+        ]);
+        window.printingModuleLoaded = true;
+        updateDataStats();
+        Logger.info('app-init', 'Módulo impresión cargado');
+    } catch (error) {
+        Logger.error('app-init', 'Error cargando módulo impresión', error);
+        throw error;
+    } finally {
+        loading.close();
+    }
+}
+
+/**
+ * Carga datos necesarios para el módulo de pedidos
+ */
+async function loadOrdersModuleData() {
+    if (window.ordersModuleLoaded) return;
+    
+    const loading = showQuickLoading('Cargando datos de pedidos...');
+    try {
+        await initOrdersModule();
+        window.ordersModuleLoaded = true;
+        Logger.info('app-init', 'Módulo pedidos cargado');
+    } catch (error) {
+        Logger.error('app-init', 'Error cargando módulo pedidos', error);
+        throw error;
+    } finally {
+        loading.close();
+    }
+}
+
 function updateDataStats() {
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     set('stat-colores',   coloresMap.size);
     set('stat-ops',       data2Map.size);
     set('stat-precios',   preciosMap.size);
-    set('stat-productos', sisproMap.size);
+    set('stat-productos', barrasMap.size);  // Códigos de barras
     set('stat-clientes',  clientesMap.size);
     set('stat-usuarios',  escanersMap.size);
     set('stat-proveedores', proveedoresMap.size);
@@ -132,3 +226,7 @@ window.initializeApp = initializeApp;
 window.loadDataFromSheets = loadDataFromSheets;
 window.loadDataAfterSave = loadDataAfterSave;
 window.updateDataStats = updateDataStats;
+window.loadProcessorModuleData = loadProcessorModuleData;
+window.loadDistributionModuleData = loadDistributionModuleData;
+window.loadPrintingModuleData = loadPrintingModuleData;
+window.loadOrdersModuleData = loadOrdersModuleData;

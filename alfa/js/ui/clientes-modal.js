@@ -236,8 +236,11 @@ async function saveClienteFromForm() {
     }
 
     const btn = document.getElementById('clienteFormSaveBtn');
+    if (!btn) return;
+    
     btn.disabled = true;
-    btn.innerHTML = '<span class="loading-spinner"></span> Guardando...';
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="codicon codicon-loading codicon-modifier-spin"></i> Guardando...';
 
     // Fila en orden exacto de CLIENTES: ID | Razón Social | Nombre Corto | Tipo Cliente | Estado | Dirección | Teléfono | Email | Tipo Empresa
     const fila = [id, razon, corto, tipo, estado, direccion, telefono, email, tipoEmp];
@@ -249,15 +252,22 @@ async function saveClienteFromForm() {
         } else {
             await saveNewClienteData([fila]);
         }
+        
+        // Recargar datos desde Supabase
         await loadClientesData();
+        
+        // Actualizar tabla
         updateClientesTable();
+        
+        // Cerrar modal
         closeClienteFormModal();
+        
         Notifications.show(isUpdate ? `Cliente ${id} actualizado` : `Cliente ${id} creado`, 'success');
     } catch (err) {
         Logger.error('clientes-modal', 'Error guardando cliente', err);
         Notifications.show('Error al guardar: ' + err.message, 'error');
         btn.disabled = false;
-        btn.innerHTML = '<i class="codicon codicon-save"></i> Guardar';
+        btn.innerHTML = originalHTML;
     }
 }
 

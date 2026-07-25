@@ -108,12 +108,15 @@ function setupPendientesSection(pendientes) {
         const option = document.createElement('option');
         option.value = grupo.op;
         const primerItem = grupo.items[0];
-        const tieneSispro = sisproMap.has(grupo.op.trim());
-        const tieneColor = !primerItem.COD_COLOR || coloresMap.has(primerItem.COD_COLOR.trim());
+        
+        // Validar color — para BUSINT/Excel el COD_COLOR es código de barras, no está en coloresMap → siempre válido
+        const tieneColor = primerItem.FUENTE === 'BUSINT'
+            || !primerItem.COD_COLOR
+            || coloresMap.has(primerItem.COD_COLOR.trim());
 
-        if (!tieneSispro || !tieneColor) {
+        if (!tieneColor) {
             option.disabled = true;
-            option.textContent = `✗ OP: ${grupo.opSufijo} — DESHABILITADA`;
+            option.textContent = `✗ OP: ${grupo.opSufijo} — DESHABILITADA (Color faltante)`;
         } else {
             let icono = '';
             if (grupo.esParcial) icono = '↳ ';

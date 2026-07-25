@@ -4,17 +4,30 @@
  * Punto de entrada principal para inicializar la orquestación.
  * Se encarga de coordinar la UI y las capas del sistema.
  */
-function bootMainApplication() {
+async function bootMainApplication() {
     Logger.info('app', '🚀 Iniciando orquestación maestra...');
 
-    // 0. Setups básicos de UI
+    // 0. AUTH GUARD - Verificar autenticación PRIMERO
+    if (typeof window.initAuthGuard === 'function') {
+        Logger.info('app', '🔐 Verificando autenticación...');
+        const isAuthenticated = await window.initAuthGuard();
+        
+        if (!isAuthenticated) {
+            Logger.error('app', '❌ Autenticación fallida, deteniendo aplicación');
+            return;
+        }
+        
+        Logger.success('app', '✅ Usuario autenticado correctamente');
+    }
+
+    // 1. Setups básicos de UI
     if (typeof window.setupTheme === 'function') window.setupTheme();
     if (typeof window.setupTabSystem === 'function') window.setupTabSystem();
 
-    // 1. Configurar TODOS los event listeners (Definido aquí)
+    // 2. Configurar TODOS los event listeners (Definido aquí)
     setupAllEventListeners();
 
-    // 2. Inicializar la app core (Definido en app-init.js)
+    // 3. Inicializar la app core (Definido en app-init.js)
     // El núcleo ya maneja setupTheme, setupTabSystem y la carga de datos.
     if (typeof window.initializeApp === 'function') {
         Logger.info('app', '📞 Lanzando initializeApp desde el núcleo...');
@@ -23,15 +36,15 @@ function bootMainApplication() {
         console.error('CRITICAL ERROR: window.initializeApp not found in app-init.js');
     }
 
-    // 3. Cargar traslados cancelados desde localStorage
+    // 4. Cargar traslados cancelados desde localStorage
     if (typeof window.loadCancelledTransfersFromStorage === 'function') {
         window.loadCancelledTransfersFromStorage();
     }
 
-    // 4. Listeners para módulos bajo demanda
+    // 5. Listeners para módulos bajo demanda
     setupModuleSpecificListeners();
 
-    // 5. Cargar opciones dinámicas después de un delay
+    // 6. Cargar opciones dinámicas después de un delay
     setTimeout(() => {
         if (typeof window.loadAllDynamicOptions === 'function') {
             window.loadAllDynamicOptions();
@@ -111,6 +124,7 @@ function setupAllEventListeners() {
 
     // ---- Sidebar & Tabs ----
     safeAdd('settingsBtn', 'click', () => window.showSettingsModal && window.showSettingsModal());
+    safeAdd('logoutBtn', 'click', () => window.handleLogout && window.handleLogout());
 
     // ---- Business Actions (Pending OPs, Editor, JSON) ----
     safeAdd('selectOP', 'change', () => window.loadOPData && window.loadOPData());
@@ -161,3 +175,28 @@ function setupModuleSpecificListeners() {
     bindTab('printing-module', window.initPrintingModule);
     bindTab('orders-module',   window.initOrdersModule);
 }
+
+/**
+ * Maneja el cierre de sesión del usuario
+ */
+function handleLogout() {
+    const confirmed = confirm('¿Estás seguro de que deseas cerrar sesión?');
+    if (confirmed) {
+        // Limpiar sessionStorage
+        sessionStorage.removeItem('supabase_token');
+        sessionStorage.removeItem('supabase_user');
+        
+        // Mostrar mensaje
+        if (typeof showMessage === 'function') {
+            showMessage('Sesión cerrada correctamente', 'success', 1500);
+        }
+        
+        // Redirigir al login después de un breve delay
+        setTimeout(() => {
+            window.location.href = 'login.html';
+        }, 1500);
+    }
+}
+
+// Exportar función de logout
+window.handleLogout = handleLogout;

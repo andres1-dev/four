@@ -62,6 +62,13 @@ function setupButtonListeners() {
         settingsBtn.addEventListener('click', showSettingsModal);
     }
 
+    const logoutBtn = document.getElementById('logoutBtn');
+    console.log('Logout button found:', logoutBtn); // Debug
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+        console.log('Logout event listener attached'); // Debug
+    }
+
     const exportBtn = document.getElementById('exportCancelledBtn');
     if (exportBtn) {
         exportBtn.addEventListener('click', exportCancelledTransfers);
@@ -73,8 +80,30 @@ function setupButtonListeners() {
     }
 }
 
+function handleLogout() {
+    console.log('handleLogout called'); // Debug
+    const confirmed = confirm('¿Estás seguro de que deseas cerrar sesión?');
+    console.log('User confirmed:', confirmed); // Debug
+    if (confirmed) {
+        // Limpiar sessionStorage
+        sessionStorage.removeItem('supabase_token');
+        sessionStorage.removeItem('supabase_user');
+        
+        // Mostrar mensaje
+        if (typeof showMessage === 'function') {
+            showMessage('Sesión cerrada correctamente', 'success', 1500);
+        }
+        
+        // Redirigir al login después de un breve delay
+        setTimeout(() => {
+            window.location.href = 'login.html';
+        }, 1500);
+    }
+}
+
 // ============================================
 // EXPORTS
 // ============================================
 
 window.setupEventListeners = setupEventListeners;
+window.handleLogout = handleLogout;

@@ -6,6 +6,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Procesador CSV - IDE</title>
 
+    <!-- AUTH GUARD INMEDIATO - Bloquea acceso antes de cargar nada -->
+    <script>
+        (function() {
+            // Verificar autenticación ANTES de cargar cualquier cosa
+            const token = sessionStorage.getItem('supabase_token');
+            const user = sessionStorage.getItem('supabase_user');
+            
+            if (!token || !user) {
+                // No hay sesión, redirigir inmediatamente
+                window.location.replace('login.html');
+                // Detener ejecución del resto del script
+                throw new Error('No authenticated');
+            }
+            
+            // Verificar si el token está expirado
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                const expirationTime = payload.exp * 1000;
+                const currentTime = Date.now();
+                
+                if (currentTime >= expirationTime) {
+                    // Token expirado
+                    sessionStorage.clear();
+                    alert('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
+                    window.location.replace('login.html');
+                    throw new Error('Token expired');
+                }
+            } catch (e) {
+                // Error al verificar token
+                sessionStorage.clear();
+                window.location.replace('login.html');
+                throw new Error('Invalid token');
+            }
+        })();
+    </script>
+
     <!-- VS Code Icons -->
     <link href="https://cdn.jsdelivr.net/npm/@vscode/codicons@0.0.32/dist/codicon.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -48,6 +84,9 @@
             </button>
             <button class="activity-icon" id="settingsBtn" title="Configuración">
                 <i class="codicon codicon-settings-gear"></i>
+            </button>
+            <button class="activity-icon" id="logoutBtn" title="Cerrar Sesión">
+                <i class="codicon codicon-sign-out"></i>
             </button>
         </div>
     </div>
@@ -145,9 +184,9 @@
                     <div class="file-upload-area">
                         <div class="upload-box empty-state" id="uploadBox">
                             <i class="fa-solid fa-file-csv upload-icon"></i>
-                            <h5>Cargar Archivo CSV</h5>
+                            <h5>Cargar Archivo CSV o Excel</h5>
                             <p>Arrastra tu archivo aquí o haz clic para seleccionar</p>
-                            <input type="file" id="csvFile" accept=".csv" hidden>
+                            <input type="file" id="csvFile" accept=".csv,.xlsx,.xls" hidden>
                         </div>
                     </div>
 
@@ -248,9 +287,14 @@
 
                     <div id="opEditorContainer" style="display:none;">
                         <div class="editor-form-section">
-                            <h5 class="editor-form-title">
-                                <i class="codicon codicon-edit"></i>
-                                Información de Cabecera
+                            <h5 class="editor-form-title" style="display: flex; flex-direction: column; gap: 8px;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <i class="codicon codicon-edit"></i>
+                                    Información de Cabecera
+                                </div>
+                                <div id="opDescripcionLargaDisplay" style="font-size: 0.9em; font-weight: normal; color: var(--text-secondary); font-style: italic; padding-left: 24px;">
+                                    <!-- Se actualiza dinámicamente con JavaScript -->
+                                </div>
                             </h5>
                             <div class="editor-form-grid">
                                 <!-- Metadatos de la OP (Solo Lectura) -->
@@ -268,28 +312,124 @@
                                     </label>
                                     <input type="text" id="opRefReadonly" class="form-control" readonly>
                                 </div>
+
                                 <div class="form-group">
-                                    <label for="opPrendaReadonly">
-                                        <i class="codicon codicon-symbol-class"></i>
+                                    <label for="opPrendaEdit">
+                                        <i class="codicon codicon-jersey"></i>
                                         Prenda
                                     </label>
-                                    <input type="text" id="opPrendaReadonly" class="form-control" readonly>
+                                    <input type="text" id="opPrendaEdit" class="form-control" placeholder="Ej: CAMISETA" list="prendas-datalist">
+                                </div>
+
+                                <!-- Datalist de prendas válidas (invisible, solo para autocompletado) -->
+                                <datalist id="prendas-datalist">
+                                  <option>BATOLA</option>
+                                  <option>BERMUDA</option>
+                                  <option>BLUSA</option>
+                                  <option>BODY</option>
+                                  <option>BOXER</option>
+                                  <option>BUSO</option>
+                                  <option>CACHETERO</option>
+                                  <option>CAMISA</option>
+                                  <option>CAMISERA</option>
+                                  <option>CAMISETA</option>
+                                  <option>CAMISILLA</option>
+                                  <option>CAPRI</option>
+                                  <option>CARGO</option>
+                                  <option>CHALECO</option>
+                                  <option>CHAQUETA</option>
+                                  <option>COBIJA</option>
+                                  <option>CONJUNTO</option>
+                                  <option>CORSET</option>
+                                  <option>CROPTOP</option>
+                                  <option>DUO BLUSA</option>
+                                  <option>DUO BOXER</option>
+                                  <option>DUO CACHETERO</option>
+                                  <option>DUO CAMISETA</option>
+                                  <option>DUO CAMISILLA</option>
+                                  <option>DUO PANTALONETA</option>
+                                  <option>DUO SHORT</option>
+                                  <option>ENTERIZO</option>
+                                  <option>FALDA</option>
+                                  <option>JARDINERA</option>
+                                  <option>JEAN</option>
+                                  <option>JOGGER</option>
+                                  <option>JORT</option>
+                                  <option>LEVANTADORA</option>
+                                  <option>LYCRA</option>
+                                  <option>PACK X 5</option>
+                                  <option>PANTALON</option>
+                                  <option>PANTALONETA</option>
+                                  <option>PIJAMA</option>
+                                  <option>PISCINERO</option>
+                                  <option>POLO</option>
+                                  <option>SALIDA DE BAÑO</option>
+                                  <option>SHORT</option>
+                                  <option>SOBRETODO</option>
+                                  <option>SUDADERA</option>
+                                  <option>TOP</option>
+                                  <option>TRIO BLUSA</option>
+                                  <option>TRIO JUANA</option>
+                                  <option>TRIO TANGA</option>
+                                  <option>VESTIDO</option>
+                                </datalist>
+
+                                <div class="form-group">
+                                    <label for="opGeneroEdit">
+                                        <i class="codicon codicon-person"></i>
+                                        Género
+                                    </label>
+                                    <select id="opGeneroEdit" class="form-control">
+                                        <option value="">Seleccione...</option>
+                                        <option value="DAMA">DAMA</option>
+                                        <option value="HOMBRE">HOMBRE</option>
+                                        <option value="NIÑO">NIÑO</option>
+                                        <option value="NIÑA">NIÑA</option>
+                                        <option value="UNISEX">UNISEX</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="opLineaEdit">
+                                        <i class="codicon codicon-list-flat"></i>
+                                        Línea
+                                    </label>
+                                    <input type="text" id="opLineaEdit" class="form-control" placeholder="Ej: MODA">
                                 </div>
                                 <div class="form-group">
                                     <label for="opTotalReadonly">
-                                        <i class="codicon codicon-graph-pie"></i>
+                                        <i class="codicon codicon-symbol-numeric"></i>
                                         Total OP (unds)
                                     </label>
                                     <input type="text" id="opTotalReadonly" class="form-control" readonly>
                                 </div>
+
+                                <!-- Campos exclusivos para Excel/BUSINT -->
+                                <div class="form-group" id="opLoteEditGroup" style="display:none;">
+                                    <label for="opLoteEdit">
+                                        <i class="codicon codicon-tag"></i>
+                                        Lote / OP
+                                    </label>
+                                    <input type="text" id="opLoteEdit" class="form-control" placeholder="Número de lote">
+                                </div>
+                                <div class="form-group" id="opTipoEditGroup" style="display:none;">
+                                    <label for="opTipoEdit">
+                                        <i class="codicon codicon-symbol-enum"></i>
+                                        Tipo
+                                    </label>
+                                    <select id="opTipoEdit" class="form-control">
+                                        <option value="FULL">FULL</option>
+                                        <option value="PENDIENTES">PENDIENTES</option>
+                                    </select>
+                                </div>
+
                                 <div class="form-group">
                                     <label for="proveedor">
                                         <i class="codicon codicon-organization"></i>
                                         Proveedor
                                     </label>
-                                    <select id="proveedor" class="form-control" required>
-                                        <option value="">Seleccione...</option>
-                                    </select>
+                                    <input type="text" id="proveedor" class="form-control" readonly 
+                                           style="background-color: var(--input-bg); cursor: not-allowed;"
+                                           placeholder="Seleccione proveedor con Ctrl+S">
                                 </div>
 
                                 <div class="form-group">
@@ -480,9 +620,9 @@
                                 </label>
                                 <div class="search-container">
                                     <input type="number" id="recInput" class="form-control"
-                                        placeholder="Buscar por número de REC..." oninput="searchDistributionRec()">
+                                        placeholder="Buscar por número de REC..." oninput="onRecInputChange()">
                                     <button class="btn-icon"
-                                        onclick="document.getElementById('recInput').value=''; searchDistributionRec(); document.getElementById('recInput').focus();"
+                                        onclick="document.getElementById('recInput').value=''; onRecInputChange(); document.getElementById('recInput').focus();"
                                         title="Limpiar búsqueda">
                                         <i class="codicon codicon-clear-all"></i>
                                     </button>
@@ -714,6 +854,14 @@
                 <i class="codicon codicon-info status-icon" id="statusIcon"></i>
                 <span id="statusMessage">Listo para procesar</span>
             </div>
+            <!-- Indicador de Proveedor Activo (Siempre Visible) -->
+            <div class="status-item status-item-btn" id="proveedorIndicator" 
+                 style="background: var(--primary); color: white; padding: 4px 12px; border-radius: 4px; margin-left: 12px; cursor: pointer;"
+                 onclick="showProveedorSelector()"
+                 title="Click para cambiar proveedor (Ctrl+S)">
+                <i class="codicon codicon-organization"></i>
+                <span id="proveedorIndicatorText">Cargando proveedor...</span>
+            </div>
         </div>
         <div class="status-right">
             <div class="status-item status-timing" id="statusTiming" title="Última actualización de datos">
@@ -729,11 +877,11 @@
                 <i class="codicon codicon-layers"></i>
                 <span id="stat-ops">0</span>
             </div>
-            <div class="status-item" title="Precios">
+            <div class="status-item status-item-btn" title="Precios — Click para gestionar" onclick="showPreciosUpdateModal()">
                 <i class="codicon codicon-tag"></i>
                 <span id="stat-precios">0</span>
             </div>
-            <div class="status-item status-item-btn" title="Productos — Click para actualizar SISPROWEB"
+            <div class="status-item status-item-btn" title="Códigos de Barras — Click para gestionar"
                 onclick="showSisproUpdateModal()">
                 <i class="codicon codicon-package"></i>
                 <span id="stat-productos">0</span>

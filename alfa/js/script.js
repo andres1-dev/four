@@ -24,6 +24,8 @@
         "js/services/csv-parser.js",
         "js/services/gas-service.js",
         "js/services/google-sheets.js",
+        "js/services/supabase-service.js",
+        "js/services/data-loader.js",  // Adaptador híbrido Sheets/Supabase
 
         // 4. Capa de Interfaz (UI Components)
         "js/ui/notifications.js",
@@ -35,17 +37,23 @@
         "js/ui/tabs.js",
         "js/ui/missing-data-modal.js",
         "js/ui/sispro-update-modal.js",
+        "js/ui/precios-update-modal.js",
         "js/ui/colores-modal.js",
         "js/ui/clientes-modal.js",
         "js/ui/usuarios-modal.js",
         "js/ui/maestros-master-modal.js",
+        "js/ui/talleres-modal.js",
+        "js/ui/supabase-login-modal.js",
+        "js/ui/proveedor-selector.js",
 
         // 5. Capa Core (Base App Logic)
         "js/core/theme.js",
+        "js/core/auth-guard.js",
         "js/core/event-listeners.js",
         "js/core/app-init.js",
         // 6. Módulos de Negocio (Business logic)
         "js/modules/data-processing.js",
+        "js/modules/excel-processor.js",
         "js/modules/op-editor.js",
         "js/modules/transfers.js",
         "js/modules/distribution.js",

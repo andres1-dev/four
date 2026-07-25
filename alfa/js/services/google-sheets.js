@@ -735,17 +735,20 @@ async function saveNewGestorData(data) {
 // EXPORTS
 // ============================================
 
+// NOTA: loadColoresData y loadClientesData ya no se exportan aquí
+// porque ahora se manejan desde data-loader.js con Supabase
+
 window.loadAllConfigData = loadAllConfigData;
 window.loadUsuariosData = loadUsuariosData;
 window.loadProveedoresData = loadProveedoresData;
 window.loadAuditoresData = loadAuditoresData;
 window.loadGestoresData = loadGestoresData;
-window.loadColoresData = loadColoresData;
+// window.loadColoresData = loadColoresData;  // Ahora en data-loader.js
 window.loadData2Data = loadData2Data;
 window.loadPreciosData = loadPreciosData;
 window.loadSisproData = loadSisproData;
 window.loadHistoricasData = loadHistoricasData;
-window.loadClientesData = loadClientesData;
+// window.loadClientesData = loadClientesData;  // Ahora en data-loader.js
 window.loadPedidosData = loadPedidosData;
 window.loadFinalizadosData = loadFinalizadosData;
 window.agregarPedidoASheets = agregarPedidoASheets;

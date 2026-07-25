@@ -59,9 +59,6 @@ function renderMaestroUI(options, container) {
     const dynActions = document.getElementById('adminDynamicActions');
     if (dynActions) {
         dynActions.innerHTML = `
-            <button class="btn-icon" id="saveMaestroBtn_${type}" style="display:none; color: var(--success);" onclick="persistMaestroChanges('${type}')" title="Guardar Cambios">
-                <i class="codicon codicon-cloud-upload"></i>
-            </button>
             <button class="btn-icon" onclick="toggleInactivesMaestro('${type}')" title="${showInactivesInModals ? 'Ocultar Inactivos' : 'Ver Inactivos'}">
                 <i class="codicon ${showInactivesInModals ? 'codicon-eye' : 'codicon-eye-closed'}" style="color: ${showInactivesInModals ? 'var(--primary)' : 'var(--text-secondary)'}"></i>
             </button>
@@ -85,9 +82,6 @@ function toggleInactivesMaestro(type) {
     const dynActions = document.getElementById('adminDynamicActions');
     if (dynActions) {
         dynActions.innerHTML = `
-            <button class="btn-icon" id="saveMaestroBtn_${type}" style="${(pendingMaestroChanges[type] && pendingMaestroChanges[type].length > 0) ? 'display:flex;' : 'display:none;'} color: var(--success);" onclick="persistMaestroChanges('${type}')" title="Guardar Cambios">
-                <i class="codicon codicon-cloud-upload"></i>
-            </button>
             <button class="btn-icon" onclick="toggleInactivesMaestro('${type}')" title="${showInactivesInModals ? 'Ocultar Inactivos' : 'Ver Inactivos'}">
                 <i class="codicon ${showInactivesInModals ? 'codicon-eye' : 'codicon-eye-closed'}" style="color: ${showInactivesInModals ? 'var(--primary)' : 'var(--text-secondary)'}"></i>
             </button>
@@ -107,14 +101,10 @@ function updateMaestroTable(type) {
     if (!container || !tbody) return;
     
     const { map } = container._options;
-    const pending = pendingMaestroChanges[type] || [];
     
     const term = (document.getElementById(`maestroSearchTerm_${type}`)?.value || '').toLowerCase();
 
-    const allEntries = new Map(map);
-    pending.forEach(p => allEntries.set(p[0], { NOMBRE: p[1], ESTADO: p[2] }));
-
-    const sorted = Array.from(allEntries.entries()).sort((a,b) => String(a[0]).localeCompare(String(b[0])));
+    const sorted = Array.from(map.entries()).sort((a,b) => String(a[0]).localeCompare(String(b[0])));
     
     // Filtering
     const filtered = sorted.filter(([id, data]) => {
@@ -138,17 +128,10 @@ function updateMaestroTable(type) {
     let html = '';
     paged.forEach(([id, data]) => {
         const isActive = (typeof data === 'object' && data !== null) ? (data.ESTADO === 'TRUE') : true;
-
-        const isNew = !map.has(id);
-        const mapEntry = map.has(id) ? map.get(id) : null;
-        
         const nombreActual = (typeof data === 'object' && data !== null) ? (data.NOMBRE || data.PROVEEDOR || data.AUDITOR || data.GESTOR || 'SIN NOMBRE') : (data || 'SIN NOMBRE');
-        const nombreOriginal = mapEntry ? (mapEntry.NOMBRE || mapEntry.PROVEEDOR || mapEntry.AUDITOR || mapEntry.GESTOR) : nombreActual;
-        const hasNameChanged = !isNew && nombreOriginal !== nombreActual;
-        const isPending = isNew || hasNameChanged || (mapEntry && mapEntry.ESTADO !== data.ESTADO);
 
         html += `
-            <tr style="${!isActive ? 'opacity: 0.5;' : ''} ${isPending ? 'background: rgba(255, 140, 0, 0.03);' : ''}">
+            <tr style="${!isActive ? 'opacity: 0.5;' : ''}">
                 <td style="color: var(--primary); font-weight: 700; text-align: left;">${id}</td>
                 <td style="text-align: left; color: var(--text);">
                     ${nombreActual}
@@ -160,7 +143,6 @@ function updateMaestroTable(type) {
                 </td>
                 <td>
                     <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
-                        ${isPending ? '<i class="codicon codicon-sync" style="color: var(--warning); font-size: 14px;" title="Pendiente de guardar"></i>' : ''}
                         <i class="codicon codicon-edit" style="cursor: pointer; color: var(--primary);" onclick="openMaestroFormModal('${type}', '${id}')" title="Editar"></i>
                     </div>
                 </td>
@@ -181,9 +163,6 @@ function updateMaestroTable(type) {
             <button class="btn-secondary" onclick="changeMaestroPage('${type}', ${totalPages})" ${_maestrosCurrentPage === totalPages ? 'disabled' : ''} style="padding: 2px 6px;"><i class="codicon codicon-chevron-right" style="font-size:12px;"></i><i class="codicon codicon-chevron-right" style="font-size:12px; margin-left:-6px;"></i></button>
         `;
     }
-
-    const saveBtn = document.getElementById(`saveMaestroBtn_${type}`);
-    if (saveBtn) saveBtn.style.display = (pendingMaestroChanges[type] && pendingMaestroChanges[type].length > 0) ? 'flex' : 'none';
 }
 
 function changeMaestroPage(type, page) {
@@ -304,19 +283,34 @@ async function persistMaestroChanges(type) {
     const { saveFn, loadFn } = container._options;
     
     const btn = document.getElementById(`saveMaestroBtn_${type}`);
+    if (!btn) return;
+    
     btn.disabled = true;
-    btn.innerHTML = 'Guardando...';
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="codicon codicon-loading codicon-modifier-spin"></i>';
 
     try {
+        // Guardar en Supabase
         await saveFn(pending);
+        
+        // Recargar datos desde Supabase
         await loadFn();
+        
+        // Limpiar cambios pendientes
         pendingMaestroChanges[type] = [];
+        
+        // Actualizar tabla
         updateMaestroTable(type);
+        
+        // Restaurar botón
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+        
         showMessage('Maestro actualizado', 'success');
     } catch (err) {
         showMessage(err.message, 'error');
         btn.disabled = false;
-        btn.innerHTML = 'Reintentar';
+        btn.innerHTML = '<i class="codicon codicon-cloud-upload"></i>';
     }
 }
 
@@ -417,7 +411,7 @@ function openMaestroFormModal(type, id) {
     }
 }
 
-function saveMaestroFromForm() {
+async function saveMaestroFromForm() {
     const id = document.getElementById('mf_id').value.trim().toUpperCase();
     const nombre = document.getElementById('mf_nombre').value.trim().toUpperCase();
     const estado = document.getElementById('mf_estado').value;
@@ -428,17 +422,27 @@ function saveMaestroFromForm() {
         return;
     }
 
-    if (!pendingMaestroChanges[type]) pendingMaestroChanges[type] = [];
-    const idx = pendingMaestroChanges[type].findIndex(c => c[0] === id);
-    if (idx !== -1) {
-        pendingMaestroChanges[type][idx][1] = nombre;
-        pendingMaestroChanges[type][idx][2] = estado;
-    } else {
-        pendingMaestroChanges[type].push([id, nombre, estado]);
-    }
+    const container = document.getElementById('adminTabEntryPoint');
+    const { saveFn, loadFn } = container._options;
 
-    closeMaestroFormModal();
-    updateMaestroTable(type);
+    // Guardar inmediatamente en Supabase
+    try {
+        const dataToSave = [[id, nombre, estado]];
+        await saveFn(dataToSave);
+        
+        // Recargar datos desde Supabase
+        await loadFn();
+        
+        // Cerrar modal
+        closeMaestroFormModal();
+        
+        // Actualizar tabla
+        updateMaestroTable(type);
+        
+        showMessage('Maestro guardado', 'success');
+    } catch (err) {
+        showMessage(err.message, 'error');
+    }
 }
 
 // Entry points

@@ -199,10 +199,27 @@ function print_generarContenidoInterno(datos, options = {}) {
     let proveedorId = '';
     const proveedorNombre = datos.PROVEEDOR || '';
     if (!isModoCliente) {
-        if (proveedorNombre.includes("TEXTILES Y CREACIONES EL UNIVERSO")) {
+        // Mapeo de nombres de proveedores a NITs
+        if (proveedorNombre.includes("TEXTILES Y CREACIONES EL UNIVERSO") || 
+            proveedorNombre.includes("UNIVERSO")) {
             proveedorId = "900616124";
-        } else if (proveedorNombre.includes("TEXTILES Y CREACIONES LOS ANGELES")) {
+        } else if (proveedorNombre.includes("TEXTILES Y CREACIONES LOS ANGELES") || 
+                   proveedorNombre.includes("ANGELES")) {
             proveedorId = "900692469";
+        } else if (proveedorNombre.includes("INVERSIONES URBANA")) {
+            proveedorId = "901920844";
+        }
+        
+        // Si no se encontró el proveedor por nombre, intentar buscar en clientesMap
+        // (algunos proveedores pueden estar registrados como clientes)
+        if (!proveedorId && typeof window.clientesMap !== 'undefined') {
+            for (const [nit, cliente] of window.clientesMap.entries()) {
+                if (cliente.RAZON_SOCIAL && 
+                    proveedorNombre.toUpperCase().includes(cliente.RAZON_SOCIAL.toUpperCase())) {
+                    proveedorId = nit;
+                    break;
+                }
+            }
         }
     }
 

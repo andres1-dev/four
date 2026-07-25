@@ -2,16 +2,14 @@
  * js/modules/orders.js
  * Módulo de Pedidos para Mayoristas
  *
- * pedidosMap    → array plano de pedidos activos   → col A1 hoja PEDIDOS
- * finalizadosMap → array plano de finalizados       → col B1 hoja PEDIDOS
+ * pedidosMap → array plano de pedidos → tabla pedidos en Supabase
  *
  * Cada pedido: { id, mayoristaId, op, referencia, prenda, cantidad, obs, fecha }
  */
 
 let pedidosMap     = [];
-let finalizadosMap = [];
 let pedidosSaving  = false;
-let mostrandoFinalizados = false;
+let mostrandoCompletados = false;  // Toggle para mostrar/ocultar completados
 
 // ============================================
 // INIT
@@ -20,10 +18,7 @@ let mostrandoFinalizados = false;
 async function initOrdersModule() {
     try {
         renderOrdersBoard();
-        await Promise.all([
-            cargarPedidosDesdeSheets(),
-            cargarFinalizadosDesdeSheets()
-        ]);
+        await cargarPedidosDesdeSheets();
     } catch (err) {
         console.error('Error inicializando módulo de pedidos:', err);
     }
@@ -48,18 +43,7 @@ async function cargarPedidosDesdeSheets() {
     }
 }
 
-async function cargarFinalizadosDesdeSheets() {
-    try {
-        if (typeof loadFinalizadosData !== 'function') {
-            console.error('loadFinalizadosData no está definida');
-            return;
-        }
-        finalizadosMap = await loadFinalizadosData();
-    } catch (err) { 
-        console.error('Error cargando finalizados:', err);
-        finalizadosMap = [];
-    }
-}
+// Función eliminada: ya no se usan pedidos finalizados
 
 // ============================================
 // RENDER BOARD
@@ -69,23 +53,28 @@ function renderOrdersBoard() {
     const container = document.getElementById('orders-board');
     if (!container) return;
 
-    const lista = [...(mostrandoFinalizados ? finalizadosMap : pedidosMap)]
-        .sort((a, b) => {
-            const na = allConfigData?.[a.mayoristaId]?.nombreCorto || a.nombreCliente || a.mayoristaId || '';
-            const nb = allConfigData?.[b.mayoristaId]?.nombreCorto || b.nombreCliente || b.mayoristaId || '';
-            return na.localeCompare(nb);
-        });
+    // Filtrar según el toggle
+    const pedidosActivos = pedidosMap.filter(p => p.estado !== false);
+    const pedidosCompletados = pedidosMap.filter(p => p.estado === false);
+    const lista = mostrandoCompletados ? pedidosCompletados : pedidosActivos;
+    
+    // Ordenar por nombre de cliente
+    lista.sort((a, b) => {
+        const na = getClienteNombre(a.mayoristaId) || a.nombreCliente || '';
+        const nb = getClienteNombre(b.mayoristaId) || b.nombreCliente || '';
+        return na.localeCompare(nb);
+    });
 
+    // Actualizar botón toggle
     const btn = document.getElementById('orders-toggle-finalizados');
     if (btn) {
-        btn.classList.toggle('active', mostrandoFinalizados);
-        btn.title = mostrandoFinalizados ? 'Ocultar finalizados' : 'Ver finalizados';
+        btn.classList.toggle('active', mostrandoCompletados);
+        btn.title = mostrandoCompletados ? 'Ocultar completados' : 'Ver completados';
     }
 
     // Totales resumen
-    const totalUds  = pedidosMap.reduce((s, p) => s + (p.cantidad || 0), 0);
-    const totalPeds = pedidosMap.length;
-    const totalFin  = finalizadosMap.length;
+    const totalUds  = pedidosActivos.reduce((s, p) => s + (p.cantidad || 0), 0);
+    const totalPeds = pedidosActivos.length;
 
     const statsHtml = `
         <div class="orders-stats-bar">
@@ -98,8 +87,8 @@ function renderOrdersBoard() {
                 <span class="orders-stat-lbl">unidades totales</span>
             </div>
             <div class="orders-stat orders-stat-fin">
-                <span class="orders-stat-val">${totalFin}</span>
-                <span class="orders-stat-lbl">finalizados</span>
+                <span class="orders-stat-val">${pedidosCompletados.length}</span>
+                <span class="orders-stat-lbl">completados</span>
             </div>
         </div>`;
 
@@ -107,8 +96,8 @@ function renderOrdersBoard() {
         container.innerHTML = statsHtml + `
             <div class="empty-state" style="margin-top:48px;">
                 <i class="codicon codicon-list-ordered empty-icon"></i>
-                <h5>${mostrandoFinalizados ? 'Sin pedidos finalizados' : 'Sin pedidos activos'}</h5>
-                ${!mostrandoFinalizados ? '<p>Usa el botón "Agregar pedido" para registrar uno.</p>' : ''}
+                <h5>${mostrandoCompletados ? 'Sin pedidos completados' : 'Sin pedidos activos'}</h5>
+                ${!mostrandoCompletados ? '<p>Usa el botón "Agregar pedido" para registrar uno.</p>' : ''}
             </div>`;
         return;
     }
@@ -121,12 +110,11 @@ function renderOrdersBoard() {
                         <th style="width:90px;">ID</th>
                         <th style="width:140px;">Cliente</th>
                         <th style="width:80px;">OP</th>
-                        <th style="width:110px;">Referencia</th>
-                        <th style="width:160px;">Prenda</th>
-                        <th style="width:90px;">Género</th>
+                        <th style="width:100px;">Referencia</th>
+                        <th style="width:140px;">Prenda</th>
                         <th style="width:80px;">Cantidad</th>
                         <th>Observaciones</th>
-                        <th style="width:90px;">${mostrandoFinalizados ? 'Finalizado' : 'Registrado'}</th>
+                        <th style="width:90px;">${mostrandoCompletados ? 'Completado' : 'Registrado'}</th>
                         <th style="width:72px;"></th>
                     </tr>
                 </thead>
@@ -138,29 +126,35 @@ function renderOrdersBoard() {
 }
 
 function renderPedidoFila(p) {
-    const config = allConfigData?.[p.mayoristaId];
-    const nombre = config?.nombreCorto || p.nombreCliente || p.mayoristaId || '—';
-    const esFin  = mostrandoFinalizados;
-    const fecha  = esFin ? (p.fechaFin || '') : (p.fecha || '');
+    const nombre = getClienteNombre(p.mayoristaId) || p.nombreCliente || '—';
+    // Formatear fecha desde TIMESTAMPTZ
+    const fecha = p.fecha ? new Date(p.fecha).toLocaleDateString('es-CO', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    }) : '';
+    
+    const esCompletado = p.estado === false;
 
     return `
-        <tr class="${esFin ? 'orders-tr-done' : ''}">
+        <tr>
             <td><span class="orders-cliente-id">${p.mayoristaId}</span></td>
             <td><span class="orders-cliente-tag">${nombre || '—'}</span></td>
             <td><span class="orders-op-plain">${p.op}</span></td>
             <td><span class="orders-row-ref">${p.referencia || '—'}</span></td>
-            <td><span class="orders-row-prenda">${p.prenda || '—'}</span></td>
-            <td><span class="orders-row-genero">${p.genero || '—'}</span></td>
-            <td><span class="orders-qty-badge${esFin ? ' orders-qty-badge-done' : ''}">${p.cantidad}</span></td>
+            <td><span class="orders-row-prenda">${p.prenda || '—'}${p.genero ? ` <span style="opacity:.5;font-size:10px">${p.genero}</span>` : ''}</span></td>
+            <td><span class="orders-qty-badge">${p.cantidad}</span></td>
             <td><span class="orders-obs-cell">${p.obs || '<span style="opacity:.35;">—</span>'}</span></td>
             <td><span class="orders-row-fecha">${fecha}</span></td>
             <td>
                 <div class="orders-row-actions">
-                    ${!esFin ? `
+                    ${!esCompletado ? `
                     <button class="orders-row-btn orders-row-btn-edit" onclick="abrirModalEditarPedido('${p.id}')" title="Editar">
                         <i class="codicon codicon-edit"></i>
                     </button>` : ''}
-                    <button class="orders-row-btn orders-row-btn-del" onclick="${esFin ? `eliminarFinalizado('${p.id}')` : `eliminarPedido('${p.id}')`}" title="${esFin ? 'Quitar del historial' : 'Eliminar'}">
+                    <button class="orders-row-btn orders-row-btn-del" onclick="eliminarPedido('${p.id}')" title="Eliminar">
                         <i class="codicon codicon-close"></i>
                     </button>
                 </div>
@@ -169,11 +163,11 @@ function renderPedidoFila(p) {
 }
 
 // ============================================
-// TOGGLE FINALIZADOS
+// TOGGLE COMPLETADOS
 // ============================================
 
 function toggleFinalizados() {
-    mostrandoFinalizados = !mostrandoFinalizados;
+    mostrandoCompletados = !mostrandoCompletados;
     renderOrdersBoard();
 }
 
@@ -189,7 +183,7 @@ function abrirModalAgregarPedido() {
     }
 
     const optsClientes = mayoristas.map(([id, c]) =>
-        `<option value="${id}">${c.nombreCorto}</option>`
+        `<option value="${id}">${c.NOMBRE_CORTO}</option>`
     ).join('');
 
     const modal = createModal(
@@ -250,34 +244,33 @@ function abrirModalAgregarPedido() {
 }
 
 function onModalOpChange(val) {
-    const hint = document.getElementById('modal-op-hint');
+    const hint    = document.getElementById('modal-op-hint');
     const details = document.getElementById('modal-op-details');
-    const detailRef = document.getElementById('modal-detail-ref');
-    const detailPrenda = document.getElementById('modal-detail-prenda');
-    const detailGenero = document.getElementById('modal-detail-genero');
-    
+    const refEl   = document.getElementById('modal-detail-ref');
+    const prendaEl= document.getElementById('modal-detail-prenda');
+    const generoEl= document.getElementById('modal-detail-genero');
+
     if (!hint) return;
     const op = val.trim();
-    
-    if (!op) { 
-        hint.innerHTML = ''; 
+
+    if (!op) {
+        hint.innerHTML = '';
         if (details) details.style.display = 'none';
-        return; 
+        return;
     }
-    
-    const sispro = sisproMap.get(op);
+
+    const sispro = window.sisproMap?.get(op);
     if (!sispro) {
         hint.innerHTML = `<span class="orders-hint-notfound">OP no encontrada en SISPROWEB</span>`;
         if (details) details.style.display = 'none';
         return;
     }
-    
+
     hint.innerHTML = `<span class="orders-hint-found"><i class="codicon codicon-check"></i> OP encontrada</span>`;
-    
-    if (details && detailRef && detailPrenda && detailGenero) {
-        detailRef.value = sispro.REFERENCIA || '';
-        detailPrenda.value = sispro.PRENDA || '';
-        detailGenero.value = sispro.GENERO || '';
+    if (details && refEl && prendaEl && generoEl) {
+        refEl.value    = sispro.REFERENCIA || '';
+        prendaEl.value = sispro.PRENDA     || '';
+        generoEl.value = sispro.GENERO     || '';
         details.style.display = 'block';
     }
 }
@@ -292,20 +285,20 @@ function confirmarPedidoModal() {
     if (!op)          { showMessage('Escribe una OP', 'warning', 1500); return; }
     if (qty <= 0)     { showMessage('Ingresa una cantidad válida', 'warning', 1500); return; }
 
-    const sispro = sisproMap.get(op);
+    const sispro = window.sisproMap?.get(op);
 
     const pedido = {
         id:            `${mayoristaId}_${op}_${Date.now()}`,
         mayoristaId,
-        nombreCliente: allConfigData?.[mayoristaId]?.nombreCorto || mayoristaId,
+        nombreCliente: getClienteNombre(mayoristaId),
         op,
         referencia:    sispro?.REFERENCIA || '',
-        prenda:        sispro?.PRENDA || '',
-        genero:        sispro?.GENERO || '',
+        prenda:        sispro?.PRENDA     || '',
+        genero:        sispro?.GENERO     || '',
         cantidad:      qty,
         obs:           obs || '',
-        fecha:         new Date().toLocaleDateString('es-CO'),
-        estado:        'PENDIENTE'
+        fecha:         new Date().toISOString(),
+        estado:        true
     };
 
     document.querySelector('.modal-agregar-pedido')?.remove();
@@ -322,15 +315,13 @@ function abrirModalEditarPedido(id) {
 
     const mayoristas   = getMayoristasActivos();
     const optsClientes = mayoristas.map(([mid, c]) =>
-        `<option value="${mid}" ${mid === pedido.mayoristaId ? 'selected' : ''}>${c.nombreCorto}</option>`
+        `<option value="${mid}" ${mid === pedido.mayoristaId ? 'selected' : ''}>${c.NOMBRE_CORTO}</option>`
     ).join('');
 
-    // Hint inicial
-    const sispro = sisproMap.get(pedido.op);
+    const sispro = window.sisproMap?.get(pedido.op);
     const hintInicial = sispro
         ? `<span class="orders-hint-found"><i class="codicon codicon-check"></i> OP encontrada</span>`
         : '';
-    
     const detailsInicial = sispro ? `
         <div id="edit-op-details" class="orders-details-card" style="display:block;">
             <div class="orders-details-row">
@@ -391,55 +382,47 @@ function abrirModalEditarPedido(id) {
 }
 
 function onEditOpChange(val) {
-    const hint = document.getElementById('edit-op-hint');
+    const hint    = document.getElementById('edit-op-hint');
     const details = document.getElementById('edit-op-details');
-    const detailRef = document.getElementById('edit-detail-ref');
-    const detailPrenda = document.getElementById('edit-detail-prenda');
-    const detailGenero = document.getElementById('edit-detail-genero');
-    
+
     if (!hint) return;
     const op = val.trim();
-    
-    if (!op) { 
-        hint.innerHTML = ''; 
+
+    if (!op) {
+        hint.innerHTML = '';
         if (details) details.style.display = 'none';
-        return; 
+        return;
     }
-    
-    const sispro = sisproMap.get(op);
+
+    const sispro = window.sisproMap?.get(op);
     if (!sispro) {
         hint.innerHTML = `<span class="orders-hint-notfound">OP no encontrada en SISPROWEB</span>`;
         if (details) details.style.display = 'none';
         return;
     }
-    
+
     hint.innerHTML = `<span class="orders-hint-found"><i class="codicon codicon-check"></i> OP encontrada</span>`;
-    
     if (details) {
-        if (!detailRef) {
-            details.innerHTML = `
-                <div class="orders-details-row">
-                    <div class="orders-add-field">
-                        <label>Referencia</label>
-                        <input type="text" class="form-control" value="${sispro.REFERENCIA || ''}" readonly>
-                    </div>
-                    <div class="orders-add-field">
-                        <label>Prenda</label>
-                        <input type="text" class="form-control" value="${sispro.PRENDA || ''}" readonly>
-                    </div>
-                    <div class="orders-add-field">
-                        <label>Género</label>
-                        <input type="text" class="form-control" value="${sispro.GENERO || ''}" readonly>
-                    </div>
-                </div>`;
-        } else {
-            detailRef.value = sispro.REFERENCIA || '';
-            detailPrenda.value = sispro.PRENDA || '';
-            detailGenero.value = sispro.GENERO || '';
-        }
+        details.innerHTML = `
+            <div class="orders-details-row">
+                <div class="orders-add-field">
+                    <label>Referencia</label>
+                    <input type="text" id="edit-detail-ref" class="form-control" value="${sispro.REFERENCIA || ''}" readonly>
+                </div>
+                <div class="orders-add-field">
+                    <label>Prenda</label>
+                    <input type="text" id="edit-detail-prenda" class="form-control" value="${sispro.PRENDA || ''}" readonly>
+                </div>
+                <div class="orders-add-field">
+                    <label>Género</label>
+                    <input type="text" id="edit-detail-genero" class="form-control" value="${sispro.GENERO || ''}" readonly>
+                </div>
+            </div>`;
         details.style.display = 'block';
     }
 }
+
+// Función eliminada: ya no se valida contra SISPROWEB
 
 function guardarEdicionPedido(id) {
     const pedido = pedidosMap.find(p => p.id === id);
@@ -454,20 +437,20 @@ function guardarEdicionPedido(id) {
     if (!op)          { showMessage('Escribe una OP', 'warning', 1500); return; }
     if (qty <= 0)     { showMessage('Ingresa una cantidad válida', 'warning', 1500); return; }
 
-    const sispro = sisproMap.get(op);
+    const sispro = window.sisproMap?.get(op);
 
     const pedidoActualizado = {
         id:            pedido.id,
         mayoristaId,
-        nombreCliente: allConfigData?.[mayoristaId]?.nombreCorto || mayoristaId,
+        nombreCliente: getClienteNombre(mayoristaId),
         op,
-        referencia:    sispro?.REFERENCIA || '',
-        prenda:        sispro?.PRENDA || '',
-        genero:        sispro?.GENERO || '',
+        referencia:    sispro?.REFERENCIA || pedido.referencia || '',
+        prenda:        sispro?.PRENDA     || pedido.prenda     || '',
+        genero:        sispro?.GENERO     || pedido.genero     || '',
         cantidad:      qty,
         obs:           obs || '',
         fecha:         pedido.fecha,
-        estado:        'PENDIENTE'
+        estado:        true
     };
 
     document.querySelector('.modal-editar-pedido')?.remove();
@@ -506,20 +489,27 @@ async function eliminarPedido(id) {
     }
 }
 
-async function eliminarFinalizado(id) {
-    try {
-        await eliminarFinalizadoDeSheets(id);
-        await cargarFinalizadosDesdeSheets();
-        renderOrdersBoard();
-    } catch (err) {
-        showMessage('Error eliminando finalizado: ' + err.message, 'error', 3000);
-    }
-}
+// Función eliminada: ya no se finalizan pedidos
 
 function getMayoristasActivos() {
-    return Object.entries(allConfigData || {})
-        .filter(([, c]) => c.tipoCliente === 'Mayorista' && c.estado?.toUpperCase().trim() === 'ACTIVO')
-        .sort((a, b) => a[1].nombreCorto.localeCompare(b[1].nombreCorto));
+    // Usar clientesMap en lugar de allConfigData
+    if (!window.clientesMap || window.clientesMap.size === 0) {
+        Logger.warn('orders', 'clientesMap no está cargado');
+        return [];
+    }
+    
+    return Array.from(window.clientesMap.entries())
+        .filter(([id, c]) => c.TIPO_CLIENTE === 'Mayorista' && c.ESTADO?.toUpperCase().trim() === 'ACTIVO')
+        .sort((a, b) => a[1].NOMBRE_CORTO.localeCompare(b[1].NOMBRE_CORTO));
+}
+
+/**
+ * Obtiene el nombre corto de un cliente desde clientesMap
+ */
+function getClienteNombre(mayoristaId) {
+    if (!window.clientesMap || !mayoristaId) return mayoristaId || '—';
+    const cliente = window.clientesMap.get(mayoristaId);
+    return cliente?.NOMBRE_CORTO || mayoristaId;
 }
 
 // ============================================
@@ -532,7 +522,7 @@ function aplicarPedidosDesdeModal(pedidos) {
     let aplicados = 0;
 
     Object.entries(pedidos).forEach(([mayoristaId, cantidad]) => {
-        const nombre = allConfigData?.[mayoristaId]?.nombreCorto || mayoristaId;
+        const nombre = getClienteNombre(mayoristaId);
         const checkbox = document.querySelector(`#mayoristasContainer input[type="checkbox"][value="${mayoristaId}"]`);
         if (checkbox && !checkbox.checked) {
             checkbox.checked = true;
@@ -563,13 +553,31 @@ function mostrarModalPedidosParaLote(lote) {
 
     document.querySelector('.modal-pedidos-lote')?.remove();
 
+    // Obtener pedidos completos del lote (no solo cantidades agrupadas)
+    const pedidosDelLote = pedidosMap.filter(p => 
+        String(p.op) === String(lote) && p.estado !== false
+    );
+
     const totalUds = Object.values(pedidos).reduce((a, b) => a + b, 0);
+    
+    // Agrupar pedidos por mayorista con sus observaciones
     const filas = Object.entries(pedidos).map(([mayoristaId, cantidad]) => {
-        const nombre = allConfigData?.[mayoristaId]?.nombreCorto || mayoristaId;
+        const nombre = getClienteNombre(mayoristaId);
+        
+        // Obtener observaciones de los pedidos de este mayorista
+        const pedidosMayorista = pedidosDelLote.filter(p => p.mayoristaId === mayoristaId);
+        const observaciones = pedidosMayorista
+            .filter(p => p.obs && p.obs.trim())
+            .map(p => `<div class="orders-modal-obs-item">• ${p.obs}</div>`)
+            .join('');
+        
         return `
             <div class="orders-modal-row">
-                <span class="orders-modal-nombre">${nombre}</span>
-                <span class="orders-modal-qty">${cantidad} uds</span>
+                <div class="orders-modal-info">
+                    <span class="orders-modal-nombre">${nombre}</span>
+                    <span class="orders-modal-qty">${cantidad} uds</span>
+                </div>
+                ${observaciones ? `<div class="orders-modal-obs">${observaciones}</div>` : ''}
             </div>`;
     }).join('');
 
@@ -598,35 +606,48 @@ function mostrarModalPedidosParaLote(lote) {
 // INTEGRACIÓN DISTRIBUCIÓN
 // ============================================
 
-async function marcarPedidosCompletados(lote) {
-    if (!lote) return;
-    const loteStr = String(lote);
-    const completados = pedidosMap.filter(p => String(p.op) === loteStr);
-    if (!completados.length) return;
-
-    try {
-        for (const pedido of completados) {
-            pedido.fechaFin = new Date().toLocaleDateString('es-CO');
-            await finalizarPedidoEnSheets(pedido);
-        }
-        await Promise.all([
-            cargarPedidosDesdeSheets(),
-            cargarFinalizadosDesdeSheets()
-        ]);
-        renderOrdersBoard();
-    } catch (err) {
-        showMessage('Error finalizando pedidos: ' + err.message, 'error', 3000);
-    }
-}
+// Función eliminada: ya no se finalizan pedidos automáticamente
 
 function getPedidosPendientesParaLote(lote) {
     const result = {};
     pedidosMap.forEach(p => {
-        if (String(p.op) === String(lote)) {
+        // Solo contar pedidos activos (estado = true)
+        if (String(p.op) === String(lote) && p.estado !== false) {
             result[p.mayoristaId] = (result[p.mayoristaId] || 0) + p.cantidad;
         }
     });
     return result;
+}
+
+/**
+ * Marca pedidos de un lote como completados (estado = false)
+ * Se ejecuta cuando se guarda una distribución
+ */
+async function marcarPedidosComoCompletados(lote) {
+    if (!lote) return;
+    const loteStr = String(lote);
+    const pedidosDelLote = pedidosMap.filter(p => String(p.op) === loteStr && p.estado !== false);
+    
+    if (!pedidosDelLote.length) return;
+
+    try {
+        // Actualizar cada pedido a estado = false
+        for (const pedido of pedidosDelLote) {
+            const pedidoActualizado = {
+                ...pedido,
+                estado: false  // Marcar como completado
+            };
+            await actualizarPedidoEnSheets(pedidoActualizado);
+        }
+        
+        // Recargar pedidos para reflejar cambios
+        await cargarPedidosDesdeSheets();
+        
+        Logger.success('orders', `${pedidosDelLote.length} pedidos marcados como completados para OP ${lote}`);
+    } catch (err) {
+        Logger.error('orders', 'Error marcando pedidos como completados', err);
+        showMessage('Error actualizando estado de pedidos: ' + err.message, 'error', 3000);
+    }
 }
 
 // ============================================
@@ -641,9 +662,8 @@ window.onEditOpChange               = onEditOpChange;
 window.confirmarPedidoModal         = confirmarPedidoModal;
 window.guardarEdicionPedido         = guardarEdicionPedido;
 window.eliminarPedido               = eliminarPedido;
-window.eliminarFinalizado           = eliminarFinalizado;
 window.toggleFinalizados            = toggleFinalizados;
-window.marcarPedidosCompletados     = marcarPedidosCompletados;
 window.getPedidosPendientesParaLote = getPedidosPendientesParaLote;
+window.marcarPedidosComoCompletados = marcarPedidosComoCompletados;
 window.mostrarModalPedidosParaLote  = mostrarModalPedidosParaLote;
 window.aplicarPedidosDesdeModal     = aplicarPedidosDesdeModal;

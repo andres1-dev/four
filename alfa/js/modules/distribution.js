@@ -23,33 +23,43 @@ async function _refreshDistributionBackground(expectedOpId = null, maxRetries = 
             await new Promise(r => setTimeout(r, delay));
             delay += 1000; // backoff lineal: 2s, 3s, 4s, 5s, 6s, 7s
 
-            const recData = await cargarTodosLosDatos();
+            const recInput = document.getElementById('recInput');
+            const recNumber = recInput ? recInput.value.trim() : '';
 
+            if (!recNumber) {
+                updateStatus('Distribución actualizada', 'success');
+                return;
+            }
+
+            // Limpiar caché del REC actual para forzar re-fetch desde Supabase
+            const recNumClean = recNumber.replace(/^0+/, '');
+            setAllRecData(allRecData.filter(item => item.A !== recNumClean && item.A !== recNumber));
+
+            // Buscar el REC fresco desde Supabase
+            const recData = await buscarRecEnSupabase(recNumber);
+
+            if (!recData) {
+                if (attempt < maxRetries) {
+                    updateStatus(`Esperando datos de distribución... (${attempt}/${maxRetries})`, 'loading');
+                    continue;
+                }
+                updateStatus('No se encontró el REC actualizado', 'error');
+                return;
+            }
+
+            // Verificar que el OP esperado ya esté en el resultado
             if (expectedOpId) {
                 const opStr = expectedOpId.toString().trim();
-                const found = recData.some(item =>
-                    item.A === opStr ||
-                    item.LOTE === opStr ||
-                    item.LOTE === parseInt(opStr)
-                );
+                const found = recData.A === opStr || recData.LOTE === opStr;
                 if (!found && attempt < maxRetries) {
                     updateStatus(`Esperando datos de distribución... (${attempt}/${maxRetries})`, 'loading');
                     continue;
                 }
             }
 
-            setAllRecData(recData);
-
-            const recInput = document.getElementById('recInput');
-            if (recInput && recInput.value.trim()) {
-                const recNumClean = recInput.value.trim().replace(/^0+/, '');
-                setCurrentRecData(
-                    allRecData.find(item => item.A === recNumClean) ||
-                    allRecData.find(item => item.A === recInput.value.trim()) ||
-                    null
-                );
-                if (currentRecData) displayDistributionResults(currentRecData);
-            }
+            setAllRecData([...allRecData, recData]);
+            setCurrentRecData(recData);
+            displayDistributionResults(currentRecData);
 
             updateStatus('Distribución actualizada', 'success');
             return;
@@ -76,29 +86,27 @@ function _refreshPrintBackground() {
 
 function initializeDistribution() {
     const loadingElem = document.getElementById('distribution-loading');
-    const mainElem = document.getElementById('distribution-main');
+    const mainElem    = document.getElementById('distribution-main');
 
     if (loadingElem) loadingElem.style.display = 'flex';
-    if (mainElem) mainElem.style.display = 'none';
+    if (mainElem)    mainElem.style.display    = 'none';
 
     setupDistributionEventListeners();
 
-    return Promise.all([
-        cargarTodosLosDatos(),
-        cargarConfiguraciones()
-    ]).then(([recData, configData]) => {
-        handleRecData(recData);
-        handleConfigData(configData);
-
-        if (loadingElem) loadingElem.style.display = 'none';
-        if (mainElem) mainElem.style.display = 'block';
-
-        updateCounters();
-        return true;
-    }).catch(error => {
-        handleError(error);
-        throw error;
-    });
+    // Solo cargar configuración — los datos de REC se buscan bajo demanda
+    return cargarConfiguraciones()
+        .then(configData => {
+            handleConfigData(configData);
+            setAllRecData([]);    // vacío hasta que el usuario busque
+            if (loadingElem) loadingElem.style.display = 'none';
+            if (mainElem)    mainElem.style.display    = 'block';
+            updateCounters();
+            return true;
+        })
+        .catch(error => {
+            handleError(error);
+            throw error;
+        });
 }
 
 // ============================================
@@ -107,148 +115,30 @@ function initializeDistribution() {
 
 async function cargarTodosLosDatos() {
     try {
-        const [json1, json2] = await Promise.all([
-            getSheetDataAsJSON_1(),
-            getSheetDataAsJSON_2()
-        ]);
-
-        const arr1 = JSON.parse(json1);
-        const arr2 = JSON.parse(json2);
-        const unified = arr1.concat(arr2);
-        
-        return unified;
+        const distributionData = await loadDistributionDataFromSupabase();
+        return distributionData;
     } catch (error) {
         console.error('Error cargando datos de distribución:', error);
         throw error;
     }
 }
 
+// ============================================
+// FUNCIONES ANTIGUAS DE GOOGLE SHEETS (DEPRECADAS)
+// Ahora se usa loadDistributionDataFromSupabase()
+// ============================================
+
+/*
 async function getSheetDataAsJSON_1() {
-    try {
-        const SPREADSHEET_ID = "133NiyjNApZGkEFs4jUvpJ9So-cSEzRVeW2FblwOCrjI";
-        const SHEET_NAME = "DATA2";
-        const RANGE = `${SHEET_NAME}!S2:S`;
-
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${RANGE}?key=${DIS_API_KEY}`;
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (!data.values) return JSON.stringify([]);
-        const jsonEntries = data.values.map(row => row[0]).filter(val => val && val.trim() !== "");
-        return `[${jsonEntries.join(",")}]`;
-    } catch (error) {
-        console.error('Error en getSheetDataAsJSON_1:', error);
-        return JSON.stringify([]);
-    }
+    // DEPRECADO: Ahora se carga desde Supabase
+    return JSON.stringify([]);
 }
 
 async function getSheetDataAsJSON_2() {
-    try {
-        const range = "DataBase!A:HR";
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SOURCE_SPREADSHEET_ID}/values/${range}?key=${DIS_API_KEY}`;
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (!data.values) return JSON.stringify([]);
-
-        const datos = data.values;
-        let result = [];
-        let lotesAnexos = {};
-        let lotesHrPendientes = {};
-
-        for (let i = 0; i < datos.length; i++) {
-            if (datos[i][0]) {
-                const valueA = datos[i][0].toString().trim();
-                if (valueA.startsWith("REC")) {
-                    const numberPart = valueA.replace("REC", "").trim();
-                    let proveedor = "TEXTILES Y CREACIONES EL UNIVERSO S.A.S.";
-                    if (datos[i][3] && datos[i][3].toString().trim() === "LINEA ANGELES") {
-                        proveedor = "TEXTILES Y CREACIONES LOS ANGELES S.A.S.";
-                    }
-
-                    let loteActual = datos[i][8] || "";
-                    let tipoActual = datos[i][27] || "";
-
-                    if (!lotesAnexos[loteActual]) {
-                        lotesAnexos[loteActual] = [];
-                        lotesHrPendientes[loteActual] = [];
-                    }
-
-                    if (tipoActual !== "FULL") {
-                        lotesAnexos[loteActual].push({
-                            "DOCUMENTO": numberPart,
-                            "TIPO": tipoActual,
-                            "CANTIDAD": datos[i][18] || ""
-                        });
-
-                        if (tipoActual === "PENDIENTES" && datos[i][225]) {
-                            const hrPendiente = datos[i][225].toString().split("☬").map(row => row.split("∞"));
-                            lotesHrPendientes[loteActual] = lotesHrPendientes[loteActual].concat(hrPendiente);
-                        }
-                    }
-
-                    if (tipoActual === "FULL") {
-                        let extensiones = [];
-                        if (datos[i][225]) {
-                            extensiones = datos[i][225].toString().split("☬").map(row => row.split("∞"));
-                        }
-
-                        result.push({
-                            "A": numberPart,
-                            "FECHA": datos[i][1] || "",
-                            "TALLER": datos[i][2] || "",
-                            "LINEA": datos[i][3] || "",
-                            "AUDITOR": datos[i][4] || "",
-                            "ESCANER": datos[i][5] || "",
-                            "LOTE": loteActual,
-                            "REFERENCIA": datos[i][6] || "",
-                            "DESCRIPCIÓN": datos[i][9] || "",
-                            "CANTIDAD": datos[i][18] || "",
-                            "TEMPLO": datos[i][26] || "",
-                            "TIPO": tipoActual,
-                            "PVP": datos[i][28] || "",
-                            "PRENDA": datos[i][29] || "",
-                            "GENERO": datos[i][30] || "",
-                            "HR": extensiones,
-                            "PROVEEDOR": proveedor,
-                            "ANEXO": []
-                        });
-                    }
-                }
-            }
-        }
-
-        // Combinar HRs y anexos
-        result.forEach(item => {
-            if (lotesAnexos[item.LOTE]) item.ANEXO = lotesAnexos[item.LOTE];
-            if (lotesHrPendientes[item.LOTE] && lotesHrPendientes[item.LOTE].length > 0) {
-                const hrPrincipal = item.HR;
-                const hrPendientes = lotesHrPendientes[item.LOTE];
-                const combinedHrMap = {};
-
-                hrPrincipal.forEach(itemHr => { if (itemHr[0]) combinedHrMap[itemHr[0]] = [...itemHr]; });
-                hrPendientes.forEach(itemHr => {
-                    if (itemHr[0]) {
-                        if (combinedHrMap[itemHr[0]]) {
-                            const cantidadExistente = parseInt(combinedHrMap[itemHr[0]][3]) || 0;
-                            const cantidadNueva = parseInt(itemHr[3]) || 0;
-                            combinedHrMap[itemHr[0]][3] = (cantidadExistente + cantidadNueva).toString();
-                        } else {
-                            combinedHrMap[itemHr[0]] = [...itemHr];
-                        }
-                    }
-                });
-
-                item.HR = Object.values(combinedHrMap);
-            }
-        });
-
-        return JSON.stringify(result, null, 2);
-    } catch (error) {
-        console.error('Error en getSheetDataAsJSON_2:', error);
-        return JSON.stringify([]);
-    }
+    // DEPRECADO: Ahora se carga desde Supabase
+    return JSON.stringify([]);
 }
+*/
 
 function cargarConfiguraciones() {
     return new Promise((resolve) => {
@@ -444,6 +334,21 @@ function generateMayoristasUI() {
 // BÚSQUEDA Y VISUALIZACIÓN DE REC
 // ============================================
 
+// ── Búsqueda on-demand con debounce ──────────────────────────────────────────
+let _searchDebounce = null;
+
+function onRecInputChange() {
+    clearTimeout(_searchDebounce);
+    const recNumber = document.getElementById('recInput').value.trim();
+    if (!recNumber) {
+        setCurrentRecData(null);
+        const resultDiv = document.getElementById('distribution-result');
+        if (resultDiv) resultDiv.innerHTML = `<div class="empty-state"><i class="fa-solid fa-chart-bar empty-icon"></i><h5>Sin datos para mostrar</h5><p>Ingrese un número de REC y configure la distribución para ver los resultados.</p></div>`;
+        return;
+    }
+    _searchDebounce = setTimeout(() => searchDistributionRec(), 400);
+}
+
 function searchDistributionRec() {
     const recNumber = document.getElementById('recInput').value.trim();
     const resultDiv = document.getElementById('distribution-result');
@@ -453,15 +358,38 @@ function searchDistributionRec() {
         return;
     }
 
+    // Buscar primero en allRecData (caché local)
     const recNumClean = recNumber.replace(/^0+/, '');
-    setCurrentRecData(allRecData.find(item => item.A === recNumClean) || allRecData.find(item => item.A === recNumber));
+    const cached = allRecData.find(item => item.A === recNumClean) || allRecData.find(item => item.A === recNumber);
 
-    displayDistributionResults(currentRecData);
-
-    // Mostrar modal de pedidos si hay pedidos pendientes para este LOTE
-    if (currentRecData && typeof mostrarModalPedidosParaLote === 'function') {
-        mostrarModalPedidosParaLote(currentRecData.LOTE);
+    if (cached) {
+        setCurrentRecData(cached);
+        displayDistributionResults(currentRecData);
+        if (currentRecData && typeof mostrarModalPedidosParaLote === 'function') {
+            mostrarModalPedidosParaLote(currentRecData.LOTE);
+        }
+        return;
     }
+
+    // No está en caché → buscar en Supabase
+    resultDiv.innerHTML = `<div class="empty-state"><span class="loading-spinner"></span><p style="margin-top:12px;">Buscando REC ${recNumber}...</p></div>`;
+
+    buscarRecEnSupabase(recNumber).then(recData => {
+        if (!recData) {
+            resultDiv.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-exclamation empty-icon" style="color:var(--warning)"></i><h5>REC no encontrado</h5><p>No existe un registro con número ${recNumber}</p></div>`;
+            return;
+        }
+        // Agregar al caché local
+        setAllRecData([...allRecData, recData]);
+        setCurrentRecData(recData);
+        displayDistributionResults(currentRecData);
+        if (currentRecData && typeof mostrarModalPedidosParaLote === 'function') {
+            mostrarModalPedidosParaLote(currentRecData.LOTE);
+        }
+    }).catch(err => {
+        Logger.error('distribution', 'Error buscando REC', err);
+        resultDiv.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation empty-icon" style="color:var(--error)"></i><h5>Error al buscar</h5><p>${err.message}</p></div>`;
+    });
 }
 
 function displayDistributionResults(recData) {
@@ -1414,7 +1342,9 @@ async function saveDistributionToSheets() {
     }
 
     const recNumber = distributionData.Documento;
-    const checkResult = await checkIfRecExists(recNumber);
+    
+    // Verificar si existe en Supabase
+    const checkResult = await checkDistributionExists(recNumber);
 
     // Preparar resumen
     const clientesCount = Object.keys(distributionData.Clientes).length;
@@ -1460,10 +1390,13 @@ async function saveDistributionToSheets() {
     }
 
     try {
-        await sendToDistributionGAS(distributionData);
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        const verification = await verifyDocumentSavedExhaustive(recNumber);
+        // Guardar en Supabase
+        const result = await saveDistributionToSupabase(distributionData);
+        
+        // Pequeño delay para asegurar que se guardó
+        await new Promise(resolve => setTimeout(resolve, 500));
 
+        // Refrescar módulo de impresión
         _refreshPrintBackground();
 
         // Capturar mayoristas con pedidos ANTES de finalizarlos
@@ -1473,8 +1406,8 @@ async function saveDistributionToSheets() {
             mayoristasConPedidos = Object.keys(pedidosPorMayorista);
         }
 
-        if (typeof marcarPedidosCompletados === 'function' && currentRecData) {
-            marcarPedidosCompletados(currentRecData.LOTE || currentRecData.A);
+        if (typeof marcarPedidosComoCompletados === 'function' && currentRecData) {
+            await marcarPedidosComoCompletados(currentRecData.LOTE || currentRecData.A);
         }
         
         // Desmarcar mayoristas que tenían pedidos para este lote
@@ -1483,16 +1416,13 @@ async function saveDistributionToSheets() {
         // Agregar el REC al input de impresión
         agregarRecAInputImpresion(recNumber);
 
-        if (verification.success && verification.verified) {
-            const successType = actionType === 'actualizar' ? 'actualizado' : 'guardado';
-            showMessage(
-                `${recNumber} ${successType} exitosamente (Fila: ${verification.fila})`,
-                'success',
-                5000
-            );
-        } else {
-            showMessage(`${recNumber} enviado al sistema (verificación falló)`, 'warning', 5000);
-        }
+        const successType = result.isUpdate ? 'actualizado' : 'guardado';
+        showMessage(
+            `${recNumber} ${successType} exitosamente en Supabase`,
+            'success',
+            5000
+        );
+        
     } catch (error) {
         console.error('Error guardando distribución:', error);
         showMessage(`Error: ${error.message}`, 'error', 5000);
@@ -1569,7 +1499,7 @@ function adjustRecInput(delta) {
     let currentValue = parseInt(recInput.value) || 0;
     let newValue = Math.max(0, currentValue + delta);
     recInput.value = newValue;
-    searchDistributionRec();
+    onRecInputChange();
     recInput.focus();
 }
 
@@ -1730,16 +1660,39 @@ function showModuleSettings() {
     const savedStrategy = localStorage.getItem('defaultDistributionStrategy') || 'SECTORIZED';
     const savedDefaultSecondary = localStorage.getItem('defaultSecondaryPercentage') || '0';
     const savedMinQuantityRule = localStorage.getItem('minQuantityForDistribution') || '120';
+    const savedSecondaryCompany = localStorage.getItem('defaultSecondaryCompany') || '';
 
     // Obtener empresas secundarias disponibles
     const empresasSecundarias = empresasData.filter(([id, config]) => config.tipoEmpresa === "Secundaria");
-    
-    let secondaryOptions = '<option value="">Ninguna</option>';
-    empresasSecundarias.forEach(([id, config]) => {
-        secondaryOptions += `<option value="${id}">${config.nombreCorto}</option>`;
-    });
 
-    const savedSecondaryCompany = localStorage.getItem('defaultSecondaryCompany') || '';
+    Logger.info('distribution', `showModuleSettings: empresasData=${empresasData.length}, secundarias=${empresasSecundarias.length}`);
+
+    // Si no hay empresas con tipoEmpresa definido, mostrar TODOS los clientes activos como opción
+    let secondaryOptions = '<option value="">Ninguna</option>';
+
+    if (empresasSecundarias.length > 0) {
+        empresasSecundarias.forEach(([id, config]) => {
+            const sel = id === savedSecondaryCompany ? 'selected' : '';
+            secondaryOptions += `<option value="${id}" ${sel}>${config.nombreCorto}</option>`;
+        });
+    } else {
+        // Fallback: mostrar todos los clientes activos que NO sean Mayoristas
+        const todosClientes = Object.entries(allConfigData)
+            .filter(([id, config]) => {
+                const isActive = config.estado && config.estado.toString().toUpperCase().trim() === 'ACTIVO';
+                const noEsMayorista = config.tipoCliente !== 'Mayorista';
+                return isActive && noEsMayorista;
+            });
+
+        if (todosClientes.length > 0) {
+            secondaryOptions += todosClientes.map(([id, config]) => {
+                const sel = id === savedSecondaryCompany ? 'selected' : '';
+                return `<option value="${id}" ${sel}>${config.nombreCorto}</option>`;
+            }).join('');
+        } else {
+            secondaryOptions += '<option disabled>— No hay empresas configuradas (verifica tipo_empresa en Supabase) —</option>';
+        }
+    }
 
     createModal('Configuración del Módulo de Distribución', `
         <div style="padding: 16px 0;">
@@ -1779,12 +1732,7 @@ function showModuleSettings() {
             </div>
         </div>
     `, true);
-    
-    // Establecer el valor guardado después de crear el modal
-    setTimeout(() => {
-        const companySelect = document.getElementById('defaultSecondaryCompany');
-        if (companySelect) companySelect.value = savedSecondaryCompany;
-    }, 0);
+    // Las opciones ya tienen 'selected' incrustado — no se necesita setTimeout
 }
 
 function saveModuleSettings(btn) {
@@ -1918,6 +1866,8 @@ window.openFilterModal = openFilterModal;
 window.closeFilterModal = closeFilterModal;
 window.applyFilters = applyFilters;
 window.initializeDistribution = initializeDistribution;
+window.searchDistributionRec = searchDistributionRec;
+window.onRecInputChange = onRecInputChange;
 window.recalculateActiveDistributions = recalculateActiveDistributions;
 window.saveModuleSettings = saveModuleSettings;
 window._refreshDistributionBackground = _refreshDistributionBackground;

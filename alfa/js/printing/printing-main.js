@@ -1,574 +1,408 @@
 window.printingDatosGlobales = [];
 window.printingModuleInitialized = false;
+window.printingClientesCache = null;
 
-// Función para cargar los datos desde la API
-async function print_cargarDatos() {
-    const loader = document.getElementById("printLoader");
-    const resultContainer = document.getElementById("printResultContainer");
+// Clientes especiales que se manejan como anexos de tipo "CLIENTE"
+const PRINT_CLIENTES_ESPECIALES = {
+    "ESTEBAN": { nombre: "Esteban", nit: "1007348825" },
+    "JESUS":   { nombre: "Jesús",   nit: "70825517" },
+    "ALEX":    { nombre: "Alex",    nit: "14838951" },
+    "RUBEN":   { nombre: "Ruben",   nit: "901920844" }
+};
 
-    if (loader) loader.style.display = "block";
-    if (resultContainer) resultContainer.innerHTML = "<div class='loading-spinner-large'></div><p style='text-align:center'>Cargando datos del sistema de impresión...</p>";
+// ============================================
+// FUNCIONES DE NORMALIZACIÓN (compartidas)
+// ============================================
 
-    try {
-        // Configuración
-        const SPREADSHEET_IDS = {
-            main: "133NiyjNApZGkEFs4jUvpJ9So-cSEzRVeW2FblwOCrjI",
-            rec: "1esc5REq0c03nHLpGcLwZRW29yq2gZnrpbz75gCCjrqc",
-            clientes: "1d5dCCCgiWXfM6vHu3zGGKlvK2EycJtT7Uk4JqUjDOfE"
-        };
-        const API_KEY = 'AIzaSyB35PqBx4p2WcH9T-2oiRfsziIzLesxfrU';
+function print_normalizeDocumento(documento) {
+    return String(documento || '').replace(/^REC/i, '').trim();
+}
 
-        // Función para obtener datos de la hoja
-        async function fetchSheetData(spreadsheetId, range) {
-            const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?key=${API_KEY}`;
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`Error al obtener ${range}`);
-            const data = await response.json();
-            return data.values || [];
-        }
+function print_normalizeLinea(linea) {
+    return String(linea || '').replace(/^LINEA\s*/i, '').replace(/\s+/g, '').toUpperCase();
+}
 
-        // Funciones de normalización
-        function normalizeDocumento(documento) {
-            return documento.replace(/^REC/i, '').trim();
-        }
+function print_normalizePVP(pvp) {
+    return String(pvp || '').replace(/\$\s*/g, '').replace(/\./g, '').trim();
+}
 
-        function normalizeLinea(linea) {
-            return linea.replace(/^LINEA\s*/i, '').replace(/\s+/g, '').toUpperCase();
-        }
+function print_normalizeDate(dateStr) {
+    if (!dateStr) return null;
+    if (dateStr.includes('T')) return dateStr.split('T')[0];
+    if (dateStr.includes('/')) {
+        const [dd, mm, yyyy] = dateStr.split('/');
+        return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+    }
+    return dateStr;
+}
 
-        function normalizePVP(pvp) {
-            return pvp.replace(/\$\s*/g, '').replace(/\./g, '').trim();
-        }
+function print_getClaseByPVP(pvp) {
+    const valor = parseFloat(pvp);
+    if (isNaN(valor)) return 'NO DEFINIDO';
+    if (valor <= 39900) return 'LINEA';
+    if (valor <= 59900) return 'MODA';
+    return 'PRONTAMODA';
+}
 
-        function normalizeDate(dateStr) {
-            if (!dateStr || !dateStr.includes('/')) return null;
-            const [dd, mm, yyyy] = dateStr.split('/');
-            return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
-        }
+// ============================================
+// CARGAR CLIENTES (una sola vez, cacheado)
+// ============================================
 
-        function getClaseByPVP(pvp) {
-            const valor = parseFloat(pvp);
-            if (isNaN(valor)) return 'NO DEFINIDO';
-            if (valor <= 39900) return 'LINEA';
-            if (valor <= 59900) return 'MODA';
-            if (valor > 59900) return 'PRONTAMODA';
-            return 'NO DEFINIDO';
-        }
+async function print_getClientes() {
+    if (window.printingClientesCache) return window.printingClientesCache;
 
-        function getGestorByLinea(linea) {
-            const normalized = normalizeLinea(linea);
-            const gestores = {
-                'ANGELES': 'VILLAMIZAR GOMEZ LUIS',
-                'MODAFRESCA': 'FABIAN MARIN FLOREZ',
-                'BASICO': 'CESAR AUGUSTO LOPEZ GIRALDO',
-                'INTIMA': 'KELLY GIOVANA ZULUAGA HOYOS',
-                'URBANO': 'MARYI ANDREA GONZALEZ SILVA',
-                'DEPORTIVO': 'JOHAN STEPHANIE ESPÍNOSA RAMIREZ',
-                'PRONTAMODA': 'SANCHEZ LOPEZ YULIETH',
-                'ESPECIALES': 'JUAN ESTEBAN ZULUAGA HOYOS',
-                'BOGOTA': 'JUAN ESTEBAN ZULUAGA HOYOS'
-            };
-
-            for (const [key, value] of Object.entries(gestores)) {
-                if (normalized.includes(key)) return value;
-            }
-            return 'GESTOR NO ASIGNADO';
-        }
-
-        function getProveedorByLinea(linea) {
-            return normalizeLinea(linea).includes('ANGELES')
-                ? 'TEXTILES Y CREACIONES LOS ANGELES SAS'
-                : 'TEXTILES Y CREACIONES EL UNIVERSO SAS';
-        }
-
-        function parseHRStringOptimized(hrString) {
-            if (!hrString) return [];
-            const result = [];
-            const entries = hrString.split('☬');
-
-            for (const entry of entries) {
-                const parts = entry.split('∞');
-                if (parts.length !== 4) continue;
-
-                const cantidad = Number(parts[3]);
-                if (isNaN(cantidad)) continue;
-
-                result.push([
-                    String(parts[0] || '').trim(),
-                    String(parts[1] || '').trim(),
-                    String(parts[2] || '').trim(),
-                    cantidad
-                ]);
-            }
-
-            return result;
-        }
-
-        function isAnuladoOptimized(item) {
-            const camposRequeridos = [
-                'TALLER', 'LINEA', 'AUDITOR', 'ESCANER', 'LOTE',
-                'REFPROV', 'DESCRIPCIÓN', 'CANTIDAD', 'REFERENCIA',
-                'TIPO', 'PVP', 'PRENDA', 'GENERO'
-            ];
-            let vacios = 0;
-
-            for (const campo of camposRequeridos) {
-                const valor = item[campo];
-                if (!valor || (typeof valor === 'string' && valor.trim() === '') || (typeof valor === 'number' && valor === 0)) {
-                    vacios++;
-                    if (vacios > 4) return true;
-                }
-            }
-            return false;
-        }
-
-        // Procesamiento de datos
-        async function getAllSpreadsheetData() {
-            const [data2Values, recValues, clientesValues, dataValues] = await Promise.all([
-                fetchSheetData(SPREADSHEET_IDS.main, "DATA2!S2:S"),
-                fetchSheetData(SPREADSHEET_IDS.rec, "DataBase!A2:AG"),
-                fetchSheetData(SPREADSHEET_IDS.clientes, "CLIENTES!A2:I"),
-                fetchSheetData(SPREADSHEET_IDS.clientes, "DATA!A2:E")
-            ]);
-
-            return { data2Values, recValues, clientesValues, dataValues };
-        }
-
-        function processDistribucionAndColaboradorData(values) {
-            const clienteDistribucionMap = {};
-            const colaboradorMap = {};
-
-            for (const row of values) {
-                const documento = String(row[0] || '').trim();
-
-                if (documento && row[4]) {
-                    colaboradorMap[documento] = row[4];
-                }
-
-                if (documento && row[2]) {
-                    try {
-                        const parsed = JSON.parse(row[2]);
-                        if (parsed.Clientes) {
-                            clienteDistribucionMap[documento] = parsed.Clientes;
-                        }
-                    } catch (e) {
-                        console.error("Error parseando JSON de distribución:", e.message, "Documento:", documento);
-                    }
-                }
-            }
-
-            return { clienteDistribucionMap, colaboradorMap };
-        }
-
-        function processClientesData(values) {
-            const clientesMap = {};
-
-            for (const row of values) {
-                const id = String(row[0] || '').trim();
-                if (id) {
-                    clientesMap[id] = {
-                        id: id,
-                        razonSocial: row[1] || '',
-                        nombreCorto: row[2] || '',
-                        tipoCliente: row[3] || '',
-                        estado: row[4] || '',
-                        direccion: row[5] || '',
-                        telefono: row[6] || '',
-                        email: row[7] || '',
-                        tipoEmpresa: row[8] || ''
-                    };
-                }
-            }
-
-            return clientesMap;
-        }
-
-        function processMainDataOptimized(values) {
-            return values.map(row => {
-                try {
-                    const jsonData = JSON.parse(row[0]);
-                    const rawPVP = normalizePVP(jsonData.PVP || '');
-
-                    return {
-                        DOCUMENTO: String(jsonData.A || ''),
-                        FECHA: normalizeDate(jsonData.FECHA || ''),
-                        TALLER: jsonData.TALLER || '',
-                        LINEA: normalizeLinea(jsonData.LINEA || ''),
-                        AUDITOR: jsonData.AUDITOR || '',
-                        ESCANER: jsonData.ESCANER || '',
-                        LOTE: Number(jsonData.LOTE) || 0,
-                        REFPROV: String(jsonData.REFPROV || ''),
-                        DESCRIPCIÓN: jsonData.DESCRIPCIÓN || '',
-                        CANTIDAD: Number(jsonData.CANTIDAD) || 0,
-                        REFERENCIA: jsonData.REFERENCIA || '',
-                        TIPO: jsonData.TIPO || '',
-                        PVP: rawPVP,
-                        PRENDA: jsonData.PRENDA || '',
-                        GENERO: jsonData.GENERO || '',
-                        GESTOR: jsonData.GESTOR || '',
-                        PROVEEDOR: jsonData.PROVEEDOR || getProveedorByLinea(jsonData.LINEA || ''),
-                        CLASE: getClaseByPVP(rawPVP),
-                        HR: jsonData.HR,
-                        ANEXOS: jsonData.ANEXOS,
-                        REC: jsonData.A // Mantener compatibilidad con tu código original
-                    };
-                } catch (e) {
-                    console.error("Error al parsear JSON:", e.message, row[0]);
-                    return null;
-                }
-            }).filter(item => item !== null);
-        }
-
-        function processRecDataOptimized(values) {
-            return values.map(row => {
-                if (!row[0] && !row[1]) return null;
-
-                const linea = row[3] || '';
-                const rawPVP = normalizePVP(row[31] || '');
-
-                return {
-                    DOCUMENTO: normalizeDocumento(String(row[0] || '')),
-                    FECHA: normalizeDate(row[1] || ''),
-                    TALLER: row[2] || '',
-                    LINEA: normalizeLinea(linea),
-                    AUDITOR: row[4] || '',
-                    ESCANER: row[5] || '',
-                    LOTE: Number(row[8]) || 0,
-                    REFPROV: String(row[6] || ''),
-                    DESCRIPCIÓN: row[9] || '',
-                    CANTIDAD: Number(row[18]) || 0,
-                    REFERENCIA: row[26] || '',
-                    TIPO: row[27] || '',
-                    PVP: rawPVP,
-                    PRENDA: row[29] || '',
-                    GENERO: row[30] || '',
-                    GESTOR: getGestorByLinea(linea),
-                    PROVEEDOR: getProveedorByLinea(linea),
-                    CLASE: getClaseByPVP(rawPVP),
-                    FUENTE: "BUSINT",
-                    HR: parseHRStringOptimized(row[32] || ''),
-                    REC: Number(normalizeDocumento(String(row[0] || ''))) || 0 // Mantener compatibilidad
-                };
-            }).filter(item => item !== null && item.DOCUMENTO !== '');
-        }
-
-        function enrichSingleClient(clienteData, clientesDataMap) {
-            const clienteId = clienteData.id;
-
-            if (clientesDataMap[clienteId]) {
-                return {
-                    ...clientesDataMap[clienteId],
-                    distribucion: clienteData.distribucion || []
+    const clientesData = await supabase.selectAll('clientes', { order: 'nombre_corto.asc' });
+    const map = {};
+    if (Array.isArray(clientesData)) {
+        clientesData.forEach(row => {
+            const id = String(row.id_cliente || '').trim();
+            if (id) {
+                map[id] = {
+                    id,
+                    razonSocial:  row.razon_social  || '',
+                    nombreCorto:  row.nombre_corto  || '',
+                    tipoCliente:  row.tipo_cliente  || '',
+                    estado:       row.estado ? 'ACTIVO' : 'INACTIVO',
+                    direccion:    row.direccion     || '',
+                    telefono:     row.telefono      || '',
+                    email:        row.email         || '',
+                    tipoEmpresa:  row.tipo_empresa  || ''
                 };
             }
+        });
+    }
+    window.printingClientesCache = map;
+    return map;
+}
 
-            return {
-                id: clienteId,
-                nombre: clienteData.nombre || '',
-                razonSocial: clienteData.nombre || '',
-                distribucion: clienteData.distribucion || []
-            };
-        }
+// ============================================
+// LÓGICA DE MEZCLA DE DATOS POR LOTE (Legacy)
+// ============================================
 
-        function enrichClientesData(clientesDistribucion, clientesData) {
-            const enriched = {};
+function print_mergeLoteData(registros, clientesMap) {
+    const fulls = registros.filter(r => (r.tipo || '').toUpperCase() === 'FULL');
+    const anexos = registros.filter(r => (r.tipo || '').toUpperCase() !== 'FULL');
 
-            for (const [nombreCliente, datosCliente] of Object.entries(clientesDistribucion)) {
-                const clienteId = datosCliente.id;
+    const result = [];
 
-                if (clientesData[clienteId]) {
-                    enriched[nombreCliente] = {
-                        ...clientesData[clienteId],
-                        distribucion: datosCliente.distribucion || []
-                    };
-
-                    if (datosCliente.porcentaje) {
-                        enriched[nombreCliente].porcentaje = datosCliente.porcentaje;
-                    }
-                } else {
-                    enriched[nombreCliente] = {
-                        id: clienteId,
-                        nombre: nombreCliente,
-                        razonSocial: datosCliente.nombre || nombreCliente,
-                        distribucion: datosCliente.distribucion || [],
-                        ...datosCliente
-                    };
-                }
-            }
-
-            return enriched;
-        }
-
-        function enrichItem(item, clienteDistribucionMap, clientesDataMap, colaboradorMap, fuente) {
-            const docKey = String(item.DOCUMENTO).trim();
-
-            if (clienteDistribucionMap[docKey]) {
-                item.CLIENTES = enrichClientesData(clienteDistribucionMap[docKey], clientesDataMap);
-            }
-
-            if (colaboradorMap[docKey]) {
-                item.COLABORADOR = colaboradorMap[docKey];
-            }
-
-            item.FUENTE = fuente;
-            item.GESTOR = item.GESTOR || getGestorByLinea(item.LINEA);
-            item.PROVEEDOR = item.PROVEEDOR || getProveedorByLinea(item.LINEA);
-
-            return item;
-        }
-
-        function processBusintData(busintData, clienteDistribucionMap, clientesDataMap, colaboradorMap) {
-            const busintMap = new Map();
-            const busintFinal = [];
-            const clientesEspeciales = {
-                "ESTEBAN": { nombre: "Esteban", nit: "1007348825" },
-                "JESUS": { nombre: "Jesús", nit: "70825517" },
-                "ALEX": { nombre: "Alex", nit: "14838951" },
-                "RUBEN": { nombre: "Ruben", nit: "901920844" }
-            };
-
-            // Agrupar por LOTE
-            for (const item of busintData) {
-                const lote = item.LOTE;
-                if (!busintMap.has(lote)) busintMap.set(lote, []);
-                busintMap.get(lote).push(item);
-            }
-
-            // Procesar cada grupo
-            for (const [lote, registros] of busintMap.entries()) {
-                const fulls = registros.filter(r => r.TIPO === 'FULL');
-                const anexos = registros.filter(r => r.TIPO !== 'FULL');
-
-                for (const full of fulls) {
-                    const docKey = String(full.DOCUMENTO).trim();
-                    const principal = {
-                        ...full,
-                        FUENTE: "BUSINT",
-                        GESTOR: getGestorByLinea(full.LINEA),
-                        PROVEEDOR: getProveedorByLinea(full.LINEA),
-                    };
-
-                    if (colaboradorMap[docKey]) {
-                        principal.COLABORADOR = colaboradorMap[docKey];
-                    }
-
-                    let totalCantidad = 0;
-                    if (principal.HR && principal.HR.length > 0) {
-                        totalCantidad += principal.HR.reduce((sum, item) => sum + (item[3] || 0), 0);
-                    }
-
-                    const anexosNormales = [];
-                    const pendientesMap = new Map();
-                    const clientesEspecialesData = {};
-
-                    for (const anexo of anexos) {
-                        const nombreAnexo = (anexo.TIPO || '').toUpperCase();
-
-                        // Procesar clientes especiales
-                        if (clientesEspeciales[nombreAnexo]) {
-                            const clienteInfo = clientesEspeciales[nombreAnexo];
-
-                            if (Array.isArray(anexo.HR) && anexo.HR.length > 0) {
-                                const distribucion = anexo.HR.map(([codigo, color, talla, cantidad]) => {
-                                    const cant = Number(cantidad) || 0;
-                                    totalCantidad += cant;
-                                    return {
-                                        codigo: String(codigo || '').trim(),
-                                        color: String(color || '').trim(),
-                                        talla: String(talla || '').trim(),
-                                        cantidad: cant
-                                    };
-                                });
-
-                                clientesEspecialesData[nombreAnexo] = enrichSingleClient({
-                                    id: clienteInfo.nit,
-                                    nombre: clienteInfo.nombre,
-                                    distribucion: distribucion
-                                }, clientesDataMap);
-                            }
-                            continue;
-                        }
-
-                        if (nombreAnexo === 'PENDIENTES') {
-                            if (Array.isArray(anexo.HR) && anexo.HR.length > 0) {
-                                for (const [codigo, color, talla, cantidad] of anexo.HR) {
-                                    const key = `${codigo}-${color}-${talla}`;
-                                    const current = pendientesMap.get(key) || 0;
-                                    const cant = Number(cantidad) || 0;
-                                    pendientesMap.set(key, current + cant);
-                                }
-                            }
-                            continue;
-                        }
-
-                        if (Array.isArray(anexo.HR) && anexo.HR.length > 0) {
-                            anexosNormales.push(...anexo.HR.map(([codigo, color, talla, cantidad]) => {
-                                const cant = Number(cantidad) || 0;
-                                totalCantidad += cant;
-                                return {
-                                    DOCUMENTO: anexo.REFPROV || '',
-                                    CODIGO: codigo,
-                                    COLOR: color,
-                                    TALLA: talla,
-                                    TIPO: anexo.TIPO || '',
-                                    CANTIDAD: cant,
-                                    REC: Number(anexo.DOCUMENTO) || ''
-                                };
-                            }));
-                        }
-                    }
-
-                    // Agregar clientes especiales enriquecidos a CLIENTES
-                    if (Object.keys(clientesEspecialesData).length > 0) {
-                        if (!principal.CLIENTES) principal.CLIENTES = {};
-
-                        for (const [nombre, data] of Object.entries(clientesEspecialesData)) {
-                            const nombreFormateado = nombre.charAt(0) + nombre.slice(1).toLowerCase();
-                            principal.CLIENTES[nombreFormateado] = data;
-                        }
-                    }
-
-                    // Consolidar PENDIENTES con HR existente
-                    if (pendientesMap.size > 0) {
-                        const hrMap = new Map();
-
-                        if (principal.HR && principal.HR.length > 0) {
-                            for (const [codigo, color, talla, cantidad] of principal.HR) {
-                                const key = `${codigo}-${color}-${talla}`;
-                                hrMap.set(key, { codigo, color, talla, cantidad });
-                            }
-                        }
-
-                        for (const [key, cantidadPendiente] of pendientesMap.entries()) {
-                            const [codigo, color, talla] = key.split('-');
-                            const itemKey = `${codigo}-${color}-${talla}`;
-
-                            if (hrMap.has(itemKey)) {
-                                const item = hrMap.get(itemKey);
-                                item.cantidad += cantidadPendiente;
-                            } else {
-                                hrMap.set(itemKey, {
-                                    codigo: String(codigo || '').trim(),
-                                    color: String(color || '').trim(),
-                                    talla: String(talla || '').trim(),
-                                    cantidad: Number(cantidadPendiente)
-                                });
-                            }
-
-                            totalCantidad += cantidadPendiente;
-                        }
-
-                        principal.HR = Array.from(hrMap.values()).map(item => [
-                            item.codigo,
-                            item.color,
-                            item.talla,
-                            item.cantidad
-                        ]);
-                    }
-
-                    // Actualizar la cantidad total
-                    principal.CANTIDAD = totalCantidad;
-
-                    // Agregar anexos normales
-                    if (anexosNormales.length > 0) {
-                        principal.ANEXOS = anexosNormales;
-                    }
-
-                    // Mantener clientes de distribución original si existen
-                    if (clienteDistribucionMap[docKey]) {
-                        principal.CLIENTES = {
-                            ...principal.CLIENTES,
-                            ...enrichClientesData(clienteDistribucionMap[docKey], clientesDataMap)
-                        };
-                    }
-
-                    busintFinal.push(principal);
-                }
-            }
-
-            return busintFinal;
-        }
-
-        // Proceso principal
-        const { data2Values, recValues, clientesValues, dataValues } = await getAllSpreadsheetData();
-        const { clienteDistribucionMap, colaboradorMap } = processDistribucionAndColaboradorData(dataValues);
-        const clientesDataMap = processClientesData(clientesValues);
-
-        // Procesar datos SISPRO
-        const sisproData = processMainDataOptimized(data2Values)
-            .filter(item => !isAnuladoOptimized(item))
-            .map(item => enrichItem(item, clienteDistribucionMap, clientesDataMap, colaboradorMap, "SISPRO"));
-
-        // Procesar datos BUSINT
-        const busintData = processRecDataOptimized(recValues)
-            .filter(item => !isAnuladoOptimized(item));
-
-        const busintFinal = processBusintData(
-            busintData,
-            clienteDistribucionMap,
-            clientesDataMap,
-            colaboradorMap
-        );
-
-        // Combinar resultados
-        const resultadoFinal = [...sisproData, ...busintFinal].map(item => {
-            // Mantener estructura compatible con tu código original
-            return {
-                ...item,
-                REC: item.DOCUMENTO, // Para mantener compatibilidad
-                COLABORADOR: item.COLABORADOR || '', // Asegurar que existe
-                DESCRIPCION: item.DESCRIPCIÓN, // Mantener ambos nombres
-                DISTRIBUCION: {
-                    Documento: item.DOCUMENTO,
-                    Clientes: item.CLIENTES || {},
-                    Colaborador: item.COLABORADOR || ''
-                }
-            };
+    fulls.forEach(full => {
+        // Clonar para evitar mutaciones
+        const principal = JSON.parse(JSON.stringify(full));
+        
+        // HR y consolidación
+        const hrMap = new Map();
+        const rawHR = Array.isArray(principal.hr) ? principal.hr : [];
+        rawHR.forEach(item => {
+            const key = `${item.codigo_color}-${item.color}-${item.talla}`;
+            hrMap.set(key, { ...item });
         });
 
-        // Almacenar datos globalmente y actualizar UI
-        window.printingDatosGlobales = resultadoFinal;
-        if (loader) loader.style.display = "none";
+        const anexosNormales = [];
+        const clientesEspecialesData = {};
+        let totalCantidad = rawHR.reduce((sum, item) => sum + (Number(item.cantidad) || 0), 0);
 
+        anexos.forEach(anexo => {
+            const nombreAnexo = (anexo.tipo || '').toUpperCase();
+            const anexoHR = Array.isArray(anexo.hr) ? anexo.hr : [];
+
+            // 1. Clientes Especiales (RUBEN, ESTEBAN...)
+            if (PRINT_CLIENTES_ESPECIALES[nombreAnexo]) {
+                const cInfo = PRINT_CLIENTES_ESPECIALES[nombreAnexo];
+                const distribucion = anexoHR.map(h => {
+                    const cant = Number(h.cantidad) || 0;
+                    totalCantidad += cant;
+                    return {
+                        codigo:   String(h.codigo_color || '').trim(),
+                        color:    String(h.color || '').trim(),
+                        talla:    String(h.talla || '').trim(),
+                        cantidad: cant
+                    };
+                });
+
+                if (distribucion.length > 0) {
+                    const cid = cInfo.nit;
+                    const cBase = clientesMap[cid] || { id: cid, nombre: cInfo.nombre, razonSocial: cInfo.nombre };
+                    clientesEspecialesData[nombreAnexo] = {
+                        ...cBase,
+                        distribucion: distribucion
+                    };
+                }
+                return;
+            }
+
+            // 2. Pendientes y Promociones (se suman al HR del FULL)
+            if (nombreAnexo === 'PENDIENTES' || nombreAnexo === 'PROMO') {
+                anexoHR.forEach(h => {
+                    const key = `${h.codigo_color}-${h.color}-${h.talla}`;
+                    const cant = Number(h.cantidad) || 0;
+                    if (hrMap.has(key)) {
+                        hrMap.get(key).cantidad += cant;
+                    } else {
+                        hrMap.set(key, { 
+                            codigo_color: String(h.codigo_color || '').trim(),
+                            color: String(h.color || '').trim(),
+                            talla: String(h.talla || '').trim(),
+                            cantidad: cant 
+                        });
+                    }
+                    totalCantidad += cant;
+                });
+                // PENDIENTES solo va al HR (igual que legacy), PROMO va a ambos
+                if (nombreAnexo === 'PENDIENTES') return;
+            }
+
+            // 3. Otros Anexos (IMPERFECTA, OTROS, PROMO...)
+            // A. Desde el HR del anexo
+            anexoHR.forEach(h => {
+                const cant = Number(h.cantidad) || 0;
+                // Si no es PROMO (que ya sumó arriba), sumar a la cantidad total
+                if (nombreAnexo !== 'PROMO') totalCantidad += cant;
+                
+                anexosNormales.push({
+                    DOCUMENTO: anexo.refprov || '',
+                    CODIGO:    h.codigo_color || '',
+                    COLOR:     h.color || '',
+                    TALLA:     h.talla || '',
+                    TIPO:      nombreAnexo,
+                    CANTIDAD:  cant,
+                    REC:       anexo.id_ingreso || ''
+                });
+            });
+
+            // B. Desde la columna 'anexos' del registro anexo (si tiene data extra)
+            try {
+                const extra = typeof anexo.anexos === 'string' ? JSON.parse(anexo.anexos) : (Array.isArray(anexo.anexos) ? anexo.anexos : []);
+                if (extra.length > 0) anexosNormales.push(...extra);
+            } catch(e) {}
+        });
+
+        // Actualizar datos del registro FULL
+        principal.hr = Array.from(hrMap.values());
+        principal.cantidad = totalCantidad;
+        
+        // Unir con anexos que ya traía la columna 'anexos' de Supabase (si existen)
+        let anexosBase = [];
+        try {
+            anexosBase = typeof principal.anexos === 'string' ? JSON.parse(principal.anexos) : (Array.isArray(principal.anexos) ? principal.anexos : []);
+        } catch(e) { anexosBase = []; }
+        
+        principal.anexos = [...anexosBase, ...anexosNormales];
+        principal._clientesEspeciales = clientesEspecialesData;
+
+        result.push(principal);
+    });
+
+    return result;
+}
+
+// ============================================
+// CONSULTAR SUPABASE SOLO POR LOS IDs PEDIDOS
+// Usa el operador "in" de PostgREST:
+//   id_ingreso=in.(2450,2451,2452)
+// ============================================
+
+async function print_fetchByIds(ids) {
+    if (!ids || ids.length === 0) return [];
+
+    const startTime = performance.now();
+
+    // 1. Normalizar y consultar registros iniciales
+    const cleanIds = ids.map(id => print_normalizeDocumento(String(id)));
+    const inFilter = `(${cleanIds.join(',')})`;
+
+    const [sisproData, clientesMap] = await Promise.all([
+        supabase.request(`ingresos?id_ingreso=in.${inFilter}&select=*`, { method: 'GET' }),
+        print_getClientes()
+    ]);
+
+    if (!Array.isArray(sisproData) || sisproData.length === 0) return [];
+
+    // 2. Identificar lotes para traer "hermanos" (anexos)
+    const lotesUnicos = [...new Set(sisproData.map(r => r.lote).filter(l => l && l > 0))];
+    
+    let allLoteData = [];
+    if (lotesUnicos.length > 0) {
+        const loteFilter = `(${lotesUnicos.join(',')})`;
+        allLoteData = await supabase.request(`ingresos?lote=in.${loteFilter}&select=*`, { method: 'GET' });
+    } else {
+        allLoteData = sisproData;
+    }
+
+    // 3. Agrupar por Lote y Mezclar
+    const groups = {};
+    allLoteData.forEach(r => {
+        const l = r.lote || 0;
+        if (!groups[l]) groups[l] = [];
+        groups[l].push(r);
+    });
+
+    const mergedRecords = [];
+    for (const l in groups) {
+        const merged = print_mergeLoteData(groups[l], clientesMap);
+        // Si no hay FULL en el lote, mantenemos los registros individuales para no perderlos
+        if (merged.length === 0) {
+            mergedRecords.push(...groups[l]);
+        } else {
+            mergedRecords.push(...merged);
+        }
+    }
+
+    // 4. Consultar Distribuciones para los registros finales
+    const finalDocIds = mergedRecords.map(r => print_normalizeDocumento(r.id_ingreso));
+    const finalInFilter = `(${finalDocIds.join(',')})`;
+    const distribucionesData = await supabase.request(`distribuciones?id_distribucion=in.${finalInFilter}&select=*`, { method: 'GET' });
+
+    const distribucionesMap = {};
+    const colaboradorMap    = {};
+    if (Array.isArray(distribucionesData)) {
+        distribucionesData.forEach(row => {
+            const doc = print_normalizeDocumento(row.id_distribucion);
+            if (row.colaborador) colaboradorMap[doc] = row.colaborador;
+            if (row.datos_distribucion?.Clientes) {
+                distribucionesMap[doc] = row.datos_distribucion.Clientes;
+            }
+        });
+    }
+
+    // 5. Construir Resultado Final enriquecido
+    const resultadoFinal = [];
+    mergedRecords.forEach(row => {
+        const documento = print_normalizeDocumento(row.id_ingreso);
+        const rawPVP    = print_normalizePVP(row.pvp ? row.pvp.toString() : '');
+
+        // Clientes de distribución (base de datos)
+        let clientesEnriquecidos = {};
+        if (distribucionesMap[documento]) {
+            for (const [nombre, datos] of Object.entries(distribucionesMap[documento])) {
+                const cid = datos.id;
+                clientesEnriquecidos[nombre] = clientesMap[cid]
+                    ? { ...clientesMap[cid], distribucion: datos.distribucion || [], porcentaje: datos.porcentaje || '' }
+                    : { id: cid, nombre, razonSocial: datos.nombre || nombre, distribucion: datos.distribucion || [], porcentaje: datos.porcentaje || '' };
+            }
+        }
+
+        // Agregar clientes especiales inyectados por el merge (RUBEN, ESTEBAN...)
+        if (row._clientesEspeciales) {
+            for (const [nombre, data] of Object.entries(row._clientesEspeciales)) {
+                const nombreFormateado = nombre.charAt(0) + nombre.slice(1).toLowerCase();
+                clientesEnriquecidos[nombreFormateado] = data;
+            }
+        }
+
+        resultadoFinal.push({
+            DOCUMENTO:    documento,
+            REC:          documento,
+            FECHA:        print_normalizeDate(row.fecha_traslado),
+            TALLER:       row.taller    || '',
+            LINEA:        print_normalizeLinea(row.linea),
+            AUDITOR:      row.auditor   || '',
+            ESCANER:      row.escaner   || '',
+            LOTE:         row.lote      || 0,
+            REFPROV:      row.refprov   || '',
+            DESCRIPCIÓN:  row.descripcion || '',
+            DESCRIPCION:  row.descripcion || '',
+            CANTIDAD:     row.cantidad  || 0,
+            REFERENCIA:   row.referencia || '',
+            TIPO:         row.tipo      || 'FULL',
+            PVP:          rawPVP,
+            PRENDA:       row.prenda    || '',
+            GENERO:       row.genero    || '',
+            GESTOR:       row.gestor    || '',
+            PROVEEDOR:    row.proveedor || '',
+            CLASE:        row.clase     || print_getClaseByPVP(rawPVP),
+            HR:           (row.hr || []).map(h => [h.codigo_color || '', h.color || '', h.talla || '', h.cantidad || 0]),
+            ANEXOS:       row.anexos || [],
+            FUENTE:       'SUPABASE',
+            COLABORADOR:  colaboradorMap[documento] || '',
+            CLIENTES:     clientesEnriquecidos,
+            DISTRIBUCION: {
+                Documento:   documento,
+                Clientes:    clientesEnriquecidos,
+                Colaborador: colaboradorMap[documento] || ''
+            }
+        });
+    });
+
+    // Mapeo extra: si el usuario buscó un ID que ahora es parte de un FULL, 
+    // nos aseguramos de que el resultado sea encontrable por el ID original.
+    // Esto es vital para que print_buscarPorREC lo encuentre.
+    const searchMap = {};
+    allLoteData.forEach(r => {
+        const origId = print_normalizeDocumento(r.id_ingreso);
+        const l = r.lote || 0;
+        // Encontrar el registro FULL de este lote en resultadoFinal
+        const parent = resultadoFinal.find(f => f.LOTE === l && f.TIPO === 'FULL');
+        if (parent) searchMap[origId] = parent;
+    });
+
+    const finalResultWithAliases = [...resultadoFinal];
+    cleanIds.forEach(id => {
+        if (!finalResultWithAliases.find(r => r.REC === id) && searchMap[id]) {
+            // Creamos una copia con el REC cambiado para que la búsqueda lo encuentre
+            const alias = { ...searchMap[id], REC: id };
+            finalResultWithAliases.push(alias);
+        }
+    });
+
+    const loadTime = performance.now() - startTime;
+    Logger.success('printing-main', `${resultadoFinal.length} lotes procesados (${finalResultWithAliases.length} mapeos) en ${loadTime.toFixed(0)}ms`);
+
+    // Actualizar caché global
+    finalResultWithAliases.forEach(item => {
+        const idx = window.printingDatosGlobales.findIndex(x => x.REC === item.REC);
+        if (idx >= 0) window.printingDatosGlobales[idx] = item;
+        else window.printingDatosGlobales.push(item);
+    });
+
+    return finalResultWithAliases;
+}
+
+// ============================================
+// INICIALIZACIÓN — ya no carga datos masivos,
+// solo prepara el módulo y cachea clientes
+// ============================================
+
+async function print_cargarDatos() {
+    const loader          = document.getElementById('printLoader');
+    const resultContainer = document.getElementById('printResultContainer');
+
+    if (loader) loader.style.display = 'block';
+    if (resultContainer) resultContainer.innerHTML =
+        "<div class='loading-spinner-large'></div><p style='text-align:center'>Preparando módulo de impresión...</p>";
+
+    try {
+        // Pre-cargar clientes (son pocos y se reusan siempre)
+        await print_getClientes();
+
+        if (loader) loader.style.display = 'none';
         if (resultContainer) {
             resultContainer.innerHTML = `
                 <div class="empty-state">
                     <i class="fa-solid fa-print empty-icon"></i>
                     <h5>Sin datos para mostrar</h5>
                     <p>Ingrese un documento para buscar información de impresión.</p>
-                </div>
-            `;
+                </div>`;
         }
 
         window.printingModuleInitialized = true;
-        Logger.success('printing-main', 'Módulo de impresión inicializado correctamente');
-        return resultadoFinal;
-
+        Logger.success('printing-main', 'Módulo de impresión listo (carga bajo demanda)');
     } catch (error) {
-        if (loader) loader.style.display = "none";
+        if (loader) loader.style.display = 'none';
         if (resultContainer) {
             resultContainer.innerHTML = `
-                <div style="color: var(--error); padding: 20px; text-align: center;">
-                    <i class="codicon codicon-error" style="font-size: 32px; margin-bottom: 15px;"></i>
-                    <p>Error al cargar datos: ${error.message}</p>
-                    <button class="btn-primary" onclick="print_cargarDatos()" style="margin-top: 15px;">
+                <div style="color:var(--error);padding:20px;text-align:center;">
+                    <i class="codicon codicon-error" style="font-size:32px;margin-bottom:15px;"></i>
+                    <p>Error al inicializar: ${error.message}</p>
+                    <button class="btn-primary" onclick="print_cargarDatos()" style="margin-top:15px;">
                         <i class="codicon codicon-refresh"></i> Reintentar
                     </button>
                 </div>`;
         }
-        console.error("Error en módulo de impresión:", error);
         throw error;
     }
 }
 
-// Inicialización controlada
 function initPrintingModule() {
-    // Si ya hay datos cargados (por la carga inicial de app.js), no recargar
-    if (window.printingDatosGlobales && window.printingDatosGlobales.length > 0) {
-        Logger.info('printing-main', 'Módulo de impresión ya tiene datos cargados');
-        return;
-    }
-
     if (!window.printingModuleInitialized) {
         print_cargarDatos();
     }

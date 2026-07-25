@@ -1,312 +1,258 @@
-function print_buscarPorREC() {
-    let recBuscado = document.getElementById("printRecInput").value;
-    if (!recBuscado) {
-        document.getElementById("printResultContainer").innerHTML = "<p>Ingrese un documento para buscar.</p>";
-        return;
-    }
+// ============================================
+// HELPERS INTERNOS
+// ============================================
 
-    // SI HAY COMAS, AHORA LA ACCIÓN PREDETERMINADA ES LOTE (DUPLEX)
-    if (recBuscado.includes(',')) {
-        print_buscarLoteRECs();
-        return;
-    }
+function print_showResult(html) {
+    const el = document.getElementById('printResultContainer');
+    if (el) el.innerHTML = html;
+}
 
-    if (!window.printingDatosGlobales) {
-        document.getElementById("printResultContainer").innerHTML = "<p>Datos no cargados. Por favor espere o recargue la página.</p>";
-        return;
-    }
+function print_showLoading(msg = 'Buscando...') {
+    print_showResult(`<div class='loading-spinner-large'></div><p style='text-align:center'>${msg}</p>`);
+}
 
-    let resultado = window.printingDatosGlobales.find(item => item.REC == recBuscado);
+function print_getInputIds() {
+    const raw = (document.getElementById('printRecInput')?.value || '').trim();
+    return raw.split(',').map(s => s.trim()).filter(Boolean);
+}
 
-    if (resultado) {
-        // Abrir plantilla principal solamente (petición usuario)
-        print_abrirPlantillaImpresion(resultado, {
-            modo: 'completo',
-            soloImpresionPrincipal: true
-        });
+// ============================================
+// BUSCAR UN SOLO REC (principal)
+// ============================================
 
-        document.getElementById("printResultContainer").innerHTML = `
-            <div style="color: var(--success); padding: 1rem; border-radius: 6px; border: 1px solid var(--success);">
-                <p>Documento ${recBuscado} encontrado. Se abrió la plantilla de impresión.</p>
-                <p>Colaborador asignado: <strong>${resultado.COLABORADOR || 'Sin asignar'}</strong></p>
-            </div>
-        `;
-    } else {
-        document.getElementById("printResultContainer").innerHTML = `<div style="color: var(--warning); padding: 1rem;"><p>No se encontró el documento ${recBuscado}.</p></div>`;
+async function print_buscarPorREC() {
+    const ids = print_getInputIds();
+    if (!ids.length) { print_showResult('<p>Ingrese un documento para buscar.</p>'); return; }
+
+    // Si hay comas → lote
+    if (ids.length > 1) { print_buscarLoteRECs(); return; }
+
+    print_showLoading(`Buscando REC ${ids[0]}...`);
+
+    try {
+        const datos = await print_fetchByIds(ids);
+        const resultado = datos.find(item => item.REC == ids[0]);
+
+        if (resultado) {
+            print_abrirPlantillaImpresion(resultado, { modo: 'completo', soloImpresionPrincipal: true });
+            print_showResult(`
+                <div style="color:var(--success);padding:1rem;border-radius:6px;border:1px solid var(--success);">
+                    <p>Documento ${ids[0]} encontrado. Se abrió la plantilla de impresión.</p>
+                    <p>Colaborador asignado: <strong>${resultado.COLABORADOR || 'Sin asignar'}</strong></p>
+                </div>`);
+        } else {
+            print_showResult(`<div style="color:var(--warning);padding:1rem;"><p>No se encontró el documento ${ids[0]}.</p></div>`);
+        }
+    } catch (e) {
+        print_showResult(`<div style="color:var(--error);padding:1rem;"><p>Error: ${e.message}</p></div>`);
     }
 }
 
-function print_mostrarOpcionesImpresion() {
-    let recBuscado = document.getElementById("printRecInput").value;
-    if (!recBuscado) {
-        document.getElementById("printResultContainer").innerHTML = "<p>Ingrese un documento para buscar.</p>";
+// ============================================
+// OPCIONES DE IMPRESIÓN (un solo REC, selectivo)
+// ============================================
+
+async function print_mostrarOpcionesImpresion() {
+    const ids = print_getInputIds();
+    if (!ids.length) { print_showResult('<p>Ingrese un documento para buscar.</p>'); return; }
+
+    if (ids.length > 1) {
+        print_showResult(`<div style="color:var(--error);padding:1rem;border-radius:6px;">
+            <p>Esta función solo funciona con un documento a la vez.</p></div>`);
         return;
     }
 
-    if (recBuscado.includes(',')) {
-        document.getElementById("printResultContainer").innerHTML = `
-            <div style="color: var(--error); padding: 1rem; border-radius: 6px;">
-                <p>Esta función solo funciona con un documento a la vez para selección manual.</p>
-            </div>
-        `;
-        return;
-    }
+    print_showLoading(`Cargando REC ${ids[0]}...`);
 
-    if (!window.printingDatosGlobales) return;
-    let resultado = window.printingDatosGlobales.find(item => item.REC == recBuscado);
+    try {
+        const datos    = await print_fetchByIds(ids);
+        const resultado = datos.find(item => item.REC == ids[0]);
 
-    if (!resultado) {
-        document.getElementById("printResultContainer").innerHTML = "<p>No se encontró el documento especificado.</p>";
-        return;
-    }
+        if (!resultado) {
+            print_showResult('<p>No se encontró el documento especificado.</p>'); return;
+        }
 
-    if (!resultado.COLABORADOR || resultado.COLABORADOR.trim() === "") {
-        document.getElementById("printResultContainer").innerHTML = `
-            <div style="color: var(--error); padding: 1rem; border-radius: 6px;">
-                <p><strong>No se puede imprimir:</strong> El documento ${recBuscado} no tiene colaborador/responsable asignado.</p>
-            </div>
-        `;
-        return;
-    }
+        if (!resultado.COLABORADOR?.trim()) {
+            print_showResult(`<div style="color:var(--error);padding:1rem;border-radius:6px;">
+                <p><strong>No se puede imprimir:</strong> El documento ${ids[0]} no tiene colaborador asignado.</p></div>`);
+            return;
+        }
 
-    let html = `
-        <div class="editor-section" style="border: 1px solid var(--border); border-radius: 6px; padding: 1rem; margin-top: 1rem;">
-            <div class="section-header" style="margin-bottom: 1rem; padding-bottom: 0.5rem;">
-                <h4 style="margin: 0;">Opciones de impresión para REC${recBuscado}</h4>
-            </div>
-            <div class="section-content">
-                <div style="margin-bottom: 1rem;">
-                    <div class="btn-group" style="margin-bottom: 1rem; display: flex; gap: 0.5rem;">
-                        <button onclick="print_seleccionarTodasOpciones(true)" class="btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">
-                            <i class="codicon codicon-check-all"></i> Seleccionar todo
+        let html = `
+            <div class="editor-section" style="border:1px solid var(--border);border-radius:6px;padding:1rem;margin-top:1rem;">
+                <div class="section-header" style="margin-bottom:1rem;padding-bottom:0.5rem;">
+                    <h4 style="margin:0;">Opciones de impresión para REC${ids[0]}</h4>
+                </div>
+                <div class="section-content">
+                    <div style="margin-bottom:1rem;">
+                        <div class="btn-group" style="margin-bottom:1rem;display:flex;gap:0.5rem;">
+                            <button onclick="print_seleccionarTodasOpciones(true)" class="btn-primary" style="padding:0.25rem 0.5rem;font-size:0.85rem;">
+                                <i class="codicon codicon-check-all"></i> Seleccionar todo
+                            </button>
+                            <button onclick="print_seleccionarTodasOpciones(false)" class="btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.85rem;">
+                                <i class="codicon codicon-clear-all"></i> Deseleccionar todo
+                            </button>
+                        </div>
+                        <label style="display:block;margin-bottom:0.5rem;font-weight:500;">Seleccione qué imprimir:</label>
+                        <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+                                <input type="checkbox" id="impPrincipal" class="opcion-impresion"> Plantilla Principal
+                            </label>`;
+
+        if (resultado.DISTRIBUCION?.Clientes) {
+            Object.keys(resultado.DISTRIBUCION.Clientes).forEach(cliente => {
+                html += `
+                            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+                                <input type="checkbox" id="impCliente_${cliente.replace(/\s+/g,'_')}" class="opcion-impresion">
+                                Cliente: ${cliente}
+                            </label>`;
+            });
+        }
+
+        html += `
+                        </div>
+                    </div>
+                    <div class="btn-group" style="display:flex;gap:0.5rem;">
+                        <button onclick="print_confirmarImpresionSelectiva('${ids[0]}')" class="btn-primary">
+                            <i class="codicon codicon-print"></i> Imprimir Selección
                         </button>
-                        <button onclick="print_seleccionarTodasOpciones(false)" class="btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">
-                            <i class="codicon codicon-clear-all"></i> Deseleccionar todo
+                        <button onclick="document.getElementById('printResultContainer').innerHTML=''" class="btn-secondary">
+                            <i class="codicon codicon-close"></i> Cancelar
                         </button>
                     </div>
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Seleccione qué imprimir:</label>
-                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                            <input type="checkbox" id="impPrincipal" class="opcion-impresion">
-                            Plantilla Principal
-                        </label>`;
+                </div>
+            </div>`;
 
-    if (resultado.DISTRIBUCION && resultado.DISTRIBUCION.Clientes) {
-        const clientes = Object.keys(resultado.DISTRIBUCION.Clientes);
-        clientes.forEach(cliente => {
-            html += `
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                            <input type="checkbox" id="impCliente_${cliente.replace(/\s+/g, '_')}" class="opcion-impresion">
-                            Cliente: ${cliente}
-                        </label>`;
-        });
+        print_showResult(html);
+    } catch (e) {
+        print_showResult(`<div style="color:var(--error);padding:1rem;"><p>Error: ${e.message}</p></div>`);
     }
-
-    html += `
-                    </div>
-                </div>
-                <div class="btn-group" style="display: flex; gap: 0.5rem;">
-                    <button onclick="print_confirmarImpresionSelectiva('${recBuscado}')" class="btn-primary">
-                        <i class="codicon codicon-print"></i> Imprimir Selección
-                    </button>
-                    <button onclick="document.getElementById('printResultContainer').innerHTML = ''" class="btn-secondary">
-                        <i class="codicon codicon-close"></i> Cancelar
-                    </button>
-                </div>
-            </div>
-        </div>`;
-
-    document.getElementById("printResultContainer").innerHTML = html;
 }
 
 function print_seleccionarTodasOpciones(seleccionar) {
-    const checkboxes = document.querySelectorAll('.opcion-impresion');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = seleccionar;
-    });
+    document.querySelectorAll('.opcion-impresion').forEach(cb => cb.checked = seleccionar);
 }
 
 function print_confirmarImpresionSelectiva(recBuscado) {
-    if (!window.printingDatosGlobales) return;
     const resultado = window.printingDatosGlobales.find(item => item.REC == recBuscado);
     if (!resultado) return;
 
     const checkboxes = document.querySelectorAll('.opcion-impresion:checked');
-    if (checkboxes.length === 0) {
-        alert("Por favor seleccione al menos una opción para imprimir");
-        return;
-    }
+    if (!checkboxes.length) { alert('Por favor seleccione al menos una opción para imprimir'); return; }
 
     const elementsToPrint = [];
+    if (document.getElementById('impPrincipal')?.checked) {
+        elementsToPrint.push({ datos: resultado, options: { modo: 'completo', soloImpresionPrincipal: true } });
+    }
 
-    const impPrincipal = document.getElementById("impPrincipal").checked;
-    if (impPrincipal) {
-        elementsToPrint.push({
-            datos: resultado,
-            options: {
-                modo: 'completo',
-                soloImpresionPrincipal: true
-            }
+    if (resultado.DISTRIBUCION?.Clientes) {
+        Object.keys(resultado.DISTRIBUCION.Clientes).forEach(cliente => {
+            const cb = document.getElementById(`impCliente_${cliente.replace(/\s+/g,'_')}`);
+            if (cb?.checked) elementsToPrint.push({ datos: resultado, options: { modo: 'cliente', clienteNombre: cliente } });
         });
     }
 
-    if (resultado.DISTRIBUCION && resultado.DISTRIBUCION.Clientes) {
-        const clientes = Object.keys(resultado.DISTRIBUCION.Clientes);
-        clientes.forEach(cliente => {
-            const checkbox = document.getElementById(`impCliente_${cliente.replace(/\s+/g, '_')}`);
-            if (checkbox && checkbox.checked) {
-                elementsToPrint.push({
-                    datos: resultado,
-                    options: { modo: 'cliente', clienteNombre: cliente }
-                });
-            }
+    if (elementsToPrint.length) print_imprimirLoteDocumentos(elementsToPrint, `Impresión Selectiva REC ${recBuscado}`);
+
+    print_showResult(`<div style="color:var(--success);padding:1rem;border-radius:6px;border:1px solid var(--success);">
+        <p>Documento ${recBuscado} - Impresión iniciada.</p></div>`);
+}
+
+// ============================================
+// MÚLTIPLES RECs (solo principal)
+// ============================================
+
+function print_buscarMultiplesRECs() { print_buscarLoteRECs(); }
+
+async function print_buscarLoteRECs() {
+    const ids = print_getInputIds();
+    if (!ids.length) { print_showResult('<p>Ingrese documentos para buscar.</p>'); return; }
+
+    print_showLoading(`Cargando ${ids.length} documento(s)...`);
+
+    try {
+        const datos    = await print_fetchByIds(ids);
+        const foundItems = [];
+        const notFound   = [];
+
+        ids.forEach(id => {
+            const r = datos.find(item => item.REC == id);
+            if (r) foundItems.push({ datos: r, options: { modo: 'completo', soloImpresionPrincipal: true } });
+            else   notFound.push(id);
         });
-    }
 
-    if (elementsToPrint.length > 0) {
-        print_imprimirLoteDocumentos(elementsToPrint, `Impresión Selectiva REC ${recBuscado}`);
-    }
+        if (foundItems.length) print_imprimirLoteDocumentos(foundItems, 'Impresión Múltiple');
 
-    document.getElementById("printResultContainer").innerHTML = `
-        <div style="color: var(--success); padding: 1rem; border-radius: 6px; border: 1px solid var(--success);">
-            <p>Documento ${recBuscado} - Impresión iniciada.</p>
-        </div>
-    `;
+        print_showResult(`
+            <div class="results-summary" style="padding:15px;border-left:4px solid var(--success);background:rgba(0,120,212,0.05);">
+                <h4 style="margin:0 0 5px 0;">Resumen: Múltiples (Principales)</h4>
+                <p style="color:var(--success);margin:0;">✅ ${foundItems.length} REC(s) procesados exitosamente.</p>
+                ${notFound.length ? `<p style="color:var(--warning);margin:5px 0 0 0;font-size:11px;">⚠️ No encontrados: ${notFound.join(', ')}</p>` : ''}
+            </div>`);
+    } catch (e) {
+        print_showResult(`<div style="color:var(--error);padding:1rem;"><p>Error: ${e.message}</p></div>`);
+    }
 }
 
-function print_buscarMultiplesRECs() {
-    print_buscarLoteRECs();
-}
+// ============================================
+// SOLO CLIENTES
+// ============================================
 
-/**
- * Múltiples (Solo Principal) - Utiliza ahora la ventana unificada
- */
-function print_buscarLoteRECs() {
-    let recsInput = document.getElementById("printRecInput").value;
-    if (!recsInput) {
-        document.getElementById("printResultContainer").innerHTML = "<p>Ingrese documentos para buscar.</p>";
+async function print_imprimirSoloClientes() {
+    const ids = print_getInputIds();
+    if (!ids.length) { print_showResult('<p>Ingrese documentos para clientes.</p>'); return; }
+
+    if (ids.length > 1) {
+        print_showResult(`<div style="color:var(--error);padding:1rem;border-radius:6px;border:1px solid var(--error);">
+            <p><strong>Solo Clientes</strong> solo funciona con un documento a la vez.</p></div>`);
         return;
     }
 
-    let recsArray = recsInput.split(',').map(rec => rec.trim()).filter(rec => rec !== '');
-    if (recsArray.length === 0) return;
-    if (!window.printingDatosGlobales) return;
+    print_showLoading(`Cargando clientes de REC ${ids[0]}...`);
 
-    let foundItems = [];
-    let notFound = [];
+    try {
+        const datos     = await print_fetchByIds(ids);
+        const resultado = datos.find(item => item.REC == ids[0]);
+        const errores   = [];
+        const itemsParaLote = [];
 
-    recsArray.forEach(rec => {
-        let resultado = window.printingDatosGlobales.find(item => item.REC == rec);
-        if (resultado) {
-            foundItems.push({ datos: resultado, options: { modo: 'completo', soloImpresionPrincipal: true } });
-        } else {
-            notFound.push(rec);
-        }
-    });
-
-    if (foundItems.length > 0) {
-        print_imprimirLoteDocumentos(foundItems, 'Impresión Múltiple');
-    }
-
-    let html = `
-        <div class="results-summary" style="padding: 15px; border-left: 4px solid var(--success); background: rgba(0, 120, 212, 0.05);">
-            <h4 style="margin: 0 0 5px 0;">Resumen: Múltiples (Principales)</h4>
-            <p style="color: var(--success); margin: 0;">✅ ${foundItems.length} REC(s) procesados exitosamente.</p>
-            ${notFound.length > 0 ? `<p style="color: var(--warning); margin: 5px 0 0 0; font-size: 11px;">⚠️ No encontrados: ${notFound.join(', ')}</p>` : ''}
-        </div>
-    `;
-    document.getElementById("printResultContainer").innerHTML = html;
-}
-
-/**
- * Solo Clientes - Utiliza ahora la ventana unificada
- */
-function print_imprimirSoloClientes() {
-    let recsInput = document.getElementById("printRecInput").value;
-    if (!recsInput) {
-        document.getElementById("printResultContainer").innerHTML = "<p>Ingrese documentos para clientes.</p>";
-        return;
-    }
-
-    if (!window.printingDatosGlobales) return;
-
-    let recsArray = recsInput.split(',').map(rec => rec.trim()).filter(rec => rec !== '');
-    if (recsArray.length === 0) return;
-
-    // Solo Clientes solo funciona con UN solo documento
-    if (recsArray.length > 1) {
-        document.getElementById("printResultContainer").innerHTML = `
-            <div style="color: var(--error); padding: 1rem; border-radius: 6px; border: 1px solid var(--error);">
-                <p><strong>Solo Clientes</strong> solo funciona con un documento a la vez.<br>
-                Ingrese un único REC para imprimir sus etiquetas de clientes.</p>
-            </div>
-        `;
-        return;
-    }
-
-    let itemsParaLote = [];
-    let errores = [];
-    let clientesCount = 0;
-
-    recsArray.forEach(rec => {
-        let resultado = window.printingDatosGlobales.find(item => item.REC == rec);
         if (!resultado) {
-            errores.push(`❌ REC ${rec}: No encontrado.`);
-            return;
-        }
-
-        if (!resultado.COLABORADOR || resultado.COLABORADOR.trim() === "") {
-            errores.push(`❌ REC ${rec}: Falta Responsable.`);
-            return;
-        }
-
-        if (!resultado.DISTRIBUCION || !resultado.DISTRIBUCION.Clientes || Object.keys(resultado.DISTRIBUCION.Clientes).length === 0) {
-            errores.push(`❌ REC ${rec}: Sin clientes.`);
-            return;
-        }
-
-        const clientes = Object.keys(resultado.DISTRIBUCION.Clientes);
-        clientes.forEach(cliente => {
-            itemsParaLote.push({
-                datos: resultado,
-                options: { modo: 'cliente', clienteNombre: cliente }
+            errores.push(`❌ REC ${ids[0]}: No encontrado.`);
+        } else if (!resultado.COLABORADOR?.trim()) {
+            errores.push(`❌ REC ${ids[0]}: Falta Responsable.`);
+        } else if (!resultado.DISTRIBUCION?.Clientes || !Object.keys(resultado.DISTRIBUCION.Clientes).length) {
+            errores.push(`❌ REC ${ids[0]}: Sin clientes.`);
+        } else {
+            Object.keys(resultado.DISTRIBUCION.Clientes).forEach(cliente => {
+                itemsParaLote.push({ datos: resultado, options: { modo: 'cliente', clienteNombre: cliente } });
             });
-            clientesCount++;
-        });
-    });
+        }
 
-    if (itemsParaLote.length > 0) {
-        const tituloClientes = `Separación REC${recsArray[0]} — Clientes (${clientesCount})`;
-        print_imprimirLoteDocumentos(itemsParaLote, tituloClientes);
-
-        let html = `
-            <div class="results-summary" style="padding: 15px; border-left: 4px solid var(--success); background: rgba(46, 204, 113, 0.05);">
-                <h4 style="margin: 0 0 5px 0;">Resumen: Solo Clientes</h4>
-                <p style="color: var(--success); margin: 0;">✅ ${clientesCount} etiquetas listas. Usa el botón Imprimir en la ventana para enviarlas en secuencia.</p>
-                ${errores.length > 0 ? `<div style="margin-top: 5px; color: var(--error); font-size: 11px;">${errores.join(' | ')}</div>` : ''}
-            </div>
-        `;
-        document.getElementById("printResultContainer").innerHTML = html;
-    } else {
-        document.getElementById("printResultContainer").innerHTML = `
-            <div style="color: var(--error); padding: 1rem;">
+        if (itemsParaLote.length) {
+            print_imprimirLoteDocumentos(itemsParaLote, `Separación REC${ids[0]} — Clientes (${itemsParaLote.length})`);
+            print_showResult(`
+                <div class="results-summary" style="padding:15px;border-left:4px solid var(--success);background:rgba(46,204,113,0.05);">
+                    <h4 style="margin:0 0 5px 0;">Resumen: Solo Clientes</h4>
+                    <p style="color:var(--success);margin:0;">✅ ${itemsParaLote.length} etiquetas listas.</p>
+                    ${errores.length ? `<div style="margin-top:5px;color:var(--error);font-size:11px;">${errores.join(' | ')}</div>` : ''}
+                </div>`);
+        } else {
+            print_showResult(`<div style="color:var(--error);padding:1rem;">
                 <p>No se pudieron generar plantillas de clientes.</p>
-                <div style="font-size: 11px;">${errores.join(' | ')}</div>
-            </div>
-        `;
+                <div style="font-size:11px;">${errores.join(' | ')}</div></div>`);
+        }
+    } catch (e) {
+        print_showResult(`<div style="color:var(--error);padding:1rem;"><p>Error: ${e.message}</p></div>`);
     }
 }
 
+// ============================================
+// UTILS
+// ============================================
 
-/**
- * Limpia el input de impresión después de completar la secuencia
- */
 function limpiarInputImpresion() {
-    const printInput = document.getElementById('printRecInput');
-    if (printInput) {
-        printInput.value = '';
-    }
+    const el = document.getElementById('printRecInput');
+    if (el) el.value = '';
 }
 
-// Exponer globalmente
 window.limpiarInputImpresion = limpiarInputImpresion;

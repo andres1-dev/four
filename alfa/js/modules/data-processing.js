@@ -11,10 +11,20 @@ async function processCSV() {
     }
 
     if (!fileInput.files.length) {
-        showMessage('Por favor selecciona un archivo CSV para procesar', 'error', 2000);
+        showMessage('Por favor selecciona un archivo CSV o Excel para procesar', 'error', 2000);
         return;
     }
 
+    const file = fileInput.files[0];
+    const ext  = file.name.split('.').pop().toLowerCase();
+
+    // ── Excel: delegar a excel-processor ──
+    if (ext === 'xlsx' || ext === 'xls') {
+        fileInput.value = '';
+        return processExcel(file);
+    }
+
+    // ── CSV normal ──
     const loading = showQuickLoading('Procesando archivo CSV...');
     const processBtn = document.getElementById('processBtn');
 
@@ -26,7 +36,6 @@ async function processCSV() {
 
     updateStatus('Procesando archivo CSV...', 'loading');
 
-    const file = fileInput.files[0];
     const reader = new FileReader();
 
     reader.onload = async function (e) {
@@ -138,6 +147,23 @@ async function reprocessLastCsv() {
 async function processCSVData(rows) {
     Logger.info('data-processing', `Iniciando procesamiento de CSV. Traslados anulados: ${cancelledTransfers.size}, Usuarios activos: ${escanersMap.size}`);
 
+    // ── Pre-paso: extraer lotes únicos del CSV y cargar datos de ingresos bajo demanda ──
+    // Esto evita cargar los 10k+ registros de ingresos al inicio
+    const lotesEnCsv = new Set();
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (row.length >= 38) {
+            const op = (row[2] || '').trim();
+            if (op) lotesEnCsv.add(op);
+        }
+    }
+    if (lotesEnCsv.size > 0) {
+        await loadData2Data(Array.from(lotesEnCsv));
+        await loadSisproData(Array.from(lotesEnCsv));
+        Logger.info('data-processing', `Datos cargados bajo demanda para ${lotesEnCsv.size} lotes del CSV`);
+    }
+    // ────────────────────────────────────────────────────────────────────────────────────
+
     const prDataMap = new Map();
     const groupedDataMap = new Map();
     const opErrors = new Map();
@@ -164,7 +190,6 @@ async function processCSVData(rows) {
         });
     }
 
-    const missingOPs = new Set();
     const missingColors = new Set();
 
     // Second pass: process TR data and group duplicates - OPTIMIZADO
@@ -194,17 +219,12 @@ async function processCSVData(rows) {
         const codColorOriginal = (row[12] || '').trim();
         const talla = row[11] || '';
         const referencia = (row[0] || '').trim();
+        const descripcionLarga = normalizeText(row[21] || '');
 
         // Validaciones directas (sin cache)
         let hasError = false;
 
-        // Validar OP en SISPROWEB
-        if (!sisproMap.has(op)) {
-            missingOPs.add(op);
-            hasError = true;
-        }
-
-        // Validar color
+        // Validar color (ÚNICA VALIDACIÓN REQUERIDA)
         if (codColorOriginal && !coloresMap.has(codColorOriginal)) {
             missingColors.add(codColorOriginal);
             hasError = true;
@@ -219,8 +239,30 @@ async function processCSVData(rows) {
         const prKey = `${row[2]}|${row[11]}|${row[12]}`;
         const prData = prDataMap.get(prKey);
 
-        // Obtener datos
-        const sisproInfo = getSisproData(op);
+        const { prenda: extractedPrenda, genero: extractedGenero } = extractPrendaGeneroFromDescripcion(descripcionLarga);
+        
+        // Intentar traer datos de SISPROWEB si existen
+        const sisproInfo = (window.sisproMap && window.sisproMap.has(op)) ? window.sisproMap.get(op) : null;
+        
+        if (sisproInfo) {
+            Logger.info('data-processing', `✅ OP ${op} encontrada en SISPRO: Linea=${sisproInfo.LINEA}`);
+        } else {
+            Logger.warn('data-processing', `❓ OP ${op} NO encontrada en SISPRO (${window.sisproMap?.size || 0} registros cargados)`);
+        }
+        
+        const prenda = sisproInfo?.PRENDA || extractedPrenda || normalizeText(row[23] || '');
+        const genero = sisproInfo?.GENERO || extractedGenero;
+        
+        // LÍNEA: Prioridad 1: SISPRO (tabla master), Prioridad 2: fallback por NIT del proveedor
+        let linea = sisproInfo?.LINEA || '';
+        if (!linea) {
+            const provActivo = (typeof getProveedorActivo === 'function') ? getProveedorActivo() : null;
+            const nitActivo = provActivo ? (provActivo.id || '').toString() : '';
+            if (nitActivo === '901920844') linea = 'INVERSIONES';
+            else if (nitActivo === '900692469') linea = 'ANGELES';
+            else if (nitActivo === '900616124') linea = '';  // Universo → sin línea por defecto
+            // Si no hay NIT reconocido ni dato en SISPRO, dejar vacío para que el usuario lo complete
+        }
 
         // COSTO: siempre usa el costo unitario de PR (DI/PRIMERAS)
         // Solo SIN CONFECCIONAR (ZY) tiene costo 0
@@ -256,13 +298,12 @@ async function processCSVData(rows) {
             const esParcial = validacionParcial.esParcial;
             
             const pvp = getPvp(referencia);
-            const generoKey = sisproInfo.GENERO || '';
-            const marca = getMarca(generoKey);
+            const marca = getMarca(genero);
             const clase = getClaseByPVP(pvp);
 
             const descripcion = getDescripcion(
-                sisproInfo.PRENDA || normalizeText(row[23] || ''),
-                sisproInfo.GENERO,
+                prenda || normalizeText(row[23] || ''),
+                genero,
                 marca,
                 referencia
             );
@@ -288,10 +329,10 @@ async function processCSVData(rows) {
                 OS: prData ? prData.OS : extractOSNumber(row[13] || ''),
                 BODEGA: normalizeBodega(bodega),
                 TALLER: normalizeText(row[18] || ''),
-                DESCRIPCION_LARGA: normalizeText(row[21] || ''),
-                PRENDA: sisproInfo.PRENDA || normalizeText(row[23] || ''),
-                LINEA: sisproInfo.LINEA || '',
-                GENERO: sisproInfo.GENERO || '',
+                DESCRIPCION_LARGA: descripcionLarga,
+                PRENDA: prenda || normalizeText(row[23] || ''),
+                LINEA: linea,
+                GENERO: genero,
                 CC: prData ? prData.CC : (row[37] || ''),
                 ESTADO: estado,
                 MARCA: marca,
@@ -301,13 +342,13 @@ async function processCSVData(rows) {
         }
     }
 
-    // Si se detectaron datos faltantes, mostrar modal y detener procesamiento actual
-    if (missingOPs.size > 0 || missingColors.size > 0) {
+    // Si se detectaron colores faltantes, mostrar modal y detener procesamiento actual
+    if (missingColors.size > 0) {
         showMissingDataModal(
-            Array.from(missingOPs),
+            [], // Ya no validamos OPs
             Array.from(missingColors),
             async () => {
-                const loading = showQuickLoading('Registros guardados. Re-validando CSV...');
+                const loading = showQuickLoading('Colores guardados. Re-validando CSV...');
                 try {
                     const success = await processCSVData(rows);
                     if (success) {

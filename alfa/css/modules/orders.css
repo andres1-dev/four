@@ -266,14 +266,34 @@
 
 .orders-modal-row {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 6px;
     padding: 8px 12px;
     background: var(--hover);
     border-radius: 6px;
 }
 
+.orders-modal-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
 .orders-modal-nombre  { font-size: 13px; color: var(--text); font-weight: 500; }
 .orders-modal-qty     { font-size: 16px; font-weight: 700; color: var(--primary); }
+
+.orders-modal-obs {
+    font-size: 11px;
+    color: var(--text-secondary);
+    padding-left: 8px;
+    border-left: 2px solid var(--primary);
+    margin-top: 2px;
+}
+
+.orders-modal-obs-item {
+    padding: 2px 0;
+    line-height: 1.4;
+}
 
 .orders-modal-total {
     display: flex;

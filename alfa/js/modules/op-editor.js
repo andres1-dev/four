@@ -76,13 +76,29 @@ function loadAuditoresOptions() {
 }
 
 /**
- * Carga las opciones de gestores en el select - SIN SELECCIÓN AUTOMÁTICA
+ * Carga las opciones de gestores en el select.
+ * Comportamiento según proveedor activo:
+ *  - INVERSIONES URBANA → preselecciona gestor 1007348825
+ *  - LOS ANGELES        → preselecciona gestor 1115189213
+ *  - UNIVERSO           → muestra solo los otros dos gestores (sin preselección)
  */
 function loadGestoresOptions() {
     const select = document.getElementById('gestor');
     if (!select) return;
 
-    const currentValue = select.value;
+    // IDs de gestores exclusivos por proveedor
+    const GESTOR_INVERSIONES = '1007348825';
+    const GESTOR_ANGELES     = '1115189213';
+
+    // Determinar proveedor activo
+    const proveedorActivo = (typeof getProveedorActivo === 'function') ? getProveedorActivo() : null;
+    const proveedor = proveedorActivo ? (proveedorActivo.nombre || '').toUpperCase() : '';
+
+    const esInversiones = proveedor.includes('INVERSIONES');
+    const esAngeles     = proveedor.includes('ANGELES') || proveedor.includes('ÁNGELES');
+    const esUniverso    = proveedor.includes('UNIVERSO');
+
+    const currentValue = select.value; // Preservar selección actual si ya hay una
 
     select.innerHTML = '<option value="">Seleccione...</option>';
 
@@ -96,18 +112,26 @@ function loadGestoresOptions() {
 
     sortedGestores.forEach(([codigo, data]) => {
         const nombre = (typeof data === 'object') ? data.NOMBRE : data;
+
+        // INVERSIONES: mostrar solo su gestor exclusivo
+        if (esInversiones && codigo !== GESTOR_INVERSIONES) return;
+        // ANGELES: mostrar solo su gestor exclusivo
+        if (esAngeles && codigo !== GESTOR_ANGELES) return;
+        // UNIVERSO: excluir los gestores exclusivos de los otros dos proveedores
+        if (esUniverso && (codigo === GESTOR_INVERSIONES || codigo === GESTOR_ANGELES)) return;
+
         const option = document.createElement('option');
         option.value = nombre;
         option.textContent = nombre;
-
-        if (nombre === currentValue) {
-            option.selected = true;
-        }
-
         select.appendChild(option);
     });
 
-    Logger.info('op-editor', `📋 Select de gestores cargado con ${gestoresMap.size} opciones`);
+    // Restaurar selección previa si existe (la autoselección por línea se hace en loadOPData)
+    if (currentValue) {
+        select.value = currentValue;
+    }
+
+    Logger.info('op-editor', `📋 Select de gestores cargado (proveedor: ${proveedor || 'ninguno'})`);
 }
 
 /**
@@ -156,10 +180,15 @@ function loadUsuariosOptions() {
 }
 
 function loadAllDynamicOptions() {
-    loadProveedoresOptions();
+    // Ya no se necesita loadProveedoresOptions() porque es un input bloqueado
     loadAuditoresOptions();
     loadGestoresOptions();
-    loadUsuariosOptions(); // NUEVO
+    loadUsuariosOptions();
+    
+    // Sincronizar proveedor activo con el input
+    if (typeof window.syncProveedorToSelect === 'function') {
+        window.syncProveedorToSelect();
+    }
 }
 
 // ============================================
@@ -177,9 +206,63 @@ function loadOPData() {
 
     const primerItem = getRepresentativeItem(items);
 
+    // NUEVO: Intentar traer PVP y LINEA de maestros si no vienen en el item
+    const op = (primerItem.OP || '').toString().trim();
+    const ref = (primerItem.REFERENCIA || '').toString().trim();
+    
+    // 1. PVP desde preciosMap (usando Referencia)
+    if ((!primerItem.PVP || primerItem.PVP === '') && window.preciosMap && window.preciosMap.has(ref)) {
+        primerItem.PVP = window.preciosMap.get(ref);
+        Logger.info('op-editor', `💰 PVP autocompletado desde preciosMap para ${ref}: ${primerItem.PVP}`);
+    }
+    
+    // 2. LINEA desde sisproMap (usando OP)
+    if ((!primerItem.LINEA || primerItem.LINEA === '') && window.sisproMap && window.sisproMap.has(op)) {
+        const sisproData = window.sisproMap.get(op);
+        primerItem.LINEA = sisproData.LINEA || '';
+        Logger.info('op-editor', `📋 Línea autocompletada desde sisproMap para OP ${op}: ${primerItem.LINEA}`);
+    }
+    
+    // 3. Lógica de NIT para Línea predeterminada (si sigue vacío o es el genérico)
+    const proveedorActivo = (typeof getProveedorActivo === 'function') ? getProveedorActivo() : null;
+    const nit = proveedorActivo ? (proveedorActivo.id || '').toString() : '';
+    
+    if (!primerItem.LINEA || primerItem.LINEA === '' || primerItem.LINEA === 'INVERSIONES URBANA') {
+        if (nit === '901920844') {
+            primerItem.LINEA = 'INVERSIONES';
+            Logger.info('op-editor', `🏢 Línea predeterminada para INVERSIONES URBANA (901920844)`);
+        } else if (nit === '900692469') {
+            primerItem.LINEA = 'ANGELES';
+            Logger.info('op-editor', `🏢 Línea predeterminada para ANGELES (900692469)`);
+        }
+    }
+
+    // 4. PRENDA y GÉNERO: siempre se calculan desde DESCRIPCION_LARGA (igual que migración BUSINT)
+    // No usar lo que venga de SISPRO — la descripción larga del CSV es la fuente de verdad
+    if (primerItem.DESCRIPCION_LARGA) {
+        const extracted = extractPrendaGeneroFromDescripcion(primerItem.DESCRIPCION_LARGA);
+        primerItem.PRENDA = extracted.prenda;
+        primerItem.GENERO = extracted.genero;
+        Logger.info('op-editor', `🔍 Prenda/Género desde DESCRIPCION_LARGA "${primerItem.DESCRIPCION_LARGA}": ${extracted.prenda} / ${extracted.genero}`);
+    }
+
     // Cargar PVP
     const pvpField = document.getElementById('pvpEdit');
     if (pvpField) pvpField.value = primerItem.PVP || '';
+
+    // Mostrar/ocultar campos exclusivos de Excel (BUSINT)
+    const esBusint = primerItem.FUENTE === 'BUSINT';
+    const loteGroup = document.getElementById('opLoteEditGroup');
+    const tipoGroup = document.getElementById('opTipoEditGroup');
+    if (loteGroup) loteGroup.style.display = esBusint ? '' : 'none';
+    if (tipoGroup) tipoGroup.style.display = esBusint ? '' : 'none';
+
+    if (esBusint) {
+        const loteInput = document.getElementById('opLoteEdit');
+        const tipoSelect = document.getElementById('opTipoEdit');
+        if (loteInput) loteInput.value = primerItem.OP || '';
+        if (tipoSelect) tipoSelect.value = primerItem.TIPO || 'FULL';
+    }
 
     // Limpiar selects de cabecera
     ['proveedor', 'auditor', 'gestor', 'escanerEdit'].forEach(id => {
@@ -187,24 +270,81 @@ function loadOPData() {
         if (el) el.value = '';
     });
 
+    // Para items de Excel (BUSINT): ajustar el proveedor activo según la línea
+    // ANGELES → 900692469 | todo lo demás (UNIVERSO, MODAFRESCA, etc.) → 900616124
+    if (primerItem.FUENTE === 'BUSINT' && primerItem.LINEA) {
+        const lineaUpper = primerItem.LINEA.toUpperCase().trim();
+        const provActualActivo = (typeof getProveedorActivo === 'function') ? getProveedorActivo() : null;
+
+        // Determinar la productora correcta según la línea
+        const productoraId = lineaUpper === 'ANGELES' ? '900692469' : '900616124';
+
+        if (!provActualActivo || provActualActivo.id !== productoraId) {
+            const pData = window.proveedoresMap?.get(productoraId);
+            const nombreProd = pData?.NOMBRE || (productoraId === '900692469'
+                ? 'TEXTILES Y CREACIONES LOS ANGELES SAS'
+                : 'TEXTILES Y CREACIONES EL UNIVERSO SAS');
+            if (typeof setProveedorActivo === 'function') {
+                setProveedorActivo(productoraId, nombreProd);
+                Logger.info('op-editor', `🏢 Proveedor ajustado a ${nombreProd} (${productoraId}) por línea BUSINT "${lineaUpper}"`);
+            }
+        }
+    }
+
     // Cargar opciones dinámicas
     loadAllDynamicOptions();
 
-    // NUEVO: Seleccionar el usuario del CSV en el select
+    // 5. Autoseleccionar GESTOR según LÍNEA (igual que migración BUSINT)
+    const gestorSelect = document.getElementById('gestor');
+    if (gestorSelect && primerItem.LINEA) {
+        const linea = primerItem.LINEA.toUpperCase().trim();
+        let gestorNombre = '';
+        
+        if (linea === 'ANGELES') {
+            gestorNombre = 'LUIS VILLAMIZAR GOMEZ';
+        } else if (linea === 'ESPECIALES' || linea === 'BOGOTA') {
+            gestorNombre = 'JUAN ESTEBAN ZULUAGA HOYOS';
+        } else {
+            gestorNombre = 'KELLY GIOVANA ZULUAGA HOYOS';
+        }
+        
+        const options = Array.from(gestorSelect.options);
+        const matchingOption = options.find(opt => opt.value === gestorNombre);
+        if (matchingOption) {
+            matchingOption.selected = true;
+            Logger.info('op-editor', `👤 Gestor autoseleccionado según línea ${linea}: ${gestorNombre}`);
+        }
+    }
+
+    // 6. Autoseleccionar AUDITOR (viene resuelto desde Excel o del CSV)
+    const auditorSelect = document.getElementById('auditor');
+    if (auditorSelect && primerItem.AUDITOR) {
+        const auditorNombre = (primerItem.AUDITOR || '').toString().trim();
+        const auditorOpts   = Array.from(auditorSelect.options);
+        // Buscar coincidencia exacta primero, luego insensible a mayúsculas
+        const matchAuditor  = auditorOpts.find(opt => opt.value === auditorNombre)
+                           || auditorOpts.find(opt => opt.value.toUpperCase() === auditorNombre.toUpperCase());
+        if (matchAuditor) {
+            matchAuditor.selected = true;
+            Logger.info('op-editor', `🔍 Auditor autoseleccionado: ${matchAuditor.value}`);
+        }
+        // Si no coincide: dejar vacío — el usuario lo selecciona manualmente
+        // NUNCA crear opción temporal para auditores
+    }
+
+    // 7. Seleccionar ESCANER/USUARIO
     const escanerSelect = document.getElementById('escanerEdit');
     if (escanerSelect && primerItem.USUARIO) {
-        // Buscar la opción que coincide con el nombre del usuario
         const options = Array.from(escanerSelect.options);
         const matchingOption = options.find(opt => opt.value === primerItem.USUARIO);
 
         if (matchingOption) {
             matchingOption.selected = true;
         } else {
-            // Si no existe, crear opción temporal
             const tempOption = document.createElement('option');
             tempOption.value = primerItem.USUARIO;
             const userName = (typeof primerItem.USUARIO === 'object') ? (primerItem.USUARIO.NOMBRE || 'Error') : (primerItem.USUARIO || '');
-            tempOption.textContent = `${userName} (del CSV)`;
+            tempOption.textContent = `${userName} (${primerItem.FUENTE === 'EXCEL' ? 'Excel' : 'CSV'})`;
             tempOption.selected = true;
             escanerSelect.appendChild(tempOption);
         }
@@ -215,6 +355,40 @@ function loadOPData() {
 
     loadOPEditor();
     switchToEditorTab();
+}
+
+/**
+ * Actualiza dinámicamente la línea en el editor basándose en el NIT activo.
+ * Útil cuando se cambia de proveedor con el editor ya abierto.
+ */
+function refreshLineaFromActiveNIT() {
+    if (!currentOPData || currentOPData.length === 0) return;
+
+    const primerItem = getRepresentativeItem(currentOPData);
+    const proveedorActivo = (typeof getProveedorActivo === 'function') ? getProveedorActivo() : null;
+    const nit = proveedorActivo ? (proveedorActivo.id || '').toString() : '';
+
+    // Solo sobreescribir si la línea está vacía o es el valor genérico
+    if (!primerItem.LINEA || primerItem.LINEA === '' || primerItem.LINEA === 'INVERSIONES URBANA') {
+        let nuevaLinea = '';
+        if (nit === '901920844') {
+            nuevaLinea = 'INVERSIONES';
+        } else if (nit === '900692469') {
+            nuevaLinea = 'ANGELES';
+        }
+
+        if (nuevaLinea) {
+            // Actualizar en los datos
+            currentOPData.forEach(item => item.LINEA = nuevaLinea);
+            
+            // Actualizar en la UI
+            const lineaInput = document.getElementById('opLineaEdit');
+            if (lineaInput) {
+                lineaInput.value = nuevaLinea;
+                Logger.info('op-editor', `🔄 Línea actualizada dinámicamente a: ${nuevaLinea}`);
+            }
+        }
+    }
 }
 
 function loadOPEditor() {
@@ -248,12 +422,25 @@ function updateEditorHeader() {
 
     const opInput = document.getElementById('opNumberReadonly');
     const refInput = document.getElementById('opRefReadonly');
-    const prendaInput = document.getElementById('opPrendaReadonly');
+    const descripcionLargaDisplay = document.getElementById('opDescripcionLargaDisplay');
+    const prendaInput = document.getElementById('opPrendaEdit');
+    const generoInput = document.getElementById('opGeneroEdit');
+    const lineaInput = document.getElementById('opLineaEdit');
     const totalInput = document.getElementById('opTotalReadonly');
 
     if (opInput) opInput.value = primerItem.OP || '';
     if (refInput) refInput.value = primerItem.REFERENCIA || '';
+    
+    // Mostrar descripción larga en el título
+    if (descripcionLargaDisplay) {
+        const descripcionLarga = primerItem.DESCRIPCION_LARGA || 'Sin descripción larga';
+        descripcionLargaDisplay.textContent = descripcionLarga;
+        descripcionLargaDisplay.title = descripcionLarga; // Tooltip por si es muy largo
+    }
+    
     if (prendaInput) prendaInput.value = primerItem.PRENDA || '';
+    if (generoInput) generoInput.value = primerItem.GENERO || '';
+    if (lineaInput) lineaInput.value = primerItem.LINEA || '';
     if (totalInput) totalInput.value = primerItem.TOTAL || '0';
 }
 
@@ -797,6 +984,11 @@ function generateJSONForOP(skipSave = false) {
     const escaner = escanerEl ? escanerEl.value : '';
     const bolsas = parseInt(document.getElementById('bolsas').value) || 0;
     const pvpEdit = document.getElementById('pvpEdit').value;
+    
+    // Obtener PRENDA, GÉNERO y LÍNEA editados
+    const prendaEdit = document.getElementById('opPrendaEdit')?.value || '';
+    const generoEdit = document.getElementById('opGeneroEdit')?.value || '';
+    const lineaEdit = document.getElementById('opLineaEdit')?.value || '';
 
     if (!proveedor || !auditor || !gestor || !pvpEdit) {
         showMessage('Por favor complete todos los campos requeridos', 'error', 2000);
@@ -805,6 +997,12 @@ function generateJSONForOP(skipSave = false) {
 
     if (!escaner) {
         showMessage('Debe seleccionar un Usuario/Escaner', 'error', 2000);
+        return;
+    }
+    
+    // Validar PRENDA, GÉNERO y LÍNEA
+    if (!prendaEdit || !generoEdit || !lineaEdit) {
+        showMessage('Por favor complete PRENDA, GÉNERO y LÍNEA', 'error', 2000);
         return;
     }
 
@@ -881,9 +1079,9 @@ function generateJSONForOP(skipSave = false) {
     const sumatoria = cantidadFull + cantidadPromo + cantidadCobros + cantidadSinConfeccionar;
 
     const referenciaHistorica = getReferenciaHistorica(primerItem.REFERENCIA);
-    const marca = getMarca(primerItem.GENERO);
+    const marca = getMarca(generoEdit); // Usar género editado
     const clase = getClaseByPVP(pvpEdit);
-    const descripcion = getDescripcion(primerItem.PRENDA, primerItem.GENERO, marca, referenciaHistorica);
+    const descripcion = getDescripcion(prendaEdit, generoEdit, marca, primerItem.REFERENCIA); // refprov al final
 
     const auditoriaNum = parseInt(primerItem.CC) || 0;
     const osNum = parseInt(primerItem.OS) || 0;
@@ -895,7 +1093,7 @@ function generateJSONForOP(skipSave = false) {
         "A": primerItem.OP_SUFIJO || primerItem.OP,
         "FECHA": primerItem.FECHA,
         "TALLER": primerItem.TALLER,
-        "LINEA": primerItem.LINEA,
+        "LINEA": lineaEdit,
         "AUDITOR": auditor,
         "GESTOR": gestor,
         "ESCANER": escaner,
@@ -930,8 +1128,8 @@ function generateJSONForOP(skipSave = false) {
         "TIPO": "FULL",
         "PVP": pvpString,
         "CLASE": clase,
-        "PRENDA": primerItem.PRENDA,
-        "GENERO": primerItem.GENERO,
+        "PRENDA": prendaEdit,  // Usar prenda editada
+        "GENERO": generoEdit,  // Usar género editado
         "MARCA": marca,
         "PROVEEDOR": proveedor,
         "BOLSAS": bolsas,
@@ -1083,7 +1281,7 @@ async function saveToSheets() {
 
     if (!confirmed) return;
 
-    const loading = showQuickLoading('Guardando en Google Sheets...');
+    const loading = showQuickLoading('Guardando en Supabase...');
     const saveBtn = document.getElementById('saveBtn');
     const saveBtnToolbar = document.getElementById('saveBtnToolbar');
 
@@ -1097,11 +1295,22 @@ async function saveToSheets() {
     }
 
     try {
-        const response = await saveOPToSheets(jsonData);
+        // NUEVO: Verificar autenticación antes de guardar
+        const isAuthenticated = await ensureSupabaseAuth();
+        
+        if (!isAuthenticated) {
+            showMessage('Debes iniciar sesión para guardar en Supabase', 'warning', 2000);
+            return;
+        }
 
-        if (response.success) {
+        // Guardar en Supabase
+        Logger.info('op-editor', `Guardando OP ${jsonData.A} en Supabase...`);
+        
+        const supabaseResult = await saveToSisproInversiones(currentOPData);
+        
+        if (supabaseResult.success) {
             // Notificar éxito del guardado
-            showMessage(`OP ${jsonData.A} guardada exitosamente`, 'success', 2000);
+            showMessage(`OP ${jsonData.A} guardada exitosamente en Supabase (${supabaseResult.count} registros)`, 'success', 2000);
 
             // Limpiar UI y eliminar OP del listado (inmediato)
             resetUIAfterSave(jsonData.A);
@@ -1117,15 +1326,16 @@ async function saveToSheets() {
             // Recargar datos en segundo plano (silencioso)
             reloadDataInBackgroundSilent();
         } else {
-            showMessage('Error al guardar: ' + response.message, 'error', 3000);
+            showMessage('Error al guardar en Supabase', 'error', 3000);
         }
     } catch (error) {
+        Logger.error('op-editor', 'Error guardando en Supabase', error);
         showMessage('Error: ' + error.message, 'error', 3000);
     } finally {
         loading.close();
         if (saveBtn) {
             saveBtn.disabled = false;
-            saveBtn.innerHTML = '<i class="codicon codicon-save"></i> Guardar en Sheets';
+            saveBtn.innerHTML = '<i class="codicon codicon-save"></i> Guardar';
         }
         if (saveBtnToolbar) {
             saveBtnToolbar.disabled = false;
@@ -1305,3 +1515,4 @@ window.handleResumenClick = handleResumenClick;
 window.refreshDynamicOptions = refreshDynamicOptions;
 window.loadAllDynamicOptions = loadAllDynamicOptions;
 window.loadUsuariosOptions = loadUsuariosOptions;
+window.refreshLineaFromActiveNIT = refreshLineaFromActiveNIT;

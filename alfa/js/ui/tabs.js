@@ -51,6 +51,43 @@ function setupMainTabs() {
 }
 
 function handleTabActivation(tabName) {
+    // Carga lazy de datos por módulo
+    if (tabName === 'csv-processor' || tabName === 'pending-ops' || tabName === 'op-editor') {
+        if (!window.processorModuleLoaded && typeof loadProcessorModuleData === 'function') {
+            loadProcessorModuleData().catch(err => {
+                Logger.error('tabs', 'Error cargando módulo procesador', err);
+            });
+        }
+    }
+
+    if (tabName === 'distribution') {
+        if (!window.distributionModuleLoaded && typeof loadDistributionModuleData === 'function') {
+            loadDistributionModuleData().catch(err => {
+                Logger.error('tabs', 'Error cargando módulo distribución', err);
+            });
+        }
+        if (!window.distributionInitialized) {
+            setupDistributionEventListeners();
+            window.distributionInitialized = true;
+        }
+    }
+
+    if (tabName === 'printing-module') {
+        if (!window.printingModuleLoaded && typeof loadPrintingModuleData === 'function') {
+            loadPrintingModuleData().catch(err => {
+                Logger.error('tabs', 'Error cargando módulo impresión', err);
+            });
+        }
+    }
+
+    if (tabName === 'orders-module') {
+        if (!window.ordersModuleLoaded && typeof loadOrdersModuleData === 'function') {
+            loadOrdersModuleData().catch(err => {
+                Logger.error('tabs', 'Error cargando módulo pedidos', err);
+            });
+        }
+    }
+
     if (tabName === 'cancel-transfers') {
         Logger.info('tabs', 'Pestaña Anular Traslados activada');
         if (processedData.length === 0) {
@@ -68,13 +105,6 @@ function handleTabActivation(tabName) {
             loadTransferList();
             updateCancelledTransfersTable();
         }
-    }
-
-    if (tabName === 'distribution' && !window.distributionInitialized) {
-        Logger.info('tabs', 'Pestaña Distribución activada');
-        initializeDistribution();
-        setupDistributionEventListeners();
-        window.distributionInitialized = true;
     }
 }
 

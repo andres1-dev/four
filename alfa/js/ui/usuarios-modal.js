@@ -55,9 +55,6 @@ function renderUsuariosUI(container) {
     const dynActions = document.getElementById('adminDynamicActions');
     if (dynActions) {
         dynActions.innerHTML = `
-            <button class="btn-icon" id="saveUsuariosBtn" style="display:none; color: var(--success);" onclick="persistUsuariosChanges()" title="Sincronizar Cambios">
-                <i class="codicon codicon-cloud-upload"></i>
-            </button>
             <button class="btn-icon" onclick="toggleInactivesUsuarios(this)" title="${showInactivesInModals ? 'Ocultar Inactivos' : 'Ver Inactivos'}">
                 <i class="codicon ${showInactivesInModals ? 'codicon-eye' : 'codicon-eye-closed'}" style="color: ${showInactivesInModals ? 'var(--primary)' : 'var(--text-secondary)'}"></i>
             </button>
@@ -75,9 +72,6 @@ function toggleInactivesUsuarios() {
     const dynActions = document.getElementById('adminDynamicActions');
     if (dynActions) {
         dynActions.innerHTML = `
-            <button class="btn-icon" id="saveUsuariosBtn" style="${(pendingUsuarioChanges && pendingUsuarioChanges.length > 0) ? 'display:flex;' : 'display:none;'} color: var(--success);" onclick="persistUsuariosChanges()" title="Sincronizar Cambios">
-                <i class="codicon codicon-cloud-upload"></i>
-            </button>
             <button class="btn-icon" onclick="toggleInactivesUsuarios(this)" title="${showInactivesInModals ? 'Ocultar Inactivos' : 'Ver Inactivos'}">
                 <i class="codicon ${showInactivesInModals ? 'codicon-eye' : 'codicon-eye-closed'}" style="color: ${showInactivesInModals ? 'var(--primary)' : 'var(--text-secondary)'}"></i>
             </button>
@@ -102,10 +96,7 @@ function updateUsuariosTable() {
 
     const term = (document.getElementById('usuarioSearchTerm')?.value || '').toLowerCase();
 
-    const allUsers = new Map(escanersMap);
-    pendingUsuarioChanges.forEach(u => allUsers.set(u.id, { NOMBRE: u.nombre, ESTADO: u.estado || 'TRUE' }));
-
-    const sorted = Array.from(allUsers.entries()).sort((a,b) => String(a[0]).localeCompare(String(b[0])));
+    const sorted = Array.from(escanersMap.entries()).sort((a,b) => String(a[0]).localeCompare(String(b[0])));
     
     // Filtering
     const filtered = sorted.filter(([id, data]) => {
@@ -129,17 +120,10 @@ function updateUsuariosTable() {
     let html = '';
     paged.forEach(([id, data]) => {
         const isActive = (typeof data === 'object' && data !== null) ? (data.ESTADO === 'TRUE') : true;
-        
-        const isNew = !escanersMap.has(id);
         const nameActual = (typeof data === 'object' && data !== null) ? (data.NOMBRE || 'SIN NOMBRE') : (data || 'SIN NOMBRE');
-        
-        const originalUser = escanersMap.get(id);
-        const nameOriginal = originalUser ? originalUser.NOMBRE : nameActual;
-        const hasChanged = nameOriginal !== nameActual;
-        const isPending = isNew || hasChanged || (originalUser && originalUser.ESTADO !== data.ESTADO);
 
         html += `
-            <tr style="${!isActive ? 'opacity: 0.5;' : ''} ${isPending ? 'background: rgba(255, 140, 0, 0.03);' : ''}">
+            <tr style="${!isActive ? 'opacity: 0.5;' : ''}">
                 <td style="color: var(--warning); font-weight: 700; text-align: left;">${id}</td>
                 <td style="text-align: left; color: var(--text);">
                     ${nameActual}
@@ -151,7 +135,6 @@ function updateUsuariosTable() {
                 </td>
                 <td>
                     <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
-                        ${isPending ? '<i class="codicon codicon-sync" style="color: var(--warning); font-size: 14px;" title="Pendiente de guardar"></i>' : ''}
                         <i class="codicon codicon-edit" style="cursor: pointer; color: var(--primary);" onclick="openUsuarioFormModal('${id}')" title="Editar"></i>
                     </div>
                 </td>
@@ -172,9 +155,6 @@ function updateUsuariosTable() {
             <button class="btn-secondary" onclick="changeUsuariosPage(${totalPages})" ${_usuariosCurrentPage === totalPages ? 'disabled' : ''} style="padding: 2px 6px;"><i class="codicon codicon-chevron-right" style="font-size:12px;"></i><i class="codicon codicon-chevron-right" style="font-size:12px; margin-left:-6px;"></i></button>
         `;
     }
-
-    const saveBtn = document.getElementById('saveUsuariosBtn');
-    if (saveBtn) saveBtn.style.display = pendingUsuarioChanges.length > 0 ? 'flex' : 'none';
 }
 
 function changeUsuariosPage(page) {
@@ -232,20 +212,34 @@ async function removeUsuarioLocal(id) {
 async function persistUsuariosChanges() {
     if (pendingUsuarioChanges.length === 0) return;
     const btn = document.getElementById('saveUsuariosBtn');
+    if (!btn) return;
+    
     btn.disabled = true;
-    btn.innerHTML = 'Guardando...';
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="codicon codicon-loading codicon-modifier-spin"></i>';
 
     try {
         const dataToSave = pendingUsuarioChanges.map(u => [u.id, u.nombre, u.estado || 'TRUE']);
         await saveNewUsuarioData(dataToSave);
+        
+        // Recargar datos desde Supabase
         await loadUsuariosData();
+        
+        // Limpiar cambios pendientes
         pendingUsuarioChanges = [];
+        
+        // Actualizar tabla
         updateUsuariosTable();
+        
+        // Restaurar botón
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+        
         showMessage('Usuarios sincronizados', 'success');
     } catch (err) {
         showMessage(err.message, 'error');
         btn.disabled = false;
-        btn.innerHTML = 'Reintentar';
+        btn.innerHTML = '<i class="codicon codicon-cloud-upload"></i>';
     }
 }
 
@@ -341,7 +335,7 @@ function openUsuarioFormModal(id) {
     }
 }
 
-function saveUsuarioFromForm() {
+async function saveUsuarioFromForm() {
     const id = document.getElementById('uf_id').value.trim().toUpperCase();
     const nombre = document.getElementById('uf_nombre').value.trim().toUpperCase();
     const estado = document.getElementById('uf_estado').value;
@@ -351,16 +345,24 @@ function saveUsuarioFromForm() {
         return;
     }
 
-    const idx = pendingUsuarioChanges.findIndex(u => u.id === id);
-    if (idx !== -1) {
-        pendingUsuarioChanges[idx].nombre = nombre;
-        pendingUsuarioChanges[idx].estado = estado;
-    } else {
-        pendingUsuarioChanges.push({ id, nombre, estado });
+    // Guardar inmediatamente en Supabase
+    try {
+        const dataToSave = [[id, nombre, estado]];
+        await saveNewUsuarioData(dataToSave);
+        
+        // Recargar datos desde Supabase
+        await loadUsuariosData();
+        
+        // Cerrar modal
+        closeUsuarioFormModal();
+        
+        // Actualizar tabla
+        updateUsuariosTable();
+        
+        showMessage('Usuario guardado', 'success');
+    } catch (err) {
+        showMessage(err.message, 'error');
     }
-
-    closeUsuarioFormModal();
-    updateUsuariosTable();
 }
 
 // Exports
