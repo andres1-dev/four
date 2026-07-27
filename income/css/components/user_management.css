@@ -1,0 +1,1279 @@
+/**
+ * User Management Styles
+ * Estilos para el sistema de gestión de usuarios (OWNER)
+ */
+
+/* Modal Principal */
+.user-management-modal {
+    display: flex;
+    position: fixed;
+    z-index: 10001;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.2s ease;
+    align-items: center;
+    justify-content: center;
+}
+
+.user-management-content {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    width: 95%;
+    max-width: 1200px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 80px rgba(0,0,0,0.6);
+    animation: slideUp 0.3s ease;
+    backdrop-filter: blur(20px);
+}
+
+.user-management-header {
+    padding: 24px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, rgba(220,38,38,0.05) 0%, transparent 100%);
+}
+
+.user-management-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-management-title i {
+    color: var(--primary);
+    font-size: 24px;
+}
+
+.user-management-close {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 24px;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.user-management-close:hover {
+    color: var(--text);
+    background: rgba(255,255,255,0.05);
+}
+
+.user-management-body {
+    padding: 24px 28px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Acciones */
+.user-management-actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.btn-add-user,
+.btn-refresh-users {
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-add-user {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: white;
+    box-shadow: 0 4px 12px rgba(220,38,38,0.3);
+}
+
+.btn-add-user:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(220,38,38,0.4);
+}
+
+.btn-refresh-users {
+    background: var(--input-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+
+.btn-refresh-users:hover {
+    background: var(--input-border);
+    transform: translateY(-2px);
+}
+
+/* Contenedor de tarjetas de usuarios */
+.users-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+    padding: 4px;
+}
+
+/* Tarjeta de usuario */
+.user-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.user-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.user-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+    border-color: var(--primary);
+}
+
+.user-card:hover::before {
+    opacity: 1;
+}
+
+.user-card.inactive {
+    opacity: 0.6;
+}
+
+.user-card.inactive:hover {
+    opacity: 0.8;
+}
+
+/* Header de la tarjeta */
+.user-card-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.user-card-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    border: 2px solid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+    transition: all 0.3s;
+}
+
+.user-card:hover .user-card-avatar {
+    transform: scale(1.05);
+}
+
+.user-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.user-card-name {
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--text);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-card-username {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.user-card-status {
+    flex-shrink: 0;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.status-indicator i {
+    font-size: 12px;
+}
+
+.status-indicator.online i {
+    color: #22c55e;
+}
+
+.status-indicator.offline i {
+    color: #6b7280;
+}
+
+/* Body de la tarjeta */
+.user-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.user-card-field {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 10px;
+    transition: all 0.2s;
+}
+
+.user-card-field:hover {
+    background: var(--input-border);
+}
+
+.user-card-field > i {
+    font-size: 16px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.user-card-field-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.user-card-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.user-card-value {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Footer de la tarjeta */
+.user-card-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.user-card-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.user-card-actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+/* Badges mejorados */
+.role-badge,
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    transition: all 0.2s;
+}
+
+.role-badge {
+    border: 1px solid currentColor;
+}
+
+.role-badge i {
+    font-size: 12px;
+}
+
+.status-badge.active {
+    background: rgba(34,197,94,0.15);
+    color: #22c55e;
+    border: 1px solid rgba(34,197,94,0.3);
+}
+
+.status-badge.inactive {
+    background: rgba(239,68,68,0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239,68,68,0.3);
+}
+
+/* Botones de acción mejorados */
+.btn-action {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-action::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.btn-action i {
+    position: relative;
+    z-index: 1;
+}
+
+.btn-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.btn-action:hover::before {
+    opacity: 0.1;
+}
+
+.btn-action:active {
+    transform: translateY(0);
+}
+
+.btn-action.edit {
+    color: #3b82f6;
+    border-color: rgba(59,130,246,0.3);
+}
+
+.btn-action.edit:hover {
+    background: rgba(59,130,246,0.1);
+    border-color: #3b82f6;
+}
+
+.btn-action.logout {
+    color: #f59e0b;
+    border-color: rgba(245,158,11,0.3);
+}
+
+.btn-action.logout:hover {
+    background: rgba(245,158,11,0.1);
+    border-color: #f59e0b;
+}
+
+.btn-action.activate {
+    color: #22c55e;
+    border-color: rgba(34,197,94,0.3);
+}
+
+.btn-action.activate:hover {
+    background: rgba(34,197,94,0.1);
+    border-color: #22c55e;
+}
+
+.btn-action.deactivate {
+    color: #ef4444;
+    border-color: rgba(239,68,68,0.3);
+}
+
+.btn-action.deactivate:hover {
+    background: rgba(239,68,68,0.1);
+    border-color: #ef4444;
+}
+
+/* Estados de carga y error mejorados */
+.loading-cell,
+.empty-cell,
+.error-cell {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.loading-cell i {
+    font-size: 48px;
+    color: var(--primary);
+    animation: spin 1s linear infinite;
+}
+
+.empty-cell i {
+    font-size: 64px;
+    color: var(--text-muted);
+    opacity: 0.3;
+}
+
+.empty-cell p {
+    font-size: 16px;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.error-cell i {
+    font-size: 48px;
+    color: #ef4444;
+}
+
+.error-cell p {
+    font-size: 16px;
+    color: var(--text);
+    margin: 0;
+    font-weight: 600;
+}
+
+.error-cell small {
+    font-size: 13px;
+    color: var(--text-muted);
+    max-width: 400px;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Modal de Formulario */
+.user-form-modal {
+    display: flex;
+    position: fixed;
+    z-index: 10002;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.2s ease;
+    align-items: center;
+    justify-content: center;
+}
+
+.user-form-content {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 25px 80px rgba(0,0,0,0.6);
+    animation: slideUp 0.3s ease;
+    backdrop-filter: blur(20px);
+}
+
+.user-form-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.user-form-header h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-form-header i {
+    color: var(--primary);
+}
+
+.user-form-close {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 20px;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.user-form-close:hover {
+    color: var(--text);
+    background: rgba(255,255,255,0.05);
+}
+
+.user-form-body {
+    padding: 24px;
+}
+
+/* Formulario */
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(220,38,38,0.1);
+}
+
+.form-group input[readonly] {
+    background: rgba(255,255,255,0.02);
+    cursor: not-allowed;
+}
+
+.checkbox-label {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    text-transform: none !important;
+    font-weight: 600 !important;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: auto;
+    cursor: pointer;
+}
+
+/* Acciones del formulario */
+.form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.btn-cancel,
+.btn-save {
+    flex: 1;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-cancel {
+    background: var(--input-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+
+.btn-cancel:hover {
+    background: var(--input-border);
+}
+
+.btn-save {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: white;
+    box-shadow: 0 4px 12px rgba(220,38,38,0.3);
+}
+
+.btn-save:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(220,38,38,0.4);
+}
+
+.btn-save:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive optimizado para tarjetas */
+@media (max-width: 1400px) {
+    .users-cards-container {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 18px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .user-management-content {
+        width: 96%;
+        max-height: 92vh;
+    }
+    
+    .users-cards-container {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .user-management-content {
+        width: 98%;
+        max-height: 95vh;
+        border-radius: 16px;
+    }
+    
+    .user-management-header,
+    .user-management-body {
+        padding: 16px 18px;
+    }
+    
+    .user-management-title {
+        font-size: 18px;
+    }
+    
+    .user-management-title i {
+        font-size: 20px;
+    }
+    
+    .user-management-actions {
+        flex-direction: column;
+    }
+    
+    .btn-add-user,
+    .btn-refresh-users {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .users-cards-container {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+    
+    .user-card {
+        padding: 16px;
+    }
+    
+    .user-card-avatar {
+        width: 48px;
+        height: 48px;
+        font-size: 22px;
+    }
+    
+    .user-card-name {
+        font-size: 15px;
+    }
+    
+    .user-card-username {
+        font-size: 12px;
+    }
+    
+    .user-form-content {
+        width: 95%;
+        max-height: 90vh;
+    }
+    
+    .user-form-header,
+    .user-form-body {
+        padding: 16px 20px;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .btn-cancel,
+    .btn-save {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .user-management-content {
+        width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+        margin: 0;
+    }
+    
+    .user-management-header,
+    .user-management-body {
+        padding: 14px 16px;
+    }
+    
+    .user-management-title {
+        font-size: 16px;
+        gap: 8px;
+    }
+    
+    .user-management-title i {
+        font-size: 18px;
+    }
+    
+    .user-management-close {
+        width: 32px;
+        height: 32px;
+        font-size: 20px;
+    }
+    
+    .btn-add-user,
+    .btn-refresh-users {
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+    
+    .users-cards-container {
+        gap: 12px;
+    }
+    
+    .user-card {
+        padding: 14px;
+        border-radius: 14px;
+    }
+    
+    .user-card-header {
+        margin-bottom: 14px;
+        padding-bottom: 14px;
+    }
+    
+    .user-card-avatar {
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
+        border-radius: 12px;
+    }
+    
+    .user-card-name {
+        font-size: 14px;
+    }
+    
+    .user-card-username {
+        font-size: 11px;
+    }
+    
+    .user-card-body {
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+    
+    .user-card-field {
+        padding: 8px;
+        border-radius: 8px;
+    }
+    
+    .user-card-field > i {
+        font-size: 14px;
+    }
+    
+    .user-card-label {
+        font-size: 9px;
+    }
+    
+    .user-card-value {
+        font-size: 12px;
+    }
+    
+    .user-card-footer {
+        gap: 10px;
+    }
+    
+    .user-card-badges {
+        gap: 6px;
+    }
+    
+    .role-badge,
+    .status-badge {
+        font-size: 10px;
+        padding: 5px 10px;
+    }
+    
+    .user-card-actions {
+        gap: 6px;
+        padding-top: 10px;
+    }
+    
+    .btn-action {
+        width: 34px;
+        height: 34px;
+        font-size: 13px;
+        border-radius: 8px;
+    }
+    
+    .user-form-content {
+        width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+    
+    .user-form-header {
+        padding: 14px 16px;
+    }
+    
+    .user-form-header h3 {
+        font-size: 16px;
+    }
+    
+    .user-form-body {
+        padding: 16px;
+    }
+    
+    .form-group {
+        margin-bottom: 14px;
+    }
+    
+    .form-group label {
+        font-size: 11px;
+        margin-bottom: 6px;
+    }
+    
+    .form-group input,
+    .form-group select {
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+    
+    .btn-cancel,
+    .btn-save {
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+}
+
+/* Landscape móvil */
+@media (max-width: 768px) and (orientation: landscape) {
+    .user-management-content {
+        max-height: 98vh;
+    }
+    
+    .user-management-body {
+        max-height: calc(98vh - 80px);
+    }
+    
+    .users-cards-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .user-form-content {
+        max-height: 98vh;
+    }
+    
+    .user-form-body {
+        max-height: calc(98vh - 70px);
+        overflow-y: auto;
+    }
+}
+
+/* Tablets grandes */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .users-cards-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .user-form-content {
+        max-width: 600px;
+    }
+}
+
+/* Desktop grande */
+@media (min-width: 1600px) {
+    .users-cards-container {
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 24px;
+    }
+    
+    .user-card {
+        padding: 24px;
+    }
+}
+
+/* Tema claro */
+[data-theme="light"] .user-management-modal,
+[data-theme="light"] .user-form-modal {
+    background-color: rgba(0,0,0,0.4);
+}
+
+[data-theme="light"] .user-management-content,
+[data-theme="light"] .user-form-content {
+    background: #ffffff;
+    border-color: rgba(0,0,0,0.1);
+    box-shadow: 0 25px 80px rgba(0,0,0,0.15);
+}
+
+[data-theme="light"] .user-management-header {
+    background: linear-gradient(135deg, rgba(220,38,38,0.04) 0%, transparent 100%);
+    border-bottom-color: rgba(0,0,0,0.08);
+}
+
+[data-theme="light"] .user-card {
+    background: #ffffff;
+    border-color: rgba(0,0,0,0.1);
+}
+
+[data-theme="light"] .user-card:hover {
+    box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+}
+
+[data-theme="light"] .user-card-header {
+    border-bottom-color: rgba(0,0,0,0.08);
+}
+
+[data-theme="light"] .user-card-field:hover {
+    background: #f1f5f9;
+}
+
+[data-theme="light"] .user-card-footer {
+    border-top-color: rgba(0,0,0,0.08);
+}
+
+[data-theme="light"] .btn-action {
+    background: #f8fafc;
+    border-color: rgba(0,0,0,0.1);
+}
+
+[data-theme="light"] .btn-action:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+[data-theme="light"] .btn-add-user,
+[data-theme="light"] .btn-refresh-users {
+    background: #f8fafc;
+    border-color: rgba(0,0,0,0.1);
+}
+
+[data-theme="light"] .btn-add-user {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: white;
+    border-color: transparent;
+}
+
+[data-theme="light"] .btn-add-user:hover {
+    box-shadow: 0 8px 24px rgba(220,38,38,0.3);
+}
+
+[data-theme="light"] .form-group input,
+[data-theme="light"] .form-group select {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+
+[data-theme="light"] .form-group input:focus,
+[data-theme="light"] .form-group select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(220,38,38,0.1);
+}
+
+/* Modo Solid Dark */
+.solid .user-management-content,
+.solid .user-form-content {
+    background: #16181f;
+    border-color: rgba(255,255,255,0.08);
+}
+
+.solid .user-management-header {
+    background: #16181f;
+    border-bottom-color: rgba(255,255,255,0.05);
+}
+
+.solid .user-card {
+    background: #1a1d26;
+    border-color: rgba(255,255,255,0.08);
+}
+
+.solid .user-card:hover {
+    background: #1e2129;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+}
+
+.solid .user-card-header {
+    border-bottom-color: rgba(255,255,255,0.05);
+}
+
+.solid .user-card-field:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+.solid .user-card-footer {
+    border-top-color: rgba(255,255,255,0.05);
+}
+
+.solid .btn-action {
+    background: rgba(255,255,255,0.03);
+    border-color: rgba(255,255,255,0.08);
+}
+
+.solid .btn-action:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+.solid .btn-add-user,
+.solid .btn-refresh-users {
+    background: rgba(255,255,255,0.03);
+    border-color: rgba(255,255,255,0.08);
+}
+
+.solid .btn-add-user {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: white;
+    border-color: transparent;
+}
+
+.solid .btn-add-user:hover {
+    box-shadow: 0 8px 24px rgba(220,38,38,0.4);
+}
+
+.solid .form-group input,
+.solid .form-group select {
+    background: rgba(255,255,255,0.03);
+    border-color: rgba(255,255,255,0.08);
+}
+
+.solid .form-group input:focus,
+.solid .form-group select:focus {
+    border-color: var(--primary);
+    background: rgba(255,255,255,0.05);
+}
+
+/* Modo Solid Light */
+.solid[data-theme="light"] .user-management-modal,
+.solid[data-theme="light"] .user-form-modal {
+    background-color: rgba(0,0,0,0.35);
+}
+
+.solid[data-theme="light"] .user-management-content,
+.solid[data-theme="light"] .user-form-content {
+    background: #ffffff;
+    border-color: #e4e8f0;
+    box-shadow: 0 25px 80px rgba(0,0,0,0.12);
+}
+
+.solid[data-theme="light"] .user-management-header {
+    background: #ffffff;
+    border-bottom-color: #e4e8f0;
+}
+
+.solid[data-theme="light"] .user-card {
+    background: #ffffff;
+    border-color: #e4e8f0;
+}
+
+.solid[data-theme="light"] .user-card:hover {
+    background: #fafbfd;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+}
+
+.solid[data-theme="light"] .user-card-header {
+    border-bottom-color: #e4e8f0;
+}
+
+.solid[data-theme="light"] .user-card-field:hover {
+    background: #f1f5f9;
+}
+
+.solid[data-theme="light"] .user-card-footer {
+    border-top-color: #e4e8f0;
+}
+
+.solid[data-theme="light"] .btn-action {
+    background: #f7f8fc;
+    border-color: #e4e8f0;
+}
+
+.solid[data-theme="light"] .btn-action:hover {
+    background: #f1f5f9;
+}
+
+.solid[data-theme="light"] .btn-add-user,
+.solid[data-theme="light"] .btn-refresh-users {
+    background: #f7f8fc;
+    border-color: #e4e8f0;
+}
+
+.solid[data-theme="light"] .btn-add-user {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: white;
+    border-color: transparent;
+}
+
+.solid[data-theme="light"] .btn-add-user:hover {
+    box-shadow: 0 8px 24px rgba(220,38,38,0.3);
+}
+
+.solid[data-theme="light"] .form-group input,
+.solid[data-theme="light"] .form-group select {
+    background: #f7f8fc;
+    border-color: #e4e8f0;
+}
+
+.solid[data-theme="light"] .form-group input:focus,
+.solid[data-theme="light"] .form-group select:focus {
+    border-color: var(--primary);
+    background: #ffffff;
+}
+
+/* Ajustes adicionales para estados de carga/error en todos los temas */
+[data-theme="light"] .loading-cell i {
+    color: var(--primary);
+}
+
+[data-theme="light"] .empty-cell i {
+    color: #94a3b8;
+}
+
+[data-theme="light"] .error-cell i {
+    color: #ef4444;
+}
+
+.solid .loading-cell i,
+.solid[data-theme="light"] .loading-cell i {
+    color: var(--primary);
+}
+
+.solid .empty-cell i,
+.solid[data-theme="light"] .empty-cell i {
+    opacity: 0.3;
+}
+
+/* Ajustes para badges en tema claro */
+[data-theme="light"] .status-badge.active,
+.solid[data-theme="light"] .status-badge.active {
+    background: rgba(34,197,94,0.1);
+    border-color: rgba(34,197,94,0.25);
+}
+
+[data-theme="light"] .status-badge.inactive,
+.solid[data-theme="light"] .status-badge.inactive {
+    background: rgba(239,68,68,0.1);
+    border-color: rgba(239,68,68,0.25);
+}
+
+/* Ajustes para el modal de formulario en todos los temas */
+[data-theme="light"] .user-form-header {
+    border-bottom-color: rgba(0,0,0,0.08);
+}
+
+.solid .user-form-header {
+    background: #16181f;
+    border-bottom-color: rgba(255,255,255,0.05);
+}
+
+.solid[data-theme="light"] .user-form-header {
+    background: #ffffff;
+    border-bottom-color: #e4e8f0;
+}
+
+/* Ajustes para botones de acción con colores específicos en tema claro */
+[data-theme="light"] .btn-action.edit,
+.solid[data-theme="light"] .btn-action.edit {
+    border-color: rgba(59,130,246,0.25);
+}
+
+[data-theme="light"] .btn-action.logout,
+.solid[data-theme="light"] .btn-action.logout {
+    border-color: rgba(245,158,11,0.25);
+}
+
+[data-theme="light"] .btn-action.activate,
+.solid[data-theme="light"] .btn-action.activate {
+    border-color: rgba(34,197,94,0.25);
+}
+
+[data-theme="light"] .btn-action.deactivate,
+.solid[data-theme="light"] .btn-action.deactivate {
+    border-color: rgba(239,68,68,0.25);
+}
