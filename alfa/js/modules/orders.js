@@ -10,8 +10,6 @@
 let pedidosMap     = [];
 let pedidosSaving  = false;
 let mostrandoCompletados = false;  // Toggle para mostrar/ocultar completados
-let opsEnIngresosSet = new Set();  // OPs activas que ya están en la tabla ingresos
-let verificandoIngresos = false;
 
 // ============================================
 // INIT
@@ -38,8 +36,6 @@ async function cargarPedidosDesdeSheets() {
         }
         pedidosMap = await loadPedidosData();
         renderOrdersBoard();
-        // Verificar automáticamente cuáles OPs ya están en ingresos
-        verificarOpsEnIngresos();
     } catch (err) { 
         console.error('Error cargando pedidos:', err);
         pedidosMap = [];
@@ -79,17 +75,9 @@ function renderOrdersBoard() {
     // Totales resumen
     const totalUds  = pedidosActivos.reduce((s, p) => s + (p.cantidad || 0), 0);
     const totalPeds = pedidosActivos.length;
-    const opsConflicto = pedidosActivos.filter(p => opsEnIngresosSet.has(String(p.op))).length;
-
-    const alertaBadge = opsConflicto > 0
-        ? `<div class="orders-stat" style="background:rgba(255,140,0,0.12); border:1px solid rgba(255,140,0,0.4); border-radius:6px; padding:4px 12px;" title="Hay OPs en pedidos que ya fueron ingresadas">
-               <span class="orders-stat-val" style="color:#ff8c00;">${opsConflicto}</span>
-               <span class="orders-stat-lbl" style="color:#ff8c00;">⚠ ya en ingresos</span>
-           </div>`
-        : '';
 
     const statsHtml = `
-        <div class="orders-stats-bar" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div class="orders-stats-bar">
             <div class="orders-stat">
                 <span class="orders-stat-val">${totalPeds}</span>
                 <span class="orders-stat-lbl">pedidos activos</span>
@@ -102,8 +90,7 @@ function renderOrdersBoard() {
                 <span class="orders-stat-val">${pedidosCompletados.length}</span>
                 <span class="orders-stat-lbl">completados</span>
             </div>
-            ${alertaBadge}
-        </div>;`
+        </div>`;
 
     if (!lista.length) {
         container.innerHTML = statsHtml + `
@@ -150,21 +137,12 @@ function renderPedidoFila(p) {
     }) : '';
     
     const esCompletado = p.estado === false;
-    const yaEnIngresos = opsEnIngresosSet.has(String(p.op));
-
-    const rowStyle = yaEnIngresos
-        ? 'background:rgba(255,140,0,0.08); border-left:3px solid #ff8c00;'
-        : '';
-
-    const opCell = yaEnIngresos
-        ? `<span class="orders-op-plain" style="color:#ff8c00; font-weight:700;">${p.op}</span>`
-        : `<span class="orders-op-plain">${p.op}</span>`;
 
     return `
-        <tr style="${rowStyle}">
+        <tr>
             <td><span class="orders-cliente-id">${p.mayoristaId}</span></td>
             <td><span class="orders-cliente-tag">${nombre || '—'}</span></td>
-            <td>${opCell}</td>
+            <td><span class="orders-op-plain">${p.op}</span></td>
             <td><span class="orders-row-ref">${p.referencia || '—'}</span></td>
             <td><span class="orders-row-prenda">${p.prenda || '—'}${p.genero ? ` <span style="opacity:.5;font-size:10px">${p.genero}</span>` : ''}</span></td>
             <td><span class="orders-qty-badge">${p.cantidad}</span></td>
@@ -172,12 +150,6 @@ function renderPedidoFila(p) {
             <td><span class="orders-row-fecha">${fecha}</span></td>
             <td>
                 <div class="orders-row-actions">
-                    ${yaEnIngresos ? `
-                    <button class="orders-row-btn" onclick="showGestionOpModal('${p.op}')"
-                            title="Esta OP ya fue ingresada. Clic para ver en Gestión OP."
-                            style="color:#ff8c00; border-color:rgba(255,140,0,0.4);">
-                        <i class="codicon codicon-warning"></i>
-                    </button>` : ''}
                     ${!esCompletado ? `
                     <button class="orders-row-btn orders-row-btn-edit" onclick="abrirModalEditarPedido('${p.id}')" title="Editar">
                         <i class="codicon codicon-edit"></i>
@@ -188,83 +160,6 @@ function renderPedidoFila(p) {
                 </div>
             </td>
         </tr>`;
-}
-
-
-// ============================================
-// VERIFICAR OPS EN INGRESOS
-// ============================================
-
-/**
- * Consulta Supabase para saber cuáles OPs de los pedidos activos
- * ya existen como registros en la tabla 'ingresos'.
- * Colorea las filas correspondientes en naranja.
- */
-async function verificarOpsEnIngresos() {
-    if (verificandoIngresos) return;
-
-    const pedidosActivos = pedidosMap.filter(p => p.estado !== false && p.op);
-    if (!pedidosActivos.length) {
-        if (typeof showMessage === 'function') showMessage('No hay pedidos activos para verificar', 'info', 2000);
-        return;
-    }
-
-    verificandoIngresos = true;
-    opsEnIngresosSet.clear();
-    renderOrdersBoard(); // Re-render para mostrar spinner
-
-    try {
-        const headers = supabase.getHeaders();
-        const proveedorActivo = (typeof getProveedorActivo === 'function') ? getProveedorActivo() : null;
-
-        // Obtener lista única de OPs activas
-        const opsUnicas = [...new Set(pedidosActivos.map(p => String(p.op).trim()).filter(Boolean))];
-
-        // Buscar en ingresos cuáles de esas OPs existen (por id_ingreso o lote)
-        const loteNums = opsUnicas.filter(op => /^\d+$/.test(op)).map(Number);
-        const promesas = [];
-
-        // Buscar por id_ingreso (puede ser '6264' o '6264.1')
-        if (opsUnicas.length) {
-            const inFilter = opsUnicas.map(op => encodeURIComponent(op)).join(',');
-            let urlId = `${SUPABASE_URL}/rest/v1/ingresos?id_ingreso=in.(${inFilter})&select=id_ingreso,lote`;
-            if (proveedorActivo) urlId += `&productora=eq.${proveedorActivo.id}`;
-            promesas.push(fetch(urlId, { headers }).then(r => r.ok ? r.json() : []).catch(() => []));
-        }
-
-        // Buscar por lote numérico
-        if (loteNums.length) {
-            let urlLote = `${SUPABASE_URL}/rest/v1/ingresos?lote=in.(${loteNums.join(',')})&select=id_ingreso,lote`;
-            if (proveedorActivo) urlLote += `&productora=eq.${proveedorActivo.id}`;
-            promesas.push(fetch(urlLote, { headers }).then(r => r.ok ? r.json() : []).catch(() => []));
-        }
-
-        const resultados = await Promise.all(promesas);
-        const encontrados = resultados.flat();
-
-        // Registrar cuáles OPs cruzaron
-        encontrados.forEach(row => {
-            if (row.id_ingreso) opsEnIngresosSet.add(String(row.id_ingreso));
-            if (row.lote)       opsEnIngresosSet.add(String(row.lote));
-        });
-
-        const count = pedidosActivos.filter(p => opsEnIngresosSet.has(String(p.op))).length;
-
-        if (count > 0) {
-            if (typeof showMessage === 'function')
-                showMessage(`⚠ ${count} pedido(s) tienen OPs que ya están en Ingresos`, 'warning', 4000);
-        } else {
-            if (typeof showMessage === 'function')
-                showMessage('✓ Ninguna OP de pedidos activos está en Ingresos', 'success', 3000);
-        }
-
-    } catch (err) {
-        console.error('Error verificando OPs en ingresos:', err);
-        if (typeof showMessage === 'function') showMessage('Error al consultar ingresos: ' + err.message, 'error', 3000);
-    } finally {
-        verificandoIngresos = false;
-        renderOrdersBoard(); // Re-render con resultados coloreados
-    }
 }
 
 // ============================================
@@ -306,9 +201,7 @@ function abrirModalAgregarPedido() {
                     <label>OP <span class="required-mark">*</span></label>
                     <input type="text" id="modal-op" class="form-control" placeholder="ej: 2425"
                         oninput="onModalOpChange(this.value)"
-                        onchange="onModalOpChange(this.value, true)"
-                        onblur="onModalOpChange(this.value, true)"
-                        onkeydown="if(event.key==='Enter') { onModalOpChange(this.value, true); document.getElementById('modal-qty').focus(); }">
+                        onkeydown="if(event.key==='Enter') document.getElementById('modal-qty').focus()">
                 </div>
                 <div class="orders-add-field orders-add-field-sm">
                     <label>Cantidad <span class="required-mark">*</span></label>
@@ -350,82 +243,7 @@ function abrirModalAgregarPedido() {
     setTimeout(() => document.getElementById('modal-cliente')?.focus(), 100);
 }
 
-// ============================================
-// BÚSQUEDA GARANTIZADA DE OP EN CATÁLOGO MASTER
-// ============================================
-
-/**
- * Garantiza la búsqueda de la OP en el catálogo master (memoria + Supabase local + fallback).
- * Maneja variantes como '6264.2' derivando la OP base '6264'.
- */
-async function obtenerDetallesOpGarantizado(opInput) {
-    if (!opInput) return null;
-    const op = String(opInput).trim();
-    if (!op) return null;
-
-    // Candidatos de claves a intentar: OP exacta, OP base sin decimal (. o _), y sin ceros iniciales
-    const baseOp = op.split('.')[0].split('_')[0].trim();
-    const cleanOp = op.replace(/^0+/, '');
-    const cleanBase = baseOp.replace(/^0+/, '');
-
-    const candidateKeys = [...new Set([op, baseOp, cleanOp, cleanBase].filter(Boolean))];
-
-    // 1. Buscar en memoria (window.sisproMap)
-    if (window.sisproMap && window.sisproMap instanceof Map) {
-        for (const key of candidateKeys) {
-            const hit = window.sisproMap.get(key);
-            if (hit && (hit.REFERENCIA || hit.PRENDA)) return hit;
-        }
-    }
-
-    // 2. Consultar catálogo local Supabase (loadSisproData)
-    if (typeof loadSisproData === 'function') {
-        try {
-            await loadSisproData(candidateKeys);
-            if (window.sisproMap && window.sisproMap instanceof Map) {
-                for (const key of candidateKeys) {
-                    const hit = window.sisproMap.get(key);
-                    if (hit && (hit.REFERENCIA || hit.PRENDA)) return hit;
-                }
-            }
-        } catch (e) {
-            console.warn('Error consultando catálogo master:', candidateKeys, e);
-        }
-    }
-
-    // 3. Fallback directo a Supabase master
-    try {
-        if (typeof SUPABASE_URL !== 'undefined' && typeof supabase !== 'undefined') {
-            const headers = supabase.getHeaders();
-            for (const key of candidateKeys) {
-                const url = `${SUPABASE_URL}/rest/v1/master?id_master=eq.${encodeURIComponent(key)}&select=id_master,referencia,descripcion,cuento,genero`;
-                const res = await fetch(url, { headers }).then(r => r.ok ? r.json() : []).catch(() => []);
-                if (res && res.length > 0 && res[0]) {
-                    const row = res[0];
-                    const sisproObj = {
-                        PRENDA:     row.descripcion || '',
-                        LINEA:      row.cuento      || '',
-                        GENERO:     row.genero      || '',
-                        REFERENCIA: row.referencia  || ''
-                    };
-                    if (window.sisproMap && window.sisproMap instanceof Map) {
-                        window.sisproMap.set(key, sisproObj);
-                        window.sisproMap.set(op, sisproObj);
-                    }
-                    return sisproObj;
-                }
-            }
-        }
-    } catch(err) {
-        console.error('Error en fallback directo master:', err);
-    }
-
-    return null;
-}
-
-let opDebounceTimer = null;
-
-async function onModalOpChange(val, immediate = false) {
+function onModalOpChange(val) {
     const hint    = document.getElementById('modal-op-hint');
     const details = document.getElementById('modal-op-details');
     const refEl   = document.getElementById('modal-detail-ref');
@@ -441,29 +259,14 @@ async function onModalOpChange(val, immediate = false) {
         return;
     }
 
-    if (opDebounceTimer) clearTimeout(opDebounceTimer);
-
-    const ejecutar = async () => {
-        hint.innerHTML = `<span class="orders-hint-loading" style="color:var(--text-muted);font-size:12px;"><i class="codicon codicon-loading codicon-modifier-spin"></i> Buscando OP en catálogo...</span>`;
-        const sispro = await obtenerDetallesOpGarantizado(op);
-        mostrarDetallesOpModal(op, sispro, hint, details, refEl, prendaEl, generoEl);
-    };
-
-    if (immediate) {
-        await ejecutar();
-    } else {
-        opDebounceTimer = setTimeout(ejecutar, 350);
-    }
-}
-
-function mostrarDetallesOpModal(op, sispro, hint, details, refEl, prendaEl, generoEl) {
+    const sispro = window.sisproMap?.get(op);
     if (!sispro) {
-        hint.innerHTML = `<span class="orders-hint-notfound"><i class="codicon codicon-warning"></i> OP ${op} no encontrada en catálogo</span>`;
+        hint.innerHTML = `<span class="orders-hint-notfound">OP no encontrada en SISPROWEB</span>`;
         if (details) details.style.display = 'none';
         return;
     }
 
-    hint.innerHTML = `<span class="orders-hint-found" style="color:var(--success); font-weight:600;"><i class="codicon codicon-check"></i> OP encontrada</span>`;
+    hint.innerHTML = `<span class="orders-hint-found"><i class="codicon codicon-check"></i> OP encontrada</span>`;
     if (details && refEl && prendaEl && generoEl) {
         refEl.value    = sispro.REFERENCIA || '';
         prendaEl.value = sispro.PRENDA     || '';
@@ -472,7 +275,7 @@ function mostrarDetallesOpModal(op, sispro, hint, details, refEl, prendaEl, gene
     }
 }
 
-async function confirmarPedidoModal() {
+function confirmarPedidoModal() {
     const mayoristaId = document.getElementById('modal-cliente')?.value;
     const op          = document.getElementById('modal-op')?.value.trim();
     const qty         = parseInt(document.getElementById('modal-qty')?.value) || 0;
@@ -482,8 +285,7 @@ async function confirmarPedidoModal() {
     if (!op)          { showMessage('Escribe una OP', 'warning', 1500); return; }
     if (qty <= 0)     { showMessage('Ingresa una cantidad válida', 'warning', 1500); return; }
 
-    // Búsqueda garantizada antes de guardar
-    const sispro = await obtenerDetallesOpGarantizado(op);
+    const sispro = window.sisproMap?.get(op);
 
     const pedido = {
         id:            `${mayoristaId}_${op}_${Date.now()}`,
@@ -507,7 +309,7 @@ async function confirmarPedidoModal() {
 // MODAL EDITAR PEDIDO
 // ============================================
 
-async function abrirModalEditarPedido(id) {
+function abrirModalEditarPedido(id) {
     const pedido = pedidosMap.find(p => p.id === id);
     if (!pedido) return;
 
@@ -516,25 +318,24 @@ async function abrirModalEditarPedido(id) {
         `<option value="${mid}" ${mid === pedido.mayoristaId ? 'selected' : ''}>${c.NOMBRE_CORTO}</option>`
     ).join('');
 
-    const sispro = await obtenerDetallesOpGarantizado(pedido.op);
-
+    const sispro = window.sisproMap?.get(pedido.op);
     const hintInicial = sispro
-        ? `<span class="orders-hint-found" style="color:var(--success); font-weight:600;"><i class="codicon codicon-check"></i> OP encontrada</span>`
+        ? `<span class="orders-hint-found"><i class="codicon codicon-check"></i> OP encontrada</span>`
         : '';
     const detailsInicial = sispro ? `
         <div id="edit-op-details" class="orders-details-card" style="display:block;">
             <div class="orders-details-row">
                 <div class="orders-add-field">
                     <label>Referencia</label>
-                    <input type="text" id="edit-detail-ref" class="form-control" value="${sispro.REFERENCIA || pedido.referencia || ''}" readonly>
+                    <input type="text" id="edit-detail-ref" class="form-control" value="${sispro.REFERENCIA || ''}" readonly>
                 </div>
                 <div class="orders-add-field">
                     <label>Prenda</label>
-                    <input type="text" id="edit-detail-prenda" class="form-control" value="${sispro.PRENDA || pedido.prenda || ''}" readonly>
+                    <input type="text" id="edit-detail-prenda" class="form-control" value="${sispro.PRENDA || ''}" readonly>
                 </div>
                 <div class="orders-add-field">
                     <label>Género</label>
-                    <input type="text" id="edit-detail-genero" class="form-control" value="${sispro.GENERO || pedido.genero || ''}" readonly>
+                    <input type="text" id="edit-detail-genero" class="form-control" value="${sispro.GENERO || ''}" readonly>
                 </div>
             </div>
         </div>` : '<div id="edit-op-details" class="orders-details-card" style="display:none;"></div>';
@@ -553,9 +354,7 @@ async function abrirModalEditarPedido(id) {
                     <label>OP <span class="required-mark">*</span></label>
                     <input type="text" id="edit-op" class="form-control" value="${pedido.op}"
                         oninput="onEditOpChange(this.value)"
-                        onchange="onEditOpChange(this.value, true)"
-                        onblur="onEditOpChange(this.value, true)"
-                        onkeydown="if(event.key==='Enter') { onEditOpChange(this.value, true); document.getElementById('edit-qty').focus(); }">
+                        onkeydown="if(event.key==='Enter') document.getElementById('edit-qty').focus()">
                 </div>
                 <div class="orders-add-field orders-add-field-sm">
                     <label>Cantidad <span class="required-mark">*</span></label>
@@ -582,7 +381,7 @@ async function abrirModalEditarPedido(id) {
     setTimeout(() => document.getElementById('edit-op')?.focus(), 100);
 }
 
-async function onEditOpChange(val, immediate = false) {
+function onEditOpChange(val) {
     const hint    = document.getElementById('edit-op-hint');
     const details = document.getElementById('edit-op-details');
 
@@ -595,29 +394,14 @@ async function onEditOpChange(val, immediate = false) {
         return;
     }
 
-    if (opDebounceTimer) clearTimeout(opDebounceTimer);
-
-    const ejecutar = async () => {
-        hint.innerHTML = `<span class="orders-hint-loading" style="color:var(--text-muted);font-size:12px;"><i class="codicon codicon-loading codicon-modifier-spin"></i> Buscando OP en catálogo...</span>`;
-        const sispro = await obtenerDetallesOpGarantizado(op);
-        mostrarDetallesEditOpModal(op, sispro, hint, details);
-    };
-
-    if (immediate) {
-        await ejecutar();
-    } else {
-        opDebounceTimer = setTimeout(ejecutar, 350);
-    }
-}
-
-function mostrarDetallesEditOpModal(op, sispro, hint, details) {
+    const sispro = window.sisproMap?.get(op);
     if (!sispro) {
-        hint.innerHTML = `<span class="orders-hint-notfound"><i class="codicon codicon-warning"></i> OP ${op} no encontrada en catálogo</span>`;
+        hint.innerHTML = `<span class="orders-hint-notfound">OP no encontrada en SISPROWEB</span>`;
         if (details) details.style.display = 'none';
         return;
     }
 
-    hint.innerHTML = `<span class="orders-hint-found" style="color:var(--success); font-weight:600;"><i class="codicon codicon-check"></i> OP encontrada</span>`;
+    hint.innerHTML = `<span class="orders-hint-found"><i class="codicon codicon-check"></i> OP encontrada</span>`;
     if (details) {
         details.innerHTML = `
             <div class="orders-details-row">
@@ -638,7 +422,9 @@ function mostrarDetallesEditOpModal(op, sispro, hint, details) {
     }
 }
 
-async function guardarEdicionPedido(id) {
+// Función eliminada: ya no se valida contra SISPROWEB
+
+function guardarEdicionPedido(id) {
     const pedido = pedidosMap.find(p => p.id === id);
     if (!pedido) return;
 
@@ -651,8 +437,7 @@ async function guardarEdicionPedido(id) {
     if (!op)          { showMessage('Escribe una OP', 'warning', 1500); return; }
     if (qty <= 0)     { showMessage('Ingresa una cantidad válida', 'warning', 1500); return; }
 
-    // Búsqueda garantizada antes de guardar
-    const sispro = await obtenerDetallesOpGarantizado(op);
+    const sispro = window.sisproMap?.get(op);
 
     const pedidoActualizado = {
         id:            pedido.id,
@@ -668,7 +453,7 @@ async function guardarEdicionPedido(id) {
         estado:        true
     };
 
-    document.querySelector('.modal-agregar-pedido, .modal-editar-pedido')?.remove();
+    document.querySelector('.modal-editar-pedido')?.remove();
     actualizarPedidoRealTime(pedidoActualizado);
     showMessage('Pedido actualizado', 'success', 1500);
 }

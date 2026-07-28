@@ -133,28 +133,21 @@ async function loadPreciosData() {
 
 /**
  * Carga catálogo de productos desde la fuente configurada.
- * @param {string[]} [ops] - OPs a buscar. Si no se pasa o está vacío, carga todo el catálogo master local.
+ * @param {string[]} [ops] - OPs a buscar. Si no se pasa, retorna mapa vacío (bajo demanda).
  */
 async function loadSisproData(ops = []) {
     if (DATA_SOURCES.SISPROWEB === 'supabase') {
         try {
             const result = await loadSisprowebFromSupabase(ops);
-            if (!ops || ops.length === 0) {
-                // Carga completa al inicio: limpiar y refrescar
-                window.sisproMap.clear();
-                result.forEach((value, key) => {
-                    window.sisproMap.set(key, value);
-                });
-            } else {
-                // Carga bajo demanda: fusionar en el mapa existente
-                result.forEach((value, key) => {
-                    window.sisproMap.set(key, value);
-                });
-            }
+            // Actualizar mapa global SIN reemplazarlo (mantener la referencia)
+            window.sisproMap.clear();
+            result.forEach((value, key) => {
+                window.sisproMap.set(key, value);
+            });
             return window.sisproMap;
         } catch (error) {
-            Logger.error('data-loader', 'Error cargando SISPROWEB desde Supabase local. Retornando mapa actual.', error);
-            return window.sisproMap || new Map();
+            Logger.error('data-loader', 'Error cargando SISPROWEB desde Supabase. Retornando mapa vacío.', error);
+            return new Map();
         }
     } else {
         Logger.warn('data-loader', 'Usando Google Sheets para SISPROWEB');

@@ -809,41 +809,54 @@ async function loadPreciosFromSupabase() {
 }
 
 /**
- * Carga catálogo de productos desde la tabla `master` LOCAL de Supabase
- * (Sincronizada por la Edge Function sync-master)
+ * Carga catálogo de productos desde la tabla master del proyecto MASTER
+ * Proyecto: zpikjjcbievfpzegupmw | Tabla: master
  * Mapeo: id_master → OP, descripcion → PRENDA, cuento → LINEA, genero → GENERO, referencia → REFERENCIA
+ * IMPORTANTE: Usa fetch directo (NO SupabaseClient) para que errores del proyecto
+ *             secundario NUNCA disparen el logout automático de la sesión principal.
+ */
+/**
+ * loadSisprowebFromSupabase — versión bajo demanda
+ * Solo consulta las OPs que se le pasen como parámetro.
+ * Si no se pasan OPs, retorna un mapa vacío sin hacer ninguna request.
  * 
- * @param {string[]} [ops] - OPs a buscar. Si está vacío o no se especifica, carga toda la tabla master local.
+ * @param {string[]} [ops] - Array de IDs de OP a buscar. Si está vacío → mapa vacío.
  */
 async function loadSisprowebFromSupabase(ops = []) {
     try {
-        const startTime = performance.now();
-        let result;
-
-        if (ops && ops.length > 0) {
-            const opsClean = [...new Set(ops.map(o => String(o).trim()).filter(Boolean))];
-            Logger.info('supabase-service', `SISPROWEB (Master Local): consultando ${opsClean.length} OPs...`);
-            
-            const inFilter = `id_master=in.(${opsClean.join(',')})`;
-            const url = `${SUPABASE_URL}/rest/v1/master?select=id_master,referencia,descripcion,cuento,genero&${inFilter}`;
-            const headers = supabase.getHeaders();
-            const res = await fetch(url, { headers });
-            
-            if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.message || errData.error || `HTTP ${res.status}`);
-            }
-            result = await res.json();
-        } else {
-            Logger.info('supabase-service', 'SISPROWEB (Master Local): cargando catálogo completo...');
-            result = await supabase.selectAll('master', {
-                columns: 'id_master,referencia,descripcion,cuento,genero'
-            });
+        // Sin OPs que buscar → mapa vacío sin request
+        if (!ops || ops.length === 0) {
+            Logger.info('supabase-service', 'SISPROWEB: sin OPs para buscar, retornando mapa vacío');
+            return new Map();
         }
 
+        Logger.info('supabase-service', `SISPROWEB: consultando ${ops.length} OPs desde tabla master...`);
+        const startTime = performance.now();
+
+        // Construir filtro IN de PostgREST: id_master=in.(op1,op2,...)
+        const opsClean  = [...new Set(ops.map(o => String(o).trim()).filter(Boolean))];
+        const inFilter  = `id_master=in.(${opsClean.join(',')})`;
+        const url = `${SUPABASE_MASTER_URL}/rest/v1/master` +
+                    `?select=id_master,referencia,descripcion,cuento,genero&${inFilter}`;
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'apikey':        SUPABASE_MASTER_KEY,
+                'Authorization': `Bearer ${SUPABASE_MASTER_KEY}`,
+                'Content-Type':  'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.message || errData.error || `HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
         const sisproMap = new Map();
 
-        (result || []).forEach(row => {
+        (data || []).forEach(row => {
             const opKey = (row.id_master || '').toString().trim();
             if (opKey) {
                 sisproMap.set(opKey, {
@@ -856,11 +869,12 @@ async function loadSisprowebFromSupabase(ops = []) {
         });
 
         const ms = (performance.now() - startTime).toFixed(0);
-        Logger.success('supabase-service', `SISPROWEB (Master Local): ${sisproMap.size} OPs cargadas en ${ms}ms`);
+        Logger.success('supabase-service', `SISPROWEB: ${sisproMap.size}/${opsClean.length} OPs encontradas en ${ms}ms`);
         return sisproMap;
 
     } catch (error) {
-        Logger.error('supabase-service', 'Error cargando sisproweb desde tabla master local', error);
+        // Nunca redirigir al login — este error es del proyecto secundario
+        Logger.error('supabase-service', 'Error cargando sisproweb desde master', error);
         throw error;
     }
 }
@@ -918,17 +932,20 @@ async function loadData2FromSupabase(lotes = []) {
         Logger.info('supabase-service', 'Cargando ingresos confirmados desde Supabase...');
         const startTime = performance.now();
 
+        const proveedorActivo = (typeof getProveedorActivo === 'function') ? getProveedorActivo() : null;
+
         let result;
 
         if (lotes.length > 0) {
-            // Bajo demanda: solo los lotes del CSV o Excel — 1 sola request con filtro IN
-            // NOTA: Se consulta la tabla 'ingresos' sin restringir por el proveedor seleccionado en la UI,
-            // para garantizar que la validación de OPs (confirmados / pendientes) funcione correctamente 
-            // con cualquier productora o línea.
+            // Bajo demanda: solo los lotes del CSV — 1 sola request con filtro IN
             const lotesClean = [...new Set(lotes.map(l => String(l).trim()).filter(Boolean))];
-            let qs = `select=id_ingreso,lote,fecha_traslado,total,total_relativo,cantidad,diferencia,traslado,otros_traslados,anexos,total_general,detalle_cantidades,productora` +
+            // lote es numeric en Supabase — sin comillas en el filtro IN
+            let qs = `select=id_ingreso,lote,fecha_traslado,total,total_relativo,cantidad,diferencia,traslado,otros_traslados,anexos,total_general,detalle_cantidades` +
                      `&lote=in.(${lotesClean.join(',')})&order=created_at.asc`;
+            if (proveedorActivo) qs += `&productora=eq.${proveedorActivo.id}`;
             const url = `${SUPABASE_URL}/rest/v1/ingresos?${qs}`;
+            // Usar el token de sesión del usuario autenticado (requerido por RLS)
+            // supabase.getHeaders() ya incluye el access_token si el usuario está logueado
             const headers = supabase.getHeaders();
             const res = await fetch(url, { headers });
             if (!res.ok) {

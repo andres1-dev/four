@@ -1396,6 +1396,17 @@ async function saveDistributionToSheets() {
         // Pequeño delay para asegurar que se guardó
         await new Promise(resolve => setTimeout(resolve, 500));
 
+        // Verificar si hay un solo cliente para cambiar estado a DIRECTO
+        const clientesCount = Object.keys(distributionData.Clientes).length;
+        if (clientesCount === 1) {
+            try {
+                await updateDistributionStatus(recNumber, 'DIRECTO');
+                Logger.info('distribution', `Estado de distribución ${recNumber} cambiado a DIRECTO (1 cliente)`);
+            } catch (error) {
+                Logger.error('distribution', 'Error cambiando estado a DIRECTO', error);
+            }
+        }
+
         // Refrescar módulo de impresión
         _refreshPrintBackground();
 

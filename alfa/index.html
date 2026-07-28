@@ -77,9 +77,6 @@
             <button class="activity-icon" data-tab="printing-module" title="Impresión">
                 <i class="codicon codicon-file-pdf"></i>
             </button>
-            <button class="activity-icon" onclick="showGestionOpModal()" title="Gestión OPs (Consultar / Eliminar)" style="color: var(--error);">
-                <i class="codicon codicon-trash"></i>
-            </button>
         </div>
         <div class="activity-bottom">
             <button class="activity-icon" id="themeToggle" title="Cambiar Tema">
@@ -124,10 +121,6 @@
                 <div class="tree-item">
                     <i class="codicon codicon-folder"></i>
                     <span>Distribuciones</span>
-                </div>
-                <div class="tree-item" onclick="showGestionOpModal()" style="cursor:pointer; color:var(--error, #f44747); margin-top:8px;">
-                    <i class="codicon codicon-trash"></i>
-                    <span>Gestión / Eliminar OPs</span>
                 </div>
             </div>
         </div>
@@ -880,17 +873,9 @@
                 <i class="codicon codicon-symbol-color"></i>
                 <span id="stat-colores">0</span>
             </div>
-            <div class="status-item status-item-btn" title="OPs confirmadas (Ingresos) — Click para Consultar/Eliminar" onclick="showGestionOpModal()">
+            <div class="status-item" title="OPs confirmadas">
                 <i class="codicon codicon-layers"></i>
                 <span id="stat-ops">0</span>
-            </div>
-            <div class="status-item status-item-btn" title="Gestión de OPs — Consultar y eliminar en Ingresos / Distribución" onclick="showGestionOpModal()">
-                <i class="codicon codicon-trash"></i>
-                <span>Gestión OP</span>
-            </div>
-            <div class="status-item" title="Catálogo Master (OPs registradas)">
-                <i class="codicon codicon-book"></i>
-                <span id="stat-master">0</span>
             </div>
             <div class="status-item status-item-btn" title="Precios — Click para gestionar" onclick="showPreciosUpdateModal()">
                 <i class="codicon codicon-tag"></i>

@@ -297,11 +297,6 @@ async function processExcel(file) {
                     loadSisproData(lotesEnExcel).catch(err => Logger.warn('excel-processor', 'Error cargando sispro', err))
                 ]);
                 Logger.info('excel-processor', `Datos bajo demanda cargados para ${lotesEnExcel.length} lotes del Excel`);
-                
-                // Auto-detectar línea y actualizar el proveedor activo en la UI (proveedorIndicatorText)
-                if (typeof detectAndSetProveedorFromLotes === 'function') {
-                    detectAndSetProveedorFromLotes(lotesEnExcel, hrRecords);
-                }
             }
         }
 
