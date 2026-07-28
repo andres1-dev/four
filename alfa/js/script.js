@@ -43,6 +43,7 @@
         "js/ui/usuarios-modal.js",
         "js/ui/maestros-master-modal.js",
         "js/ui/talleres-modal.js",
+        "js/ui/gestion-op-modal.js",
         "js/ui/supabase-login-modal.js",
         "js/ui/proveedor-selector.js",
 

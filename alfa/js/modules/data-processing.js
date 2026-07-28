@@ -158,9 +158,15 @@ async function processCSVData(rows) {
         }
     }
     if (lotesEnCsv.size > 0) {
-        await loadData2Data(Array.from(lotesEnCsv));
-        await loadSisproData(Array.from(lotesEnCsv));
+        const lotesArr = Array.from(lotesEnCsv);
+        await loadData2Data(lotesArr);
+        await loadSisproData(lotesArr);
         Logger.info('data-processing', `Datos cargados bajo demanda para ${lotesEnCsv.size} lotes del CSV`);
+        
+        // Auto-detectar línea y actualizar el proveedor activo en la UI (proveedorIndicatorText)
+        if (typeof detectAndSetProveedorFromLotes === 'function') {
+            detectAndSetProveedorFromLotes(lotesArr);
+        }
     }
     // ────────────────────────────────────────────────────────────────────────────────────
 
