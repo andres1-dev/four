@@ -272,12 +272,25 @@ async function print_fetchByIds(ids) {
 
         // Clientes de distribución (base de datos)
         let clientesEnriquecidos = {};
+        const esRefVar = (row.refprov === 'REFVAR' || row.referencia === 'REFVAR');
         if (distribucionesMap[documento]) {
             for (const [nombre, datos] of Object.entries(distribucionesMap[documento])) {
                 const cid = datos.id;
+                // Enriquecer distribución con referencia y descripcion si es REFVAR
+                let distribucionEnriquecida = datos.distribucion || [];
+                if (esRefVar && Array.isArray(distribucionEnriquecida)) {
+                    distribucionEnriquecida = distribucionEnriquecida.map(item => {
+                        const hrItem = (row.hr || []).find(h => h.codigo_color === item.codigo && h.talla === item.talla && h.color === item.color);
+                        return {
+                            ...item,
+                            referencia: hrItem?.referencia || '',
+                            descripcion: hrItem?.descripcion || ''
+                        };
+                    });
+                }
                 clientesEnriquecidos[nombre] = clientesMap[cid]
-                    ? { ...clientesMap[cid], distribucion: datos.distribucion || [], porcentaje: datos.porcentaje || '' }
-                    : { id: cid, nombre, razonSocial: datos.nombre || nombre, distribucion: datos.distribucion || [], porcentaje: datos.porcentaje || '' };
+                    ? { ...clientesMap[cid], distribucion: distribucionEnriquecida, porcentaje: datos.porcentaje || '' }
+                    : { id: cid, nombre, razonSocial: datos.nombre || nombre, distribucion: distribucionEnriquecida, porcentaje: datos.porcentaje || '' };
             }
         }
 
@@ -310,7 +323,14 @@ async function print_fetchByIds(ids) {
             GESTOR:       row.gestor    || '',
             PROVEEDOR:    row.proveedor || '',
             CLASE:        row.clase     || print_getClaseByPVP(rawPVP),
-            HR:           (row.hr || []).map(h => [h.codigo_color || '', h.color || '', h.talla || '', h.cantidad || 0]),
+            HR:           (row.hr || []).map(h => ({
+                codigo_color: h.codigo_color || '',
+                color: h.color || '',
+                talla: h.talla || '',
+                cantidad: h.cantidad || 0,
+                referencia: h.referencia || '',
+                descripcion: h.descripcion || ''
+            })),
             ANEXOS:       row.anexos || [],
             FUENTE:       'SUPABASE',
             COLABORADOR:  colaboradorMap[documento] || '',

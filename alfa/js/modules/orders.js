@@ -13,6 +13,9 @@ let mostrandoCompletados = false;  // Toggle para mostrar/ocultar completados
 let opsEnIngresosSet = new Set();  // OPs activas que ya están en la tabla ingresos
 let verificandoIngresos = false;
 
+// Exponer pedidosMap globalmente para que esté disponible en distribución
+window.pedidosMap = pedidosMap;
+
 // ============================================
 // INIT
 // ============================================
@@ -37,12 +40,14 @@ async function cargarPedidosDesdeSheets() {
             return;
         }
         pedidosMap = await loadPedidosData();
+        window.pedidosMap = pedidosMap; // Actualizar referencia global
         renderOrdersBoard();
         // Verificar automáticamente cuáles OPs ya están en ingresos
         verificarOpsEnIngresos();
     } catch (err) { 
         console.error('Error cargando pedidos:', err);
         pedidosMap = [];
+        window.pedidosMap = pedidosMap; // Actualizar referencia global
         renderOrdersBoard();
     }
 }
@@ -763,8 +768,20 @@ function aplicarPedidosDesdeModal(pedidos) {
 
 function mostrarModalPedidosParaLote(lote) {
     if (!lote) return;
-    const pedidos = getPedidosPendientesParaLote(lote);
-    if (!Object.keys(pedidos).length) return;
+    
+    // SIEMPRE cargar pedidos frescos desde Supabase antes de mostrar el modal
+    // para garantizar que los datos estén actualizados
+    cargarPedidosDesdeSheets().then(() => {
+        const pedidos = getPedidosPendientesParaLote(lote);
+        if (Object.keys(pedidos).length) {
+            renderModalPedidosParaLote(lote, pedidos);
+        }
+    }).catch(err => {
+        console.error('Error cargando pedidos para modal:', err);
+    });
+}
+
+function renderModalPedidosParaLote(lote, pedidos) {
 
     document.querySelector('.modal-pedidos-lote')?.remove();
 
@@ -825,7 +842,8 @@ function mostrarModalPedidosParaLote(lote) {
 
 function getPedidosPendientesParaLote(lote) {
     const result = {};
-    pedidosMap.forEach(p => {
+    const pedidos = window.pedidosMap || pedidosMap;
+    pedidos.forEach(p => {
         // Solo contar pedidos activos (estado = true)
         if (String(p.op) === String(lote) && p.estado !== false) {
             result[p.mayoristaId] = (result[p.mayoristaId] || 0) + p.cantidad;
@@ -841,7 +859,8 @@ function getPedidosPendientesParaLote(lote) {
 async function marcarPedidosComoCompletados(lote) {
     if (!lote) return;
     const loteStr = String(lote);
-    const pedidosDelLote = pedidosMap.filter(p => String(p.op) === loteStr && p.estado !== false);
+    const pedidos = window.pedidosMap || pedidosMap;
+    const pedidosDelLote = pedidos.filter(p => String(p.op) === loteStr && p.estado !== false);
     
     if (!pedidosDelLote.length) return;
 

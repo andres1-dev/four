@@ -365,6 +365,7 @@ function searchDistributionRec() {
     if (cached) {
         setCurrentRecData(cached);
         displayDistributionResults(currentRecData);
+        // Cargar pedidos frescos antes de mostrar el modal
         if (currentRecData && typeof mostrarModalPedidosParaLote === 'function') {
             mostrarModalPedidosParaLote(currentRecData.LOTE);
         }
@@ -383,6 +384,7 @@ function searchDistributionRec() {
         setAllRecData([...allRecData, recData]);
         setCurrentRecData(recData);
         displayDistributionResults(currentRecData);
+        // Cargar pedidos frescos antes de mostrar el modal
         if (currentRecData && typeof mostrarModalPedidosParaLote === 'function') {
             mostrarModalPedidosParaLote(currentRecData.LOTE);
         }

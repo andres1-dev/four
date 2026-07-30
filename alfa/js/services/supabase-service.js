@@ -352,12 +352,18 @@ async function saveToSisproInversiones(data) {
             if (item.BODEGA === 'PRIMERAS') {
                 cantidadFull += parseInt(item.CANTIDAD) || 0;
                 costoTotal += costoTOTAL;
-                hr.push({
+                const hrEntry = {
                     codigo_color: item.COD_COLOR,
                     color: item.COLORES,
                     talla: item.TALLA,
                     cantidad: parseInt(item.CANTIDAD) || 0
-                });
+                };
+                // Agregar referencia y descripcion si es REFVAR (usar campos HR específicos)
+                if (item.REFERENCIA === 'REFVAR' || item.REFERENCIA_HISTORICA === 'REFVAR') {
+                    hrEntry.referencia = item.HR_REFERENCIA || item.REFERENCIA_HISTORICA || item.REFERENCIA || '';
+                    hrEntry.descripcion = item.HR_DESCRIPCION || item.DESCRIPCION_LARGA || item.DESCRIPCION || '';
+                }
+                hr.push(hrEntry);
             }
             else if (item.BODEGA === 'PROMOCIONES') {
                 cantidadPromo += parseInt(item.CANTIDAD) || 0;

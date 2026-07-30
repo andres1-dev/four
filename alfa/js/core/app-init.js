@@ -2,6 +2,9 @@ function initializeApp() {
     // initializeNotifications(); // Opcional si aun existe
     window.distributionInitialized = true;
 
+    // Inicializar pedidosMap vacío inmediatamente
+    window.pedidosMap = [];
+
     // Cargar todos los datos incluyendo la configuración dinámica
     loadDataFromSheets();
     updateStatus('Sistema inicializado correctamente', 'info');
@@ -26,7 +29,9 @@ async function loadDataFromSheets(silent = false) {
         }
 
         // UN SOLO Promise.all — todas las tablas en paralelo simultáneo
-        await Promise.all([
+        const [pedidos] = await Promise.all([
+            // Pedidos - CRÍTICO para distribución, debe cargarse síncronamente
+            loadPedidosData(),
             // Config (pequeñas, rápidas)
             loadUsuariosData(),
             loadProveedoresData(),
@@ -41,6 +46,10 @@ async function loadDataFromSheets(silent = false) {
             // Tablas globales del proyecto secundario
             loadGlobalMaps().catch(err => Logger.warn('app-init', 'Tablas globales no disponibles', err))
         ]);
+
+        // Inicializar pedidosMap global inmediatamente con los datos cargados
+        window.pedidosMap = pedidos || [];
+        Logger.info('app-init', `${window.pedidosMap.length} pedidos cargados en pedidosMap global`);
 
         // Clientes en background — no bloquea la UI
         loadClientesData().catch(err => Logger.warn('app-init', 'Clientes no cargados en background', err))

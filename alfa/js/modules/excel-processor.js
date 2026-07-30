@@ -106,7 +106,8 @@ function _normalizeToHR(rows) {
         const first = items[0];
 
         const uniqueRefs = new Set(items.map(i => String(i.REFERENCIA || '').trim()));
-        const isRefVar   = uniqueRefs.size > 1;
+        const uniqueRefp = new Set(items.map(i => _extractRefprov(i.DESCRIPCION) || String(i.REFERENCIA_PROV || '').trim()));
+        const isRefVar   = uniqueRefs.size > 1 || uniqueRefp.size > 1;
 
         const totalCantidad = items.reduce((s, i) => s + (parseInt(i.CANTIDAD) || 0), 0);
 
@@ -124,7 +125,7 @@ function _normalizeToHR(rows) {
             if (barra && talla && color) {
                 const k = `${barra}_${talla}_${color}`;
                 if (!hrMap[k]) {
-                    const e = { talla, color, barra, cantidad: 0 };
+                    const e = { talla, color, codigo_color: barra, cantidad: 0 };
                     if (isRefVar) { e.refprov = itemRefp; e.referencia = itemRef; e.descripcion = itemDesc; }
                     hrMap[k] = e;
                 }
@@ -155,7 +156,7 @@ function _normalizeToHR(rows) {
             referencia,
             descripcion,
             total:       totalCantidad,
-            tipo:        isRefVar ? 'REFVAR' : 'FULL',
+            tipo:        'FULL',
             hr:          Object.values(hrMap),
             fuente:      'GLOBAL'
         });
@@ -228,7 +229,7 @@ function _hrRecordToItems(rec) {
         PVP:                 pvp,
         TALLA:               hrRow.talla         || '',
         COLORES:             hrRow.color         || '',
-        COD_COLOR:           hrRow.barra         || '',   // barra = código de color en Excel
+        COD_COLOR:           hrRow.codigo_color  || '',   // codigo_color = código de barras en Excel
         OS:                  '',
         BODEGA:              'PRIMERAS',
         TALLER:              rec.TALLER          || '',
@@ -242,6 +243,9 @@ function _hrRecordToItems(rec) {
         CLASE:               clase,
         DESCRIPCION:         descripcionFinal,
         AUDITOR:             rec.AUDITOR      || '',   // Campo extra para editor
+        // Campos específicos para REFVAR (desde hrRow)
+        HR_REFERENCIA:       hrRow.referencia    || '',   // referencia específica del item en HR
+        HR_DESCRIPCION:      hrRow.descripcion   || '',   // descripción específica del item en HR
         FUENTE:              'BUSINT'
     }));
 }

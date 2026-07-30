@@ -337,19 +337,34 @@ function print_generarContenidoInterno(datos, options = {}) {
     // Sección de distribución
     if (datos.DISTRIBUCION && datos.DISTRIBUCION.Clientes) {
         if (isModoCliente && clienteData.distribucion) {
+            // Determinar si es REFVAR para mostrar columnas adicionales y ordenamiento
+            const esRefVar = datos.REFPROV === 'REFVAR' || datos.REFERENCIA === 'REFVAR';
             let totalUnidadesCliente = clienteData.distribucion.reduce((total, item) => total + (parseInt(item.cantidad) || 0), 0);
             const distribucionOrdenada = [...clienteData.distribucion].sort((a, b) => {
+                // Si es REFVAR, ordenar primero por referencia
+                if (esRefVar) {
+                    const refA = (a.referencia || '').trim();
+                    const refB = (b.referencia || '').trim();
+                    if (refA !== refB) return refA.localeCompare(refB, "es", { sensitivity: "base" });
+                }
+                // Luego ordenar por talla y color
                 const sizeA = print_parseSize(a.talla);
                 const sizeB = print_parseSize(b.talla);
                 if (sizeA.rank !== sizeB.rank) return sizeA.rank - sizeB.rank;
                 return a.color.localeCompare(b.color, "es", { sensitivity: "base" });
             });
-            html += `<div class="section"><div class="section-title">DISTRIBUCIÓN (${totalUnidadesCliente}) ${clienteNombre} </div><table><thead><tr><th>Código</th><th>Color</th><th>Talla</th><th>Cantidad</th></tr></thead><tbody>`;
+            const headerRefVar = esRefVar ? '<th>Referencia</th><th>Descripción</th>' : '';
+            const cellRefVar = esRefVar ? `<td>${item.referencia || ''}</td><td>${item.descripcion || ''}</td>` : '';
+            const colspanTotal = esRefVar ? 5 : 3;
+
+            html += `<div class="section"><div class="section-title">DISTRIBUCIÓN (${totalUnidadesCliente}) ${clienteNombre} </div><table><thead><tr><th>Código</th><th>Color</th><th>Talla</th>${headerRefVar}<th>Cantidad</th></tr></thead><tbody>`;
             distribucionOrdenada.forEach(item => {
-                html += `<tr><td>${item.codigo}</td><td>${item.color}</td><td>${item.talla}</td><td>${item.cantidad}</td></tr>`;
+                html += `<tr><td>${item.codigo}</td><td>${item.color}</td><td>${item.talla}</td>${cellRefVar}<td>${item.cantidad}</td></tr>`;
             });
-            html += `<tr class="total"><td colspan="3">TOTAL</td><td>${totalUnidadesCliente}</td></tr></tbody></table></div>`;
+            html += `<tr class="total"><td colspan="${colspanTotal}">TOTAL</td><td>${totalUnidadesCliente}</td></tr></tbody></table></div>`;
         } else if (!isModoCliente) {
+            // Determinar si es REFVAR para mostrar columnas adicionales y ordenamiento
+            const esRefVar = datos.REFPROV === 'REFVAR' || datos.REFERENCIA === 'REFVAR';
             let clientes = Object.keys(datos.DISTRIBUCION.Clientes);
             let principales = [], secundarias = [], mayoristas = [];
             let distribucionFinal = {};
@@ -378,13 +393,25 @@ function print_generarContenidoInterno(datos, options = {}) {
             });
 
             const todasLasFilas = Object.values(distribucionFinal).sort((a, b) => {
+                // Si es REFVAR, ordenar primero por referencia
+                if (esRefVar) {
+                    const hrItemA = (datos.HR || []).find(h => h.codigo_color === a.codigo && h.talla === a.talla && h.color === a.color);
+                    const hrItemB = (datos.HR || []).find(h => h.codigo_color === b.codigo && h.talla === b.talla && h.color === b.color);
+                    const refA = (hrItemA?.referencia || '').trim();
+                    const refB = (hrItemB?.referencia || '').trim();
+                    if (refA !== refB) return refA.localeCompare(refB, "es", { sensitivity: "base" });
+                }
+                // Luego ordenar por talla y color
                 const sizeA = print_parseSize(a.talla);
                 const sizeB = print_parseSize(b.talla);
                 if (sizeA.rank !== sizeB.rank) return sizeA.rank - sizeB.rank;
                 return a.color.localeCompare(b.color, "es", { sensitivity: "base" });
             });
 
-            html += `<div class="section"><div class="section-title">DISTRIBUCIÓN (${clientesOrdenados.length})</div><table><thead><tr><th>Código</th><th>Color</th><th>Talla</th><th>Total</th>`;
+            const headerRefVar = esRefVar ? '<th>Referencia</th><th>Descripción</th>' : '';
+            const colspanTotal = esRefVar ? 5 : 3;
+
+            html += `<div class="section"><div class="section-title">DISTRIBUCIÓN (${clientesOrdenados.length})</div><table><thead><tr><th>Código</th><th>Color</th><th>Talla</th>${headerRefVar}<th>Total</th>`;
             clientesOrdenados.forEach(cliente => {
                 html += `<th>${cliente}${porcentajes[cliente] ? '<br>' + porcentajes[cliente] : ''}</th>`;
             });
@@ -392,7 +419,11 @@ function print_generarContenidoInterno(datos, options = {}) {
 
             let totalPorCliente = {};
             todasLasFilas.forEach(row => {
-                html += `<tr><td>${row.codigo}</td><td>${row.color}</td><td>${row.talla}</td><td>${row.cantidadTotal}</td>`;
+                // Obtener referencia y descripcion del HR original si es REFVAR
+                const hrItem = (datos.HR || []).find(h => h.codigo_color === row.codigo && h.talla === row.talla && h.color === row.color);
+                const cellRefVar = esRefVar ? `<td>${hrItem?.referencia || ''}</td><td>${hrItem?.descripcion || ''}</td>` : '';
+
+                html += `<tr><td>${row.codigo}</td><td>${row.color}</td><td>${row.talla}</td>${cellRefVar}<td>${row.cantidadTotal}</td>`;
                 clientesOrdenados.forEach(cliente => {
                     html += `<td>${row[cliente]}</td>`;
                     totalPorCliente[cliente] = (totalPorCliente[cliente] || 0) + row[cliente];
@@ -401,9 +432,14 @@ function print_generarContenidoInterno(datos, options = {}) {
             });
 
             let totalGeneral = Object.values(totalPorCliente).reduce((sum, val) => sum + val, 0);
-            html += `<tr class="total"><td colspan="3">TOTALES</td><td>${totalGeneral}</td>`;
+            html += `<tr class="total"><td colspan="${colspanTotal}">TOTALES</td><td>${totalGeneral}</td>`;
             clientesOrdenados.forEach(cliente => html += `<td>${totalPorCliente[cliente]}</td>`);
             html += `</tr></tbody></table></div>`;
+
+            // Actualizar el título de la sección con los totales por cliente
+            const totalesPorClienteStr = clientesOrdenados.map(c => `${c}: ${totalPorCliente[c] || 0}`).join(' - ');
+            const sectionTitle = `DISTRIBUCIÓN (${clientesOrdenados.length}) - ${totalesPorClienteStr}`;
+            html = html.replace(`<div class="section"><div class="section-title">DISTRIBUCIÓN (${clientesOrdenados.length})</div>`, `<div class="section"><div class="section-title">${sectionTitle}</div>`);
         }
     }
 
