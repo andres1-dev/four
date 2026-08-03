@@ -3,12 +3,17 @@
  * Matching backup.html exactly
  */
 
+const CAPTURE_APP_BASE_URL = 'https://andres1-dev.github.io/four/income/login.html';
+
 async function captureAndDownloadCards(silent = false) {
     const cardsContainer = document.querySelector('.cards-container');
     const trendsContainer = document.querySelector('.cards-container2');
     const captureBtn = document.getElementById('captureBtn');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const loadingText = document.getElementById('loadingText');
+    
+    // Declarar trendsExpandedState al inicio para que esté disponible en todo el scope
+    const trendsExpandedState = new Map();
 
     // Toast de progreso para modo silencioso
     let toastEl = null;
@@ -110,7 +115,6 @@ async function captureAndDownloadCards(silent = false) {
         const cardHeaders = tempContainer.querySelectorAll('.card-header');
 
         // Guardar estado expandido de las tarjetas del trendsContainer ANTES de expandir
-        const trendsExpandedState = new Map();
         if (trendsContainer) {
             trendsContainer.querySelectorAll('.card-header').forEach(header => {
                 const card = header.closest('.card');
@@ -244,7 +248,7 @@ async function captureAndDownloadCards(silent = false) {
         // 8. Generar token de acceso y abrir WhatsApp
         if (!silent && loadingText) loadingText.textContent = "Abriendo WhatsApp...";
         else updateToast('Abriendo WhatsApp...');
-        let appUrl = APP_BASE_URL;
+        let appUrl = CAPTURE_APP_BASE_URL;
         try {
             if (typeof generateAndSaveToken === 'function') {
                 appUrl = await generateAndSaveToken();

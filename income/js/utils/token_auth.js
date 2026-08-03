@@ -1,35 +1,70 @@
 /**
- * token_auth.js — Token de acceso temporal (6 h)
- * El token se genera en GAS, se guarda en localStorage del EMISOR,
- * y se valida localmente en el RECEPTOR via localStorage compartido
- * — pero como son dominios distintos no comparten localStorage.
- *
- * Solución: el token viaja en la URL y se valida contra GAS.
- * Para evitar el problema de velocidad del GAS, guardamos el token
- * en localStorage del emisor Y lo incluimos en la URL.
- * El receptor valida contra GAS de forma bloqueante con un loading visible.
+ * token_auth.js — Token de acceso temporal (24 h)
+ * El token se genera y valida en Supabase en lugar de Google Apps Script.
+ * El token viaja en la URL y se valida contra Supabase.
+ * 
+ * Migración de GAS a Supabase para mayor velocidad y simplicidad.
  */
 
-var TOKEN_GAS_URL = 'https://script.google.com/macros/s/AKfycbzFkQsoAMCfnkoBHSTMMx4evKkAkwkBVlCu3eHIMVcam41GR2Q1_9YffhJSf8SeOC3_/exec';
-var APP_BASE_URL  = 'https://andres1-dev.github.io/four/income/login.html';
+// Definir constantes necesarias (para evitar conflicto con supabase_data.js)
+const TOKEN_AUTH_SUPABASE_URL = 'https://iladaofarozipitwaeti.supabase.co';
+const TOKEN_AUTH_SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsYWRhb2Zhcm96aXBpdHdhZXRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NjYzMDksImV4cCI6MjA5MzA0MjMwOX0.4fyiibeZS10DCgov62d7tIFVzJHsklsBrbokAJ9ptK8';
+const APP_BASE_URL  = 'https://andres1-dev.github.io/four/income/login.html';
 
 /**
- * Pide a GAS que genere un token y retorna la URL con ?token=
+ * Genera un token único (UUID) y lo guarda en Supabase
  */
 async function generateAndSaveToken() {
     try {
-        const res  = await fetch(TOKEN_GAS_URL, {
+        // Generar token único
+        const token = generateUUID();
+        
+        // Calcular fecha de expiración (24 horas desde ahora)
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        
+        // Datos del usuario por defecto (pueden ser personalizados)
+        const tokenData = {
+            token: token,
+            usuario: 'INVITADO',
+            nombre: 'INVITADO',
+            correo: '',
+            telefono: '',
+            rol: 'ADMIN',
+            expires_at: expiresAt
+        };
+        
+        // Insertar token en Supabase
+        const res = await fetch(`${TOKEN_AUTH_SUPABASE_URL}/rest/v1/temp_tokens`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'action=generate_token'
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': TOKEN_AUTH_SUPABASE_ANON,
+                'Authorization': `Bearer ${TOKEN_AUTH_SUPABASE_ANON}`,
+                'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify(tokenData)
         });
-        const data = await res.json();
-        console.log('[TOKEN] GAS response:', data);
-        if (data.ok && data.token) {
-            return APP_BASE_URL + '?token=' + data.token;
+        
+        if (res.ok) {
+            console.log('[TOKEN] Token generado exitosamente en Supabase');
+            return APP_BASE_URL + '?token=' + token;
+        } else {
+            console.error('[TOKEN] Error al insertar token en Supabase:', await res.text());
+            return APP_BASE_URL;
         }
     } catch (e) {
-        console.warn('[TOKEN] fetch error:', e);
+        console.warn('[TOKEN] Error generando token:', e);
+        return APP_BASE_URL;
     }
-    return APP_BASE_URL;
+}
+
+/**
+ * Genera un UUID v4 simple
+ */
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
 }

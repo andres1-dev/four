@@ -10,39 +10,51 @@
         (function () {
             var token = new URLSearchParams(window.location.search).get('token');
             if (!token) return;
+            
             // Ocultar página mientras validamos
             document.documentElement.style.visibility = 'hidden';
-            var GAS = 'https://script.google.com/macros/s/AKfycbzFkQsoAMCfnkoBHSTMMx4evKkAkwkBVlCu3eHIMVcam41GR2Q1_9YffhJSf8SeOC3_/exec';
-            fetch(GAS, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'action=validate_token&token=' + encodeURIComponent(token)
+            
+            // Configuración de Supabase (mismas constantes que en token_auth.js)
+            const TOKEN_AUTH_SUPABASE_URL = 'https://iladaofarozipitwaeti.supabase.co';
+            const TOKEN_AUTH_SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsYWRhb2Zhcm96aXBpdHdhZXRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NjYzMDksImV4cCI6MjA5MzA0MjMwOX0.4fyiibeZS10DCgov62d7tIFVzJHsklsBrbokAJ9ptK8';
+            
+            // Validar token contra Supabase
+            fetch(`${TOKEN_AUTH_SUPABASE_URL}/rest/v1/temp_tokens?token=eq.${encodeURIComponent(token)}&expires_at=gte.${new Date().toISOString()}`, {
+                method: 'GET',
+                headers: {
+                    'apikey': TOKEN_AUTH_SUPABASE_ANON,
+                    'Authorization': `Bearer ${TOKEN_AUTH_SUPABASE_ANON}`,
+                    'Accept': 'application/json'
+                }
             })
-                .then(function (r) { return r.json(); })
-                .then(function (d) {
-                    if (d && d.ok && d.valid) {
-                        // Sesión temporal — solo sessionStorage, sin localStorage
-                        var session = {
-                            usuario: d.usuario || 'INVITADO',
-                            nombre: d.nombre || 'INVITADO',
-                            correo: d.correo || '',
-                            telefono: d.tel || '',
-                            rol: d.rol || 'ADMIN',
-                            id_device: '',
-                            ts: Date.now(),
-                            temporary: true  // marca para identificar sesión temporal
-                        };
-                        sessionStorage.setItem('tdm_session', JSON.stringify(session));
-                        // NO guardar en localStorage para que no persista
-                        window.location.replace('index.html');
-                    } else {
-                        document.documentElement.style.visibility = '';
-                        history.replaceState(null, '', window.location.pathname);
-                    }
-                })
-                .catch(function () {
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data && data.length > 0) {
+                    // Token válido encontrado
+                    var tokenData = data[0];
+                    var session = {
+                        usuario: tokenData.usuario || 'INVITADO',
+                        nombre: tokenData.nombre || 'INVITADO',
+                        correo: tokenData.correo || '',
+                        telefono: tokenData.telefono || '',
+                        rol: tokenData.rol || 'ADMIN',
+                        id_device: '',
+                        ts: Date.now(),
+                        temporary: true  // marca para identificar sesión temporal
+                    };
+                    sessionStorage.setItem('tdm_session', JSON.stringify(session));
+                    // NO guardar en localStorage para que no persista
+                    window.location.replace('index.html');
+                } else {
+                    // Token inválido o expirado
                     document.documentElement.style.visibility = '';
-                });
+                    history.replaceState(null, '', window.location.pathname);
+                }
+            })
+            .catch(function (error) {
+                console.error('[TOKEN] Error validando token:', error);
+                document.documentElement.style.visibility = '';
+            });
         })();
     </script>
     <script>
