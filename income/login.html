@@ -14,36 +14,42 @@
             // Ocultar página mientras validamos
             document.documentElement.style.visibility = 'hidden';
             
-            // Configuración de Supabase (mismas constantes que en token_auth.js)
-            const TOKEN_AUTH_SUPABASE_URL = 'https://iladaofarozipitwaeti.supabase.co';
-            const TOKEN_AUTH_SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsYWRhb2Zhcm96aXBpdHdhZXRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NjYzMDksImV4cCI6MjA5MzA0MjMwOX0.4fyiibeZS10DCgov62d7tIFVzJHsklsBrbokAJ9ptK8';
+            // Configuración de Edge Function
+            const EDGE_FUNCTION_URL = 'https://iladaofarozipitwaeti.supabase.co/functions/v1/token-auth';
+            const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsYWRhb2Zhcm96aXBpdHdhZXRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NjYzMDksImV4cCI6MjA5MzA0MjMwOX0.4fyiibeZS10DCgov62d7tIFVzJHsklsBrbokAJ9ptK8';
             
-            // Validar token contra Supabase
-            fetch(`${TOKEN_AUTH_SUPABASE_URL}/rest/v1/temp_tokens?token=eq.${encodeURIComponent(token)}&expires_at=gte.${new Date().toISOString()}`, {
-                method: 'GET',
+            // Validar token contra Edge Function
+            fetch(EDGE_FUNCTION_URL, {
+                method: 'POST',
                 headers: {
-                    'apikey': TOKEN_AUTH_SUPABASE_ANON,
-                    'Authorization': `Bearer ${TOKEN_AUTH_SUPABASE_ANON}`,
-                    'Accept': 'application/json'
-                }
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${SUPABASE_ANON}`
+                },
+                body: JSON.stringify({ action: 'validate_token', token: token })
             })
             .then(function (r) { return r.json(); })
             .then(function (data) {
-                if (data && data.length > 0) {
+                if (data && data.ok && data.valid) {
                     // Token válido encontrado
-                    var tokenData = data[0];
                     var session = {
-                        usuario: tokenData.usuario || 'INVITADO',
-                        nombre: tokenData.nombre || 'INVITADO',
-                        correo: tokenData.correo || '',
-                        telefono: tokenData.telefono || '',
-                        rol: tokenData.rol || 'ADMIN',
+                        usuario: data.usuario || '222222222',
+                        nombre: data.nombre || 'INVITADOS',
+                        correo: data.correo || '',
+                        telefono: data.telefono || '573168008000',
+                        rol: data.rol || 'ADMIN',
                         id_device: '',
                         ts: Date.now(),
                         temporary: true  // marca para identificar sesión temporal
                     };
                     sessionStorage.setItem('tdm_session', JSON.stringify(session));
-                    // NO guardar en localStorage para que no persista
+                    
+                    // Guardar la sesión de Supabase si viene en la respuesta
+                    if (data.session) {
+                        // Guardar la sesión de Supabase en localStorage
+                        localStorage.setItem('sb-' + data.session.user.id + '-auth-token', JSON.stringify(data.session));
+                    }
+                    
+                    // NO guardar otros datos en localStorage para que no persista
                     window.location.replace('index.html');
                 } else {
                     // Token inválido o expirado

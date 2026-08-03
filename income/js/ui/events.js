@@ -540,8 +540,22 @@ async function updateReportWithDate(newDate, forceReload = false, silent = false
             try {
                 const sessionData = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
                 if (sessionData && sessionData.temporary) {
-                    console.log('[EVENTS] Sesión temporal detectada en update error, no redirigiendo');
-                    return;
+                    // Verificar si hay sesión de Supabase válida
+                    let hasSupabaseSession = false;
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+                            hasSupabaseSession = true;
+                            break;
+                        }
+                    }
+                    
+                    if (hasSupabaseSession) {
+                        console.log('[EVENTS] Sesión temporal con sesión Supabase válida, puede redirigir si es necesario');
+                    } else {
+                        console.log('[EVENTS] Sesión temporal sin sesión Supabase en update error, no redirigiendo');
+                        return;
+                    }
                 }
             } catch (e) {
                 console.error('Error verificando tipo de sesión en update:', e);
@@ -590,8 +604,22 @@ async function cargarDatosIniciales(forceRefresh = false) {
         try {
             const sessionData = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
             if (sessionData && sessionData.temporary) {
-                console.log('[EVENTS] Sesión temporal detectada en initial load error, no redirigiendo');
-                throw error;
+                // Verificar si hay sesión de Supabase válida
+                let hasSupabaseSession = false;
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+                        hasSupabaseSession = true;
+                        break;
+                    }
+                }
+                
+                if (hasSupabaseSession) {
+                    console.log('[EVENTS] Sesión temporal con sesión Supabase válida en initial load error, puede redirigir si es necesario');
+                } else {
+                    console.log('[EVENTS] Sesión temporal sin sesión Supabase en initial load error, no redirigiendo');
+                    throw error;
+                }
             }
         } catch (e) {
             console.error('Error verificando tipo de sesión en initial load:', e);

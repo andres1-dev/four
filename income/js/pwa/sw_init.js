@@ -18,7 +18,7 @@ if ('serviceWorker' in navigator) {
         
         navigator.serviceWorker.register(swPath, { scope: baseUrl })
             .then(reg => {
-                console.log('✅ Service Worker registrado:', reg.scope);
+                // Service Worker registrado exitosamente
             })
             .catch(err => {
                 console.warn('⚠️ Error al registrar Service Worker:', err);

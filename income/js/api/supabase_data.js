@@ -12,16 +12,25 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 function handleSupabaseConnectionLoss(reason = 'Se perdió la conexión con Supabase', error = null) {
     console.warn('🔴 [SUPABASE] Connection loss or auth error:', reason);
     
-    // Verificar si es una sesión temporal (token) antes de redirigir
+    // Ahora las sesiones temporales tienen sesión de Supabase válida, así que no hay distinción
+    // Solo no redirigir si hay sesión temporal sin sesión Supabase (caso de error)
     try {
         const sessionData = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
         if (sessionData && sessionData.temporary) {
-            console.log('[SUPABASE] Sesión temporal detectada, no redirigiendo al login');
-            // Para sesiones temporales, solo mostrar un warning no intrusivo
-            if (error && !error.isTemporarySession) {
-                console.warn('[SUPABASE] Error en sesión temporal pero no es error de auth:', reason);
+            // Verificar si hay sesión de Supabase válida
+            let hasSupabaseSession = false;
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+                    hasSupabaseSession = true;
+                    break;
+                }
             }
-            return; // No redirigir si es una sesión temporal
+            
+            if (!hasSupabaseSession) {
+                console.log('[SUPABASE] Sesión temporal sin sesión Supabase, no redirigiendo');
+                return;
+            }
         }
     } catch (e) {
         console.error('Error verificando tipo de sesión:', e);
@@ -57,8 +66,20 @@ window.addEventListener('offline', () => {
     try {
         const sessionData = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
         if (sessionData && sessionData.temporary) {
-            console.log('[SUPABASE] Sesión temporal detectada en evento offline, no redirigiendo');
-            return;
+            // Verificar si hay sesión de Supabase válida
+            let hasSupabaseSession = false;
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+                    hasSupabaseSession = true;
+                    break;
+                }
+            }
+            
+            if (!hasSupabaseSession) {
+                console.log('[SUPABASE] Sesión temporal sin sesión Supabase en evento offline, no redirigiendo');
+                return;
+            }
         }
     } catch (e) {
         console.error('Error verificando tipo de sesión en offline:', e);
@@ -69,20 +90,21 @@ window.addEventListener('offline', () => {
 // ─── Obtener token de sesión si está autenticado ──────────────────────────────
 function getAuthToken() {
     try {
-        // Verificar si es una sesión temporal (token de invitado)
-        const sessionData = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
-        if (sessionData && sessionData.temporary) {
-            console.log('[SUPABASE] Usando sesión temporal con anon key');
-            return SUPABASE_ANON; // Sesión temporal usa anon key
-        }
-        
-        // Para sesiones normales de Supabase Auth
+        // Para sesiones normales de Supabase Auth (incluyendo sesiones temporales de Edge Function)
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
             if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
                 const sessionData = JSON.parse(localStorage.getItem(key));
-                if (sessionData?.access_token) return sessionData.access_token;
+                if (sessionData?.access_token) {
+                    return sessionData.access_token;
+                }
             }
+        }
+        
+        // Verificar si es una sesión temporal (token de invitado) sin sesión Supabase
+        const sessionData = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
+        if (sessionData && sessionData.temporary) {
+            return SUPABASE_ANON; // Sesión temporal usa anon key como fallback
         }
     } catch (e) { }
     return SUPABASE_ANON;

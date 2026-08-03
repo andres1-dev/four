@@ -164,6 +164,9 @@ async function captureAndDownloadCards(silent = false) {
         elementsToHide.forEach(el => el.style.visibility = 'hidden');
 
         // 3. Capturar con html2canvas
+        const isDarkTheme = document.documentElement.getAttribute('data-theme') !== 'light';
+        const backgroundColor = isDarkTheme ? '#0f1117' : '#ffffff'; // Color según tema
+        
         const canvasOptions = {
             scale: isMobile ? 3 : 2,
             logging: false,
@@ -173,19 +176,23 @@ async function captureAndDownloadCards(silent = false) {
             scrollY: 0,
             windowWidth: isMobile ? 3000 : 1840,
             windowHeight: tempContainer.scrollHeight,
-            backgroundColor: null  // se aplica manualmente en el canvas final
+            backgroundColor: backgroundColor  // Usar color según tema
         };
 
         await new Promise(resolve => setTimeout(resolve, 300));
         const uiCanvas = await html2canvas(tempContainer, canvasOptions);
 
-        // Canvas final con fondo transparente
+        // Canvas final con el mismo color de fondo
         const finalCanvas = document.createElement('canvas');
         finalCanvas.width  = uiCanvas.width;
         finalCanvas.height = uiCanvas.height;
         const fCtx = finalCanvas.getContext('2d');
 
-        // Solo UI, sin fondo sólido
+        // Aplicar color de fondo primero
+        fCtx.fillStyle = backgroundColor;
+        fCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+        
+        // Luego dibujar la UI sobre el fondo
         fCtx.drawImage(uiCanvas, 0, 0);
 
         const canvas = finalCanvas;
@@ -233,14 +240,12 @@ async function captureAndDownloadCards(silent = false) {
         else updateToast('Procesando imagen...');
         
         const blob = await new Promise(resolve => {
-            canvas.toBlob(resolve, 'image/png');
+            canvas.toBlob(resolve, 'image/png'); // PNG con mejor calidad
         });
-        
-        console.log('Imagen generada - Tamaño:', blob.size, 'bytes');
 
         // 6. Crear archivo y descargar
         const fileName = `Informe_Ingresos_${formatDate(new Date()).replace(/\//g, '-')}.png`;
-        downloadImage(blob, fileName);
+        downloadImage(blob, fileName, false); // false para no mostrar log
         
         // 7. Esperar un momento para que se descargue
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -465,7 +470,6 @@ function downloadImage(blob, fileName) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    console.log('✓ Imagen descargada:', fileName);
 }
 
 // Función para abrir WhatsApp solo con texto
@@ -477,8 +481,6 @@ function openWhatsAppWithText(message) {
     // Detectar si estamos en iOS
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
-
-    console.log('Abriendo WhatsApp - iOS:', isIOS, 'PWA:', isInStandaloneMode);
 
     if (isIOS && isInStandaloneMode) {
         // En iOS PWA, usar window.open es más confiable
