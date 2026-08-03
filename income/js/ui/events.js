@@ -536,8 +536,19 @@ async function updateReportWithDate(newDate, forceReload = false, silent = false
         console.error("Update error:", error);
         if (silent) { showSilentToast('Error al actualizar', 'error'); setTimeout(removeSilentToast, 2000); }
         if (!consolidatedData || consolidatedData.length === 0) {
+            // Verificar si es una sesión temporal antes de redirigir
+            try {
+                const sessionData = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
+                if (sessionData && sessionData.temporary) {
+                    console.log('[EVENTS] Sesión temporal detectada en update error, no redirigiendo');
+                    return;
+                }
+            } catch (e) {
+                console.error('Error verificando tipo de sesión en update:', e);
+            }
+            
             if (typeof window.handleSupabaseConnectionLoss === 'function') {
-                window.handleSupabaseConnectionLoss("No se pudieron cargar los datos de Supabase.");
+                window.handleSupabaseConnectionLoss("No se pudieron cargar los datos de Supabase.", error);
             } else {
                 sessionStorage.clear();
                 window.location.replace('login.html');
@@ -574,8 +585,20 @@ async function cargarDatosIniciales(forceRefresh = false) {
         datosCargarEndpoint().catch(err => console.warn("Error en datosCargarEndpoint:", err));
     } catch (error) {
         console.error("Initial load error:", error);
+        
+        // Verificar si es una sesión temporal antes de redirigir
+        try {
+            const sessionData = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
+            if (sessionData && sessionData.temporary) {
+                console.log('[EVENTS] Sesión temporal detectada en initial load error, no redirigiendo');
+                throw error;
+            }
+        } catch (e) {
+            console.error('Error verificando tipo de sesión en initial load:', e);
+        }
+        
         if (typeof window.handleSupabaseConnectionLoss === 'function') {
-            window.handleSupabaseConnectionLoss("No se pudo conectar con Supabase durante la carga inicial.");
+            window.handleSupabaseConnectionLoss("No se pudo conectar con Supabase durante la carga inicial.", error);
         } else {
             sessionStorage.clear();
             window.location.replace('login.html');

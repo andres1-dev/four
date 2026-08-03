@@ -9,8 +9,24 @@ const SUPABASE_URL = 'https://iladaofarozipitwaeti.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsYWRhb2Zhcm96aXBpdHdhZXRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NjYzMDksImV4cCI6MjA5MzA0MjMwOX0.4fyiibeZS10DCgov62d7tIFVzJHsklsBrbokAJ9ptK8';
 
 // ─── Manejo de pérdida de conexión y logout automático ───────────────────────
-function handleSupabaseConnectionLoss(reason = 'Se perdió la conexión con Supabase') {
+function handleSupabaseConnectionLoss(reason = 'Se perdió la conexión con Supabase', error = null) {
     console.warn('🔴 [SUPABASE] Connection loss or auth error:', reason);
+    
+    // Verificar si es una sesión temporal (token) antes de redirigir
+    try {
+        const sessionData = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
+        if (sessionData && sessionData.temporary) {
+            console.log('[SUPABASE] Sesión temporal detectada, no redirigiendo al login');
+            // Para sesiones temporales, solo mostrar un warning no intrusivo
+            if (error && !error.isTemporarySession) {
+                console.warn('[SUPABASE] Error en sesión temporal pero no es error de auth:', reason);
+            }
+            return; // No redirigir si es una sesión temporal
+        }
+    } catch (e) {
+        console.error('Error verificando tipo de sesión:', e);
+    }
+    
     try {
         sessionStorage.removeItem('tdm_session');
         sessionStorage.removeItem('tdm_preload_data');
@@ -37,12 +53,30 @@ window.handleSupabaseConnectionLoss = handleSupabaseConnectionLoss;
 
 // Escuchar evento offline de red
 window.addEventListener('offline', () => {
+    // Verificar si es una sesión temporal antes de redirigir
+    try {
+        const sessionData = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
+        if (sessionData && sessionData.temporary) {
+            console.log('[SUPABASE] Sesión temporal detectada en evento offline, no redirigiendo');
+            return;
+        }
+    } catch (e) {
+        console.error('Error verificando tipo de sesión en offline:', e);
+    }
     handleSupabaseConnectionLoss('El dispositivo ha perdido la conexión a internet.');
 });
 
 // ─── Obtener token de sesión si está autenticado ──────────────────────────────
 function getAuthToken() {
     try {
+        // Verificar si es una sesión temporal (token de invitado)
+        const sessionData = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
+        if (sessionData && sessionData.temporary) {
+            console.log('[SUPABASE] Usando sesión temporal con anon key');
+            return SUPABASE_ANON; // Sesión temporal usa anon key
+        }
+        
+        // Para sesiones normales de Supabase Auth
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
             if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
@@ -85,6 +119,14 @@ async function sbFetch(path, params = '') {
                 const error = new Error(`Error HTTP ${res.status} al conectar con Supabase`);
                 error.isSupabaseError = true;
                 error.status = res.status;
+                
+                // Para sesiones temporales, no tratar errores 401/403 como errores de autenticación que requieran logout
+                const sessionData = JSON.parse(sessionStorage.getItem('tdm_session') || 'null');
+                if (sessionData && sessionData.temporary) {
+                    error.isTemporarySession = true;
+                    console.log('[SUPABASE] Error en sesión temporal, no se considerará como error de auth');
+                }
+                
                 throw error;
             }
 
