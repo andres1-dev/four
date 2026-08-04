@@ -83,10 +83,9 @@ function cargarDatosDia() {
             const gestionNum = parseFloat(actual.gestion);
             const gestionDesc = gestionNum > 0 ? 'Crecimiento vs año anterior' : gestionNum < 0 ? 'Caída vs año anterior' : 'Sin variación';
             tooltipGestion.innerHTML =
-                `<strong>Comparación de Gestión Anual</strong><br><br>` +
-                `<strong>Año Actual (${actual.año}):</strong> ${pctActual}% cumplimiento<br>` +
-                `<strong>Año Anterior (${diaAnterior.año}):</strong> ${pctAnterior}% cumplimiento<br><br>` +
-                `<strong>Resultado:</strong> ${actual.gestion} — ${gestionDesc}<br><br>` +
+                `<strong>Variación Porcentual Relativa</strong><br>` +
+                `Mide el cambio relativo entre dos valores en el tiempo, es decir, cuánto creció o disminuyó el cumplimiento respecto al mismo día del año anterior.<br><br>` +
+                `Resultado: <strong>${actual.gestion}</strong> — ${gestionDesc}<br><br>` +
                 `<em style="font-size:11px;opacity:0.7">Fórmula: (% actual ÷ % año anterior - 1) × 100<br>` +
                 `= (${pctActual} ÷ ${pctAnterior} - 1) × 100<br>` +
                 `Positivo = mejora · Negativo = retroceso</em>`;
@@ -189,10 +188,9 @@ function cargarDatosMes() {
             const gestionNumMes = parseFloat(actual.gestion);
             const gestionDescMes = gestionNumMes > 0 ? 'Crecimiento vs año anterior' : gestionNumMes < 0 ? 'Caída vs año anterior' : 'Sin variación';
             tooltipGestionMes.innerHTML =
-                `<strong>Comparación de Gestión Mensual</strong><br><br>` +
-                `<strong>Año Actual (${actual.año}):</strong> ${actual.mes} - ${pctActual}% cumplimiento<br>` +
-                `<strong>Año Anterior (${mesAnterior.año}):</strong> ${mesAnterior.mes} - ${pctAnterior}% cumplimiento<br><br>` +
-                `<strong>Resultado:</strong> ${actual.gestion} — ${gestionDescMes}<br><br>` +
+                `<strong>Variación Porcentual Relativa</strong><br>` +
+                `Mide el cambio relativo entre dos valores en el tiempo, es decir, cuánto creció o disminuyó el cumplimiento respecto al mismo mes del año anterior.<br><br>` +
+                `Resultado: <strong>${actual.gestion}</strong> — ${gestionDescMes}<br><br>` +
                 `<em style="font-size:11px;opacity:0.7">Fórmula: (% actual ÷ % año anterior - 1) × 100<br>` +
                 `= (${pctActual} ÷ ${pctAnterior} - 1) × 100<br>` +
                 `Positivo = mejora · Negativo = retroceso</em>`;
@@ -294,10 +292,9 @@ function cargarDatosAño() {
             const gestionNumAño = parseFloat(actual.gestion);
             const gestionDescAño = gestionNumAño > 0 ? 'Crecimiento vs año anterior' : gestionNumAño < 0 ? 'Caída vs año anterior' : 'Sin variación';
             tooltipGestionAño.innerHTML =
-                `<strong>Comparación de Gestión Anual</strong><br><br>` +
-                `<strong>Año Actual (${actual.año}):</strong> ${pctActual}% cumplimiento<br>` +
-                `<strong>Año Anterior (${añoAnterior.año}):</strong> ${pctAnterior}% cumplimiento<br><br>` +
-                `<strong>Resultado:</strong> ${actual.gestion} — ${gestionDescAño}<br><br>` +
+                `<strong>Variación Porcentual Relativa</strong><br>` +
+                `Mide el cambio relativo entre dos valores en el tiempo, es decir, cuánto creció o disminuyó el cumplimiento respecto al mismo período del año anterior.<br><br>` +
+                `Resultado: <strong>${actual.gestion}</strong> — ${gestionDescAño}<br><br>` +
                 `<em style="font-size:11px;opacity:0.7">Fórmula: (% actual ÷ % año anterior - 1) × 100<br>` +
                 `= (${pctActual} ÷ ${pctAnterior} - 1) × 100<br>` +
                 `Positivo = mejora · Negativo = retroceso</em>`;

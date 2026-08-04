@@ -41,25 +41,10 @@ function datosToggleCard(element) {
     } else {
         content.classList.add('expanded');
         indicator.classList.replace('fa-chevron-down', 'fa-chevron-up');
-        // Mostrar rango de fechas que se está consultando
-        if (contador) {
-            const hoy = new Date();
-            const mesActual = hoy.getMonth();
-            const añoActual = hoy.getFullYear();
-            
-            // Primer día del mes anterior
-            const inicio = new Date(añoActual, mesActual - 1, 1);
-            // Día de hoy
-            const fin = hoy;
-            
-            const mesInicio = inicio.toLocaleDateString('es-ES', { month: 'short' });
-            const mesFin = hoy.toLocaleDateString('es-ES', { month: 'short' });
-            
-            // Capitalizar primera letra de los meses
-            const mesInicioCap = mesInicio.charAt(0).toUpperCase() + mesInicio.slice(1);
-            const mesFinCap = mesFin.charAt(0).toUpperCase() + mesFin.slice(1);
-            
-            contador.textContent = `${añoActual} (${inicio.getDate()} ${mesInicioCap} - ${fin.getDate()} ${mesFinCap})`;
+        if (!datosRegistros && !datosCargando) {
+            datosCargando = true;
+            if (contador) contador.textContent = 'Cargando...';
+            datosCargarEndpoint().then(() => { datosCargando = false; });
         }
     }
 }
@@ -74,6 +59,7 @@ function checkPassword() {
 
 // Initialize Page
 document.addEventListener('DOMContentLoaded', async function () {
+    initDatePicker();
     initProveedorFilter();
     initCaptureButton();
 
@@ -114,9 +100,151 @@ window.closeAllPanels = function(except) {
         window.activePanels.proveedor.classList.remove('open');
         window.activePanels.proveedor.setAttribute('aria-hidden', 'true');
     }
+    
+    // Cerrar flatpickr
+    if (except !== 'datePicker' && window._datePicker) {
+        window._datePicker.close();
+    }
 };
 
+function initDatePicker() {
+    const updateBtn = document.getElementById('updateReportBtn');
+    const dateIconBtn = document.getElementById('dateIconBtn');
+    if (!dateIconBtn) return;
 
+    // Input oculto para flatpickr
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'datePicker';
+    input.readOnly = true;
+    input.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:0;height:0;top:-9999px;left:-9999px;';
+    document.body.appendChild(input);
+
+    const fp = flatpickr(input, {
+        defaultDate: new Date(),
+        dateFormat: 'Y-m-d',
+        disableMobile: true,
+        appendTo: document.body,
+        locale: {
+            firstDayOfWeek: 1,
+            weekdays: {
+                shorthand: ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'],
+                longhand:  ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
+            },
+            months: {
+                shorthand: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],
+                longhand:  ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+            }
+        },
+        onOpen: function() {
+            // Cerrar otros paneles cuando se abre el date picker
+            window.closeAllPanels('datePicker');
+        },
+        onReady(_, __, instance) {
+            const cal = instance.calendarContainer;
+            cal.style.position = 'fixed';
+            cal.style.zIndex   = '999999';
+            instance.input.setAttribute('tabindex', '-1');
+
+            // Inyectar estilos para sobreescribir flatpickr base
+            if (!document.getElementById('flatpickr-custom-override')) {
+                const style = document.createElement('style');
+                style.id = 'flatpickr-custom-override';
+                style.textContent = `
+                    .flatpickr-calendar { background: #16181f !important; border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 14px !important; box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important; padding: 12px !important; width: 336px !important; }
+                    .flatpickr-days, .dayContainer { width: 312px !important; min-width: 312px !important; max-width: 312px !important; }
+                    .flatpickr-day { max-width: 44px !important; width: 44px !important; height: 36px !important; line-height: 36px !important; font-size: 12px !important; }
+                    span.flatpickr-weekday { width: 44px !important; font-size: 10px !important; }
+                    .flatpickr-months, .flatpickr-month, .flatpickr-weekdays, span.flatpickr-weekday, .flatpickr-days, .dayContainer { background: transparent !important; background-color: transparent !important; }
+                    .flatpickr-month { color: #e2e8f0 !important; fill: #e2e8f0 !important; }
+                    .flatpickr-current-month, .flatpickr-current-month input.cur-year { color: #e2e8f0 !important; }
+                    .flatpickr-current-month .flatpickr-monthDropdown-months { background: #16181f !important; color: #e2e8f0 !important; }
+                    .flatpickr-prev-month svg, .flatpickr-next-month svg { fill: #94a3b8 !important; }
+                    .flatpickr-prev-month:hover svg, .flatpickr-next-month:hover svg { fill: #e2e8f0 !important; }
+                    span.flatpickr-weekday { color: #64748b !important; font-weight: 700 !important; }
+                    .flatpickr-day { background: transparent !important; color: #94a3b8 !important; border: none !important; border-radius: 8px !important; }
+                    .flatpickr-day:hover { background: rgba(255,255,255,0.08) !important; color: #e2e8f0 !important; border: none !important; }
+                    .flatpickr-day.selected, .flatpickr-day.selected:hover { background: #e05560 !important; color: #fff !important; border: none !important; }
+                    .flatpickr-day.today.selected, .flatpickr-day.today.selected:hover { background: #e05560 !important; color: #fff !important; border: none !important; }
+                    .flatpickr-day.today { border: 1px solid rgba(224,85,96,0.5) !important; color: #e2e8f0 !important; }
+                    .flatpickr-day.today.selected { border: none !important; }
+                    .flatpickr-day.prevMonthDay, .flatpickr-day.nextMonthDay, .flatpickr-day.flatpickr-disabled { color: rgba(255,255,255,0.15) !important; background: transparent !important; }
+                    .flatpickr-calendar.arrowTop::before, .flatpickr-calendar.arrowTop::after, .flatpickr-calendar.arrowBottom::before, .flatpickr-calendar.arrowBottom::after { display: none !important; }
+                    .numInputWrapper span { border: none !important; opacity: 1 !important; visibility: visible !important; }
+                    .numInputWrapper span:after { display: none !important; }
+                    .numInputWrapper span.arrowUp::before { content: '\\f077' !important; font-family: 'Font Awesome 6 Free' !important; font-weight: 900 !important; font-size: 8px !important; color: #94a3b8 !important; }
+                    .numInputWrapper span.arrowDown::before { content: '\\f078' !important; font-family: 'Font Awesome 6 Free' !important; font-weight: 900 !important; font-size: 8px !important; color: #94a3b8 !important; }
+                    .numInputWrapper span:hover::before { color: #e2e8f0 !important; }
+                    [data-theme="light"] .flatpickr-calendar { background: #ffffff !important; border-color: rgba(0,0,0,0.08) !important; box-shadow: 0 8px 32px rgba(0,0,0,0.12) !important; }
+                    [data-theme="light"] .flatpickr-months, [data-theme="light"] .flatpickr-month, [data-theme="light"] .flatpickr-weekdays, [data-theme="light"] span.flatpickr-weekday, [data-theme="light"] .flatpickr-days, [data-theme="light"] .dayContainer { background: transparent !important; background-color: transparent !important; }
+                    [data-theme="light"] .flatpickr-month, [data-theme="light"] .flatpickr-current-month, [data-theme="light"] .flatpickr-current-month input.cur-year { color: #1e293b !important; fill: #1e293b !important; }
+                    [data-theme="light"] .flatpickr-current-month .flatpickr-monthDropdown-months { background: #ffffff !important; color: #1e293b !important; }
+                    [data-theme="light"] .flatpickr-prev-month svg, [data-theme="light"] .flatpickr-next-month svg { fill: #64748b !important; }
+                    [data-theme="light"] .flatpickr-prev-month:hover svg, [data-theme="light"] .flatpickr-next-month:hover svg { fill: #1e293b !important; }
+                    [data-theme="light"] span.flatpickr-weekday { color: #94a3b8 !important; }
+                    [data-theme="light"] .flatpickr-day { color: #475569 !important; }
+                    [data-theme="light"] .flatpickr-day:hover { background: rgba(0,0,0,0.05) !important; color: #1e293b !important; }
+                    [data-theme="light"] .flatpickr-day.selected, [data-theme="light"] .flatpickr-day.selected:hover { background: #D21723 !important; color: #fff !important; }
+                    [data-theme="light"] .flatpickr-day.today.selected, [data-theme="light"] .flatpickr-day.today.selected:hover { background: #D21723 !important; color: #fff !important; border: none !important; }
+                    [data-theme="light"] .flatpickr-day.today { border-color: rgba(210,23,35,0.4) !important; color: #1e293b !important; }
+                    [data-theme="light"] .flatpickr-day.prevMonthDay, [data-theme="light"] .flatpickr-day.nextMonthDay, [data-theme="light"] .flatpickr-day.flatpickr-disabled { color: rgba(0,0,0,0.15) !important; background: transparent !important; }
+                    [data-theme="light"] .numInputWrapper span.arrowUp::before, [data-theme="light"] .numInputWrapper span.arrowDown::before { color: #64748b !important; }
+                    [data-theme="light"] .numInputWrapper span:hover::before { color: #1e293b !important; }
+                `;
+                document.head.appendChild(style);
+            }
+        },
+        onClose(_, __, instance) {
+            instance.input.blur();
+        },
+        onChange(selectedDates) {
+            if (!selectedDates[0]) return;
+            const scrollY = window.scrollY;
+            const selectedDate = selectedDates[0];
+            if (consolidatedData.length > 0) {
+                generarReporteCompleto(selectedDate).then(reporte => {
+                    currentReportData = reporte;
+                    cargarDatosDia();
+                    cargarDatosMes();
+                    cargarDatosAño();
+                    cargarDatosTendencia();
+                    if (window.scrollY !== scrollY) window.scrollTo({ top: scrollY, behavior: 'instant' });
+                });
+            }
+        }
+    });
+
+    window._datePicker = fp;
+
+    dateIconBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        const rect = dateIconBtn.getBoundingClientRect();
+        const cal = fp.calendarContainer;
+        fp.open();
+        requestAnimationFrame(() => {
+            const cw = cal.offsetWidth;
+            const ch = cal.offsetHeight;
+            const margin = 8;
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            // Centrado bajo el botón
+            let left = rect.left + (rect.width / 2) - (cw / 2);
+            let top  = rect.bottom + margin;
+            if (left < margin) left = margin;
+            if (left + cw > vw - margin) left = vw - cw - margin;
+            if (top + ch > vh - margin) top = rect.top - ch - margin;
+            cal.style.left = left + 'px';
+            cal.style.top  = top  + 'px';
+        });
+    });
+
+    if (updateBtn) {
+        updateBtn.addEventListener('click', () => {
+            const selectedDate = fp.selectedDates[0] || new Date();
+            updateReportWithDate(selectedDate, true);
+        });
+    }
+}
 
 // Ajusta el ancho de un input/select al contenido exacto
 function fitInputWidth(el) {
@@ -467,6 +595,8 @@ async function cargarDatosIniciales(forceRefresh = false) {
         budgetData = budget;
 
         reconsolidateWithFilter();
+
+        datosCargarEndpoint().catch(err => console.warn("Error en datosCargarEndpoint:", err));
     } catch (error) {
         console.error("Initial load error:", error);
         
@@ -529,28 +659,9 @@ function checkPreloadedData() {
 async function generarReporteCompleto(targetDate) {
     const fechaObj = parseDate(targetDate) || new Date();
     const currentYear = fechaObj.getFullYear();
-    const actualCurrentYear = new Date().getFullYear(); // Año actual real
-    const minHistoricalYear = 2024; // Solo trabajamos con 2024 hacia adelante
-
-    // Determinar qué fuente de datos usar para el año actual
-    let dataForCurrentYear = consolidatedData;
-
-    // Si el año solicitado NO es el año actual y es >= 2024, intentar cargar datos históricos
-    if (currentYear !== actualCurrentYear && currentYear >= minHistoricalYear) {
-        try {
-            const { loadHistoricalYearAsConsolidated } = await import('../utils/historical_adapter.js');
-            const historicalData = await loadHistoricalYearAsConsolidated(currentYear);
-            if (historicalData.length > 0) {
-                dataForCurrentYear = historicalData;
-            }
-        } catch (error) {
-            console.warn(`No se pudieron cargar datos históricos para ${currentYear}, usando datos de Supabase:`, error);
-        }
-    }
-
-    let currentResult = findClosestDateWithData(fechaObj, currentYear, dataForCurrentYear);
-    if (!currentResult && dataForCurrentYear && dataForCurrentYear.length > 0) {
-        const lastItem = dataForCurrentYear[dataForCurrentYear.length - 1];
+    let currentResult = findClosestDateWithData(fechaObj, currentYear, consolidatedData);
+    if (!currentResult && consolidatedData && consolidatedData.length > 0) {
+        const lastItem = consolidatedData[consolidatedData.length - 1];
         currentResult = { date: parseDate(lastItem.Fecha), isExact: false, data: lastItem };
     }
 
@@ -571,35 +682,21 @@ async function generarReporteCompleto(targetDate) {
     const previousYear = currentYear - 1;
     const previousYearDate = new Date(fechaObj);
     previousYearDate.setFullYear(previousYear);
-
-    // Intentar cargar datos históricos del JSON para años anteriores >= 2024 (formato consolidado)
-    let historicalData = [];
-    if (previousYear >= minHistoricalYear) {
-        try {
-            const { loadHistoricalYearAsConsolidated } = await import('../utils/historical_adapter.js');
-            historicalData = await loadHistoricalYearAsConsolidated(previousYear);
-        } catch (error) {
-            console.warn('No se pudieron cargar datos históricos:', error);
-        }
-    }
-
-    // Combinar datos: usar históricos si están disponibles y año >= 2024, si no usar consolidatedData
-    const dataForPreviousYear = (historicalData.length > 0 && previousYear >= minHistoricalYear) ? historicalData : consolidatedData;
-    let previousResult = findClosestDateWithData(previousYearDate, previousYear, dataForPreviousYear);
+    let previousResult = findClosestDateWithData(previousYearDate, previousYear, consolidatedData);
 
     const report = {
         filtros: { actual: formatDate(currentResult.date), anterior: previousResult ? formatDate(previousResult.date) : null },
         dia: {
-            actual: generateDayMetrics(currentResult.data, currentResult.date, dataForCurrentYear, false),
-            anterior: previousResult ? generateDayMetrics(previousResult.data, previousResult.date, dataForPreviousYear, true, currentResult.date) : null
+            actual: generateDayMetrics(currentResult.data, currentResult.date, consolidatedData, false),
+            anterior: previousResult ? generateDayMetrics(previousResult.data, previousResult.date, consolidatedData, true, currentResult.date) : null
         },
         mes: {
-            actual: generatePeriodMetrics('mes', currentResult.date, dataForCurrentYear, false),
-            anterior: previousResult ? generatePeriodMetrics('mes', previousResult.date, dataForPreviousYear, true, currentResult.date) : null
+            actual: generatePeriodMetrics('mes', currentResult.date, consolidatedData, false),
+            anterior: previousResult ? generatePeriodMetrics('mes', previousResult.date, consolidatedData, true, currentResult.date) : null
         },
         año: {
-            actual: generatePeriodMetrics('año', currentResult.date, dataForCurrentYear, false),
-            anterior: previousResult ? generatePeriodMetrics('año', previousResult.date, dataForPreviousYear, true, currentResult.date) : null
+            actual: generatePeriodMetrics('año', currentResult.date, consolidatedData, false),
+            anterior: previousResult ? generatePeriodMetrics('año', previousResult.date, consolidatedData, true, currentResult.date) : null
         }
     };
 

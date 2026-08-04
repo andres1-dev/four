@@ -419,57 +419,6 @@ async function datosCargarEndpoint() {
     }
 }
 
-// ─── datosCargarEndpointFiltrado ──────────────────────────────────────────────
-// Carga registros filtrados por rango de fechas para descargas eficientes
-// Hacemos la función global para que sea accesible desde database.js
-window.datosCargarEndpointFiltrado = async function(fechaInicio, fechaFin) {
-    try {
-        // Formatear fechas para Supabase (YYYY-MM-DD)
-        const inicioStr = fechaInicio.toISOString().split('T')[0];
-        const finStr = fechaFin.toISOString().split('T')[0];
-        
-        console.log('Filtrando datos desde', inicioStr, 'hasta', finStr);
-        
-        // Consulta con filtro de rango de fechas en backend
-        // Usamos fecha_traslado como campo de fecha principal para filtrar
-        const query = `select=*&fecha_traslado=gte.${inicioStr}&fecha_traslado=lte.${finStr}`;
-        console.log('Query:', query);
-        
-        const rows = await sbFetch('ingresos', query);
-        console.log('Registros obtenidos:', rows.length);
-
-        return rows.map(r => {
-            const rawFecha = r.fecha_traslado || r.created_at || r.fecha_ingreso || '';
-            const fechaStr = typeof rawFecha === 'string' ? rawFecha.substring(0, 10) : '';
-            return {
-                DOCUMENTO: String(r.id_ingreso || r.documento || r.id || ''),
-                FECHA: fechaStr,
-                TALLER: r.taller || '',
-                LINEA: r.linea || '',
-                AUDITOR: r.auditor || '',
-                ESCANER: r.escaner || '',
-                LOTE: Number(r.lote) || 0,
-                REFPROV: String(r.refprov || ''),
-                DESCRIPCION: r.descripcion || '',
-                CANTIDAD: Number(r.total) || 0,
-                REFERENCIA: r.referencia || '',
-                TIPO: r.tipo || '',
-                PVP: r.pvp || '',
-                PRENDA: r.prenda || '',
-                GENERO: r.genero || '',
-                GESTOR: r.gestor || '',
-                PROVEEDOR: r.proveedor || '',
-                CLASE: r.clase || '',
-                FUENTE: r.fuente || 'SISPRO',
-                ANO: fechaStr ? Number(fechaStr.substring(0, 4)) : 2026
-            };
-        });
-    } catch (error) {
-        console.error('Error al cargar datos filtrados:', error);
-        throw error;
-    }
-}
-
 // ─── Helper para obtener datos precargados (idéntico al original) ─────────────
 function getPreloadedData() {
     try {

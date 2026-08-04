@@ -35,11 +35,10 @@ function normalizeDocumento(documento) {
 }
 
 function calculateGrowth(currentPercent, previousPercent) {
-    if (!previousPercent || previousPercent === '0%' || previousPercent === '0') return 'N/A';
+    if (!previousPercent || previousPercent === '0%') return null;
     const current = parseFloat(currentPercent);
     const previous = parseFloat(previousPercent);
-    if (previous === 0) return 'N/A';
-    if (isNaN(current) || isNaN(previous)) return 'N/A';
+    if (previous === 0) return null;
     const growth = ((current / previous) - 1) * 100;
     return growth.toFixed(2) + '%';
 }

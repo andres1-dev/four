@@ -163,27 +163,9 @@ function calcularProyeccionDiaria(datos) {
     };
 }
 
-async function getTrendsData(currentYear, previousYear, data) {
-    const actualCurrentYear = new Date().getFullYear();
-    const minHistoricalYear = 2024; // Solo trabajamos con 2024 hacia adelante
-
-    let currentYearData = data.filter(d => d.Año === currentYear);
-    let previousYearData = data.filter(d => d.Año === previousYear);
-
-    // Si el año anterior no es el actual y es >= 2024, intentar cargar datos históricos del JSON
-    if (previousYear !== actualCurrentYear && previousYear >= minHistoricalYear) {
-        try {
-            const { loadHistoricalYearAsConsolidated } = await import('./utils/historical_adapter.js');
-            const historicalData = await loadHistoricalYearAsConsolidated(previousYear);
-            if (historicalData.length > 0) {
-                previousYearData = historicalData;
-                console.log(`Usando datos históricos del JSON para tendencias del año ${previousYear}`);
-            }
-        } catch (error) {
-            console.warn(`No se pudieron cargar datos históricos para tendencias de ${previousYear}:`, error);
-        }
-    }
-
+function getTrendsData(currentYear, previousYear, data) {
+    const currentYearData = data.filter(d => d.Año === currentYear);
+    const previousYearData = data.filter(d => d.Año === previousYear);
     const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
     return {
         meses,

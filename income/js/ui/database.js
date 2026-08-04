@@ -2,39 +2,75 @@
  * DataBase (Records) Card Logic and Downloads
  */
 
-let rangoSeleccionado = [];
+async function datosDescargar(formato) {
+    try {
+        console.log('Iniciando descarga:', formato);
+        
+        // Calcular automáticamente mes actual y mes anterior
+        const hoy = new Date();
+        const mesActual = hoy.getMonth();
+        const añoActual = hoy.getFullYear();
+        
+        // Mes anterior
+        const fechaMesAnterior = new Date(añoActual, mesActual - 1, 1);
+        const mesAnterior = fechaMesAnterior.getMonth();
+        const añoAnterior = fechaMesAnterior.getFullYear();
+        
+        // Primer día del mes anterior
+        const inicio = new Date(añoAnterior, mesAnterior, 1);
+        // Último día del mes actual
+        const fin = new Date(añoActual, mesActual + 1, 0);
 
-function datosDescargar(formato) {
-    if (!datosRegistros || datosRegistros.length === 0) {
-        alert('No hay datos cargados.');
-        return;
-    }
+        console.log('Rango de fechas:', inicio.toISOString().split('T')[0], 'a', fin.toISOString().split('T')[0]);
 
-    // Para Excel, preparar datos con fechas en formato correcto
-    let datosParaExportar = datosRegistros;
-    if (formato === 'excel') {
-        datosParaExportar = datosRegistros.map(registro => {
-            const copia = { ...registro };
-            
-            // Convertir FECHA a formato DD/MM/YYYY para que Excel lo reconozca
-            if (copia.FECHA) {
-                const fechaObj = parseFechaLocal(copia.FECHA);
-                if (fechaObj) {
-                    const dia = String(fechaObj.getDate()).padStart(2, '0');
-                    const mes = String(fechaObj.getMonth() + 1).padStart(2, '0');
-                    const año = fechaObj.getFullYear();
-                    copia.FECHA = `${dia}/${mes}/${año}`;
+        // Usar la función global de Supabase para cargar datos filtrados
+        if (typeof window.datosCargarEndpointFiltrado !== 'function') {
+            console.error('datosCargarEndpointFiltrado no está disponible');
+            alert('Error: función de carga no disponible. Recargue la página.');
+            return;
+        }
+        
+        const datosParaExportar = await window.datosCargarEndpointFiltrado(inicio, fin);
+        console.log('Datos obtenidos:', datosParaExportar.length);
+
+        if (!datosParaExportar || datosParaExportar.length === 0) {
+            alert('No hay datos para el período seleccionado (mes actual y anterior).');
+            return;
+        }
+
+        // Para Excel, preparar datos con fechas en formato correcto
+        let datosParaExportarFinal;
+        if (formato === 'excel') {
+            datosParaExportarFinal = datosParaExportar.map(registro => {
+                const copia = { ...registro };
+                
+                // Convertir FECHA a formato DD/MM/YYYY para que Excel lo reconozca
+                if (copia.FECHA) {
+                    const fechaObj = parseFechaLocal(copia.FECHA);
+                    if (fechaObj) {
+                        const dia = String(fechaObj.getDate()).padStart(2, '0');
+                        const mes = String(fechaObj.getMonth() + 1).padStart(2, '0');
+                        const año = fechaObj.getFullYear();
+                        copia.FECHA = `${dia}/${mes}/${año}`;
+                    }
                 }
-            }
-            
-            return copia;
-        });
-    }
+                
+                return copia;
+            });
+        } else {
+            datosParaExportarFinal = datosParaExportar;
+        }
 
-    switch (formato) {
-        case 'csv': datosDescargarCSV(datosParaExportar); break;
-        case 'json': datosDescargarJSON(datosParaExportar); break;
-        case 'excel': datosDescargarExcel(datosParaExportar); break;
+        console.log('Iniciando generación de archivo:', formato);
+        switch (formato) {
+            case 'csv': datosDescargarCSV(datosParaExportarFinal); break;
+            case 'json': datosDescargarJSON(datosParaExportarFinal); break;
+            case 'excel': datosDescargarExcel(datosParaExportarFinal); break;
+        }
+        console.log('Descarga completada');
+    } catch (error) {
+        console.error('Error al descargar datos:', error);
+        alert('Error al descargar datos: ' + error.message);
     }
 }
 
@@ -48,7 +84,11 @@ function datosDescargarCSV(data) {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = 'datos.csv';
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+    console.log('Archivo CSV descargado');
 }
 
 function datosDescargarJSON(data) {
@@ -56,7 +96,11 @@ function datosDescargarJSON(data) {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = 'datos.json';
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+    console.log('Archivo JSON descargado');
 }
 
 function datosDescargarExcel(data) {
@@ -169,133 +213,88 @@ function generarYDescargarExcel(data) {
     }
 }
 
-function initFlatpickr() {
-    const hoy = new Date();
-    const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-    rangoSeleccionado = [primerDiaMes, hoy];
-
-    if (typeof flatpickr !== 'undefined') {
-        const fpInstance = flatpickr("#filtro-fechas", {
-            mode: "range",
-            dateFormat: "Y-m-d",
-            defaultDate: [primerDiaMes, hoy],
-            locale: {
-                firstDayOfWeek: 1,
-                weekdays: {
-                    shorthand: ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'],
-                    longhand:  ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
-                },
-                months: {
-                    shorthand: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],
-                    longhand:  ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-                },
-                rangeSeparator: ' a '
-            },
-            onReady: (selectedDates, dateStr, instance) => {
-                const el = document.getElementById('filtro-fechas');
-                if (el) {
-                    fitFlatpickrWidth(el);
-                    // Prevenir que el clic en el input dispare la descarga
-                    el.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                    });
-                }
-            },
-            onChange: (selectedDates, dateStr, instance) => {
-                if (selectedDates.length === 2) {
-                    rangoSeleccionado = selectedDates;
-                } else if (selectedDates.length === 1) {
-                    rangoSeleccionado = [selectedDates[0], selectedDates[0]];
-                }
-                const el = document.getElementById('filtro-fechas');
-                if (el) fitFlatpickrWidth(el);
-            },
-            onClose: (selectedDates, dateStr, instance) => {
-                // Asegurar que el rango esté completo al cerrar
-                if (selectedDates.length === 1) {
-                    rangoSeleccionado = [selectedDates[0], selectedDates[0]];
-                } else if (selectedDates.length === 2) {
-                    rangoSeleccionado = selectedDates;
-                }
-            }
-        });
-
-        // Guardar instancia para acceso global si es necesario
-        window._filtroFechasPicker = fpInstance;
-    }
-}
-
-function fitFlatpickrWidth(el) {
-    const tmp = document.createElement('canvas');
-    const ctx = tmp.getContext('2d');
-    const style = window.getComputedStyle(el);
-    ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-    const text = el.value || 'aaaa-mm-dd';
-    const measured = ctx.measureText(text).width;
-    el.style.width = `${Math.ceil(measured + 24 + 16)}px`; // padding izq + respiro
-}
-
-function datosDescargarExcelFiltrado() {
-    if (!datosRegistros || datosRegistros.length === 0) {
-        alert('No hay datos cargados. Por favor, abre la tarjeta de Base de Datos primero.');
-        return;
-    }
-    
-    if (!rangoSeleccionado || rangoSeleccionado.length === 0) {
-        alert('Por favor, selecciona un rango de fechas.');
-        return;
-    }
-    
-    // Si solo hay una fecha, usar la misma para inicio y fin
-    const fechaInicio = rangoSeleccionado[0];
-    const fechaFin = rangoSeleccionado.length === 2 ? rangoSeleccionado[1] : rangoSeleccionado[0];
-    
-    if (!fechaInicio || !fechaFin) {
-        alert('Selecciona un rango válido de fechas.');
-        return;
-    }
-
-    const inicio = normalizarInicio(fechaInicio);
-    const fin = normalizarFin(fechaFin);
-
-    const datosFiltrados = datosRegistros.filter(registro => {
-        const fecha = parseFechaLocal(registro.FECHA);
-        return fecha >= inicio && fecha <= fin;
-    });
-
-    if (datosFiltrados.length === 0) {
-        alert(`No hay datos en el rango seleccionado:\n${formatearFecha(fechaInicio)} - ${formatearFecha(fechaFin)}`);
-        return;
-    }
-
-    // Preparar datos con fechas en formato correcto para Excel
-    const datosConFechas = datosFiltrados.map(registro => {
-        const copia = { ...registro };
+async function datosDescargarExcelFiltrado() {
+    try {
+        // Calcular automáticamente mes actual y mes anterior
+        const hoy = new Date();
+        const mesActual = hoy.getMonth();
+        const añoActual = hoy.getFullYear();
         
-        // Convertir FECHA a formato DD/MM/YYYY para que Excel lo reconozca
-        const fechaObj = parseFechaLocal(registro.FECHA);
-        if (fechaObj) {
-            const dia = String(fechaObj.getDate()).padStart(2, '0');
-            const mes = String(fechaObj.getMonth() + 1).padStart(2, '0');
-            const año = fechaObj.getFullYear();
-            copia.FECHA = `${dia}/${mes}/${año}`;
+        // Mes anterior
+        const fechaMesAnterior = new Date(añoActual, mesActual - 1, 1);
+        const mesAnterior = fechaMesAnterior.getMonth();
+        const añoAnterior = fechaMesAnterior.getFullYear();
+        
+        // Primer día del mes anterior
+        const inicio = new Date(añoAnterior, mesAnterior, 1);
+        // Último día del mes actual
+        const fin = new Date(añoActual, mesActual + 1, 0);
+
+        // Usar la función global de Supabase para cargar datos filtrados
+        if (typeof window.datosCargarEndpointFiltrado !== 'function') {
+            alert('Error: función de carga no disponible. Recargue la página.');
+            return;
         }
         
-        return copia;
-    });
+        const datosFiltrados = await window.datosCargarEndpointFiltrado(inicio, fin);
 
-    console.log(`Descargando ${datosFiltrados.length} registros del rango: ${formatearFecha(fechaInicio)} - ${formatearFecha(fechaFin)}`);
-    datosDescargarExcel(datosConFechas);
+        if (!datosFiltrados || datosFiltrados.length === 0) {
+            alert('No hay datos para el período seleccionado (mes actual y anterior).');
+            return;
+        }
+
+        // Preparar datos con fechas en formato correcto para Excel
+        const datosConFechas = datosFiltrados.map(registro => {
+            const copia = { ...registro };
+            
+            // Convertir FECHA a formato DD/MM/YYYY para que Excel lo reconozca
+            if (copia.FECHA) {
+                const fechaObj = parseFechaLocal(copia.FECHA);
+                if (fechaObj) {
+                    const dia = String(fechaObj.getDate()).padStart(2, '0');
+                    const mes = String(fechaObj.getMonth() + 1).padStart(2, '0');
+                    const año = fechaObj.getFullYear();
+                    copia.FECHA = `${dia}/${mes}/${año}`;
+                }
+            }
+            
+            return copia;
+        });
+
+        datosDescargarExcel(datosConFechas);
+    } catch (error) {
+        console.error('Error al descargar Excel filtrado:', error);
+        alert('Error al descargar Excel. Por favor, intente nuevamente.');
+    }
 }
 
-function formatearFecha(fecha) {
-    if (!fecha) return '';
-    const d = new Date(fecha);
-    const dia = String(d.getDate()).padStart(2, '0');
-    const mes = String(d.getMonth() + 1).padStart(2, '0');
-    const año = d.getFullYear();
-    return `${dia}/${mes}/${año}`;
+function parseFechaLocal(fechaStr) {
+    if (!fechaStr) return null;
+    
+    // Si ya es un objeto Date, retornarlo
+    if (fechaStr instanceof Date) return fechaStr;
+    
+    // Formato DD/MM/YYYY
+    if (fechaStr.includes('/')) {
+        const parts = fechaStr.split('/');
+        if (parts.length === 3) {
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            const year = parseInt(parts[2], 10);
+            return new Date(year, month, day);
+        }
+    }
+    
+    // Formato YYYY-MM-DD
+    if (fechaStr.includes('-')) {
+        const parts = fechaStr.split('-');
+        if (parts.length === 3) {
+            const year = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            const day = parseInt(parts[2], 10);
+            return new Date(year, month, day);
+        }
+    }
+    
+    return null;
 }
-
-// Call init on load
-document.addEventListener('DOMContentLoaded', initFlatpickr);

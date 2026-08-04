@@ -30,7 +30,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Bebas+Neue&family=Montserrat:wght@900&family=Raleway:wght@300;400;700&display=block">
-
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
 
@@ -1069,7 +1069,7 @@
                     DataBase
                 </h2>
                 <div class="header-controls">
-                    <span class="records-badge" id="datos-contador"></span>
+                    <span class="records-badge" id="datos-contador">Cargando ...</span>
                     <i class="fas fa-chevron-down collapse-indicator"></i>
                 </div>
             </div>
@@ -1102,6 +1102,16 @@
                                 <p>Hoja de cálculo</p>
                             </div>
                             <div class="option-action"><i class="fas fa-download"></i></div>
+                        </div>
+                        <div class="download-option">
+                            <div class="option-icon excel"><i class="fas fa-filter"></i></div>
+                            <div class="option-info">
+                                <h4>Excel (Filtrado)</h4>
+                                <input type="text" id="filtro-fechas" placeholder="Rango de fechas"
+                                    class="flatpickr-input" readonly
+                                    style="padding:4px 0; border:none; border-radius:8px; width:auto; font-size:10px; cursor:pointer; background:transparent; text-align:left;">
+                            </div>
+                            <div class="option-action" onclick="datosDescargarExcelFiltrado()" style="cursor:pointer;"><i class="fas fa-download"></i></div>
                         </div>
                     </div>
                 </div>
@@ -1190,7 +1200,7 @@
 
     <!-- Core Libraries -->
     <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
