@@ -4,7 +4,7 @@
 class QueryOpClient {
     constructor() {
         this.cache = new Map();
-        this.cacheTimeout = 5 * 60 * 1000; // 5 minutos
+        this.cacheTimeout = 0; // 0 = caché desactivado (siempre tiempo real)
         this.baseUrl = `${CONFIG.SUPABASE_URL}/functions/v1/query-op-data`;
     }
 
@@ -21,11 +21,11 @@ class QueryOpClient {
 
         const opKey = String(op).trim();
 
-        // Verificar caché (a menos que se fuerce refresh)
-        if (!forceRefresh && this.cache.has(opKey)) {
+        // Verificar caché (solo si cacheTimeout > 0)
+        if (this.cacheTimeout > 0 && !forceRefresh && this.cache.has(opKey)) {
             const cached = this.cache.get(opKey);
             const now = Date.now();
-            
+
             if (now - cached.timestamp < this.cacheTimeout) {
                 console.log(`📦 Datos de OP ${opKey} obtenidos del caché`);
                 return cached.data;
@@ -71,11 +71,13 @@ class QueryOpClient {
             console.log(`✅ OP ${opKey} consultada en ${queryTime}ms`);
             console.log(`📊 Stats:`, result.stats);
 
-            // Guardar en caché
-            this.cache.set(opKey, {
-                data: result,
-                timestamp: Date.now()
-            });
+            // Guardar en caché solo si está activado
+            if (this.cacheTimeout > 0) {
+                this.cache.set(opKey, {
+                    data: result,
+                    timestamp: Date.now()
+                });
+            }
 
             return result;
 
