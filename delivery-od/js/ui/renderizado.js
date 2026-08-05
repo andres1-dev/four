@@ -139,7 +139,7 @@ function displayFullResult(item, qrParts) {
 
             // Renderizar TODOS los campos disponibles del objeto siesa
             const priorityKeys = ['proovedor', 'cliente', 'nit', 'lote', 'referencia', 'cantidad', 'fecha', 'valorBruto'];
-            const hiddenKeys = ['factura', 'confirmacion', 'Ih3', 'estado'];
+            const hiddenKeys = ['factura', 'confirmacion', 'Ih3', 'estado', 'datosIngreso', '_tieneIngreso', '_tieneEntrega'];
 
             priorityKeys.forEach(key => {
                 if (siesa[key]) {
