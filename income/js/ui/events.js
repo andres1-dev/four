@@ -75,6 +75,7 @@ function checkPassword() {
 // Initialize Page
 document.addEventListener('DOMContentLoaded', async function () {
     initProveedorFilter();
+    initDatePicker();
     initCaptureButton();
 
     try {
@@ -113,6 +114,11 @@ window.closeAllPanels = function(except) {
     if (except !== 'proveedor' && window.activePanels.proveedor) {
         window.activePanels.proveedor.classList.remove('open');
         window.activePanels.proveedor.setAttribute('aria-hidden', 'true');
+    }
+    
+    // Cerrar flatpickr
+    if (except !== 'datePicker' && window._datePicker) {
+        window._datePicker.close();
     }
 };
 
@@ -281,6 +287,155 @@ function initProveedorFilter() {
             console.error("Provider filter error:", error);
         }
     });
+}
+
+function initDatePicker() {
+    const updateBtn = document.getElementById('updateReportBtn');
+    const dateIconBtn = document.getElementById('dateIconBtn');
+    if (!dateIconBtn) return;
+
+    // Input oculto para flatpickr
+    let input = document.getElementById('datePicker');
+    if (!input) {
+        input = document.createElement('input');
+        input.type = 'text';
+        input.id = 'datePicker';
+        input.readOnly = true;
+        input.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:0;height:0;top:-9999px;left:-9999px;';
+        document.body.appendChild(input);
+    }
+
+    const fp = flatpickr(input, {
+        defaultDate: new Date(),
+        dateFormat: 'Y-m-d',
+        disableMobile: true,
+        appendTo: document.body,
+        locale: {
+            firstDayOfWeek: 1,
+            weekdays: {
+                shorthand: ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'],
+                longhand:  ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
+            },
+            months: {
+                shorthand: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],
+                longhand:  ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+            }
+        },
+        onOpen: function() {
+            // Cerrar otros paneles cuando se abre el date picker
+            window.closeAllPanels('datePicker');
+        },
+        onReady(_, __, instance) {
+            const cal = instance.calendarContainer;
+            cal.style.position = 'fixed';
+            cal.style.zIndex   = '999999';
+            instance.input.setAttribute('tabindex', '-1');
+
+            // Inyectar estilos para sobreescribir flatpickr base
+            if (!document.getElementById('flatpickr-custom-override')) {
+                const style = document.createElement('style');
+                style.id = 'flatpickr-custom-override';
+                style.textContent = `
+                    .flatpickr-calendar { background: #16181f !important; border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 14px !important; box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important; padding: 12px !important; width: 336px !important; }
+                    .flatpickr-days, .dayContainer { width: 312px !important; min-width: 312px !important; max-width: 312px !important; }
+                    .flatpickr-day { max-width: 44px !important; width: 44px !important; height: 36px !important; line-height: 36px !important; font-size: 12px !important; }
+                    span.flatpickr-weekday { width: 44px !important; font-size: 10px !important; }
+                    .flatpickr-months, .flatpickr-month, .flatpickr-weekdays, span.flatpickr-weekday, .flatpickr-days, .dayContainer { background: transparent !important; background-color: transparent !important; }
+                    .flatpickr-month { color: #e2e8f0 !important; fill: #e2e8f0 !important; }
+                    .flatpickr-current-month, .flatpickr-current-month input.cur-year { color: #e2e8f0 !important; }
+                    .flatpickr-current-month .flatpickr-monthDropdown-months { background: #16181f !important; color: #e2e8f0 !important; }
+                    .flatpickr-prev-month svg, .flatpickr-next-month svg { fill: #94a3b8 !important; }
+                    .flatpickr-prev-month:hover svg, .flatpickr-next-month:hover svg { fill: #e2e8f0 !important; }
+                    span.flatpickr-weekday { color: #64748b !important; font-weight: 700 !important; }
+                    .flatpickr-day { background: transparent !important; color: #94a3b8 !important; border: none !important; border-radius: 8px !important; }
+                    .flatpickr-day:hover { background: rgba(255,255,255,0.08) !important; color: #e2e8f0 !important; border: none !important; }
+                    .flatpickr-day.selected, .flatpickr-day.selected:hover { background: #e05560 !important; color: #fff !important; border: none !important; }
+                    .flatpickr-day.today.selected, .flatpickr-day.today.selected:hover { background: #e05560 !important; color: #fff !important; border: none !important; }
+                    .flatpickr-day.today { border: 1px solid rgba(224,85,96,0.5) !important; color: #e2e8f0 !important; }
+                    .flatpickr-day.today.selected { border: none !important; }
+                    .flatpickr-day.prevMonthDay, .flatpickr-day.nextMonthDay, .flatpickr-day.flatpickr-disabled { color: rgba(255,255,255,0.15) !important; background: transparent !important; }
+                    .flatpickr-calendar.arrowTop::before, .flatpickr-calendar.arrowTop::after, .flatpickr-calendar.arrowBottom::before, .flatpickr-calendar.arrowBottom::after { display: none !important; }
+                    .numInputWrapper span { border: none !important; opacity: 1 !important; visibility: visible !important; }
+                    .numInputWrapper span:after { display: none !important; }
+                    .numInputWrapper span.arrowUp::before { content: '\\f077' !important; font-family: 'Font Awesome 6 Free' !important; font-weight: 900 !important; font-size: 8px !important; color: #94a3b8 !important; }
+                    .numInputWrapper span.arrowDown::before { content: '\\f078' !important; font-family: 'Font Awesome 6 Free' !important; font-weight: 900 !important; font-size: 8px !important; color: #94a3b8 !important; }
+                    .numInputWrapper span:hover::before { color: #e2e8f0 !important; }
+                    [data-theme="light"] .flatpickr-calendar { background: #ffffff !important; border-color: rgba(0,0,0,0.08) !important; box-shadow: 0 8px 32px rgba(0,0,0,0.12) !important; }
+                    [data-theme="light"] .flatpickr-months, [data-theme="light"] .flatpickr-month, [data-theme="light"] .flatpickr-weekdays, [data-theme="light"] span.flatpickr-weekday, [data-theme="light"] .flatpickr-days, [data-theme="light"] .dayContainer { background: transparent !important; background-color: transparent !important; }
+                    [data-theme="light"] .flatpickr-month, [data-theme="light"] .flatpickr-current-month, [data-theme="light"] .flatpickr-current-month input.cur-year { color: #1e293b !important; fill: #1e293b !important; }
+                    [data-theme="light"] .flatpickr-current-month .flatpickr-monthDropdown-months { background: #ffffff !important; color: #1e293b !important; }
+                    [data-theme="light"] .flatpickr-prev-month svg, [data-theme="light"] .flatpickr-next-month svg { fill: #64748b !important; }
+                    [data-theme="light"] .flatpickr-prev-month:hover svg, [data-theme="light"] .flatpickr-next-month:hover svg { fill: #1e293b !important; }
+                    [data-theme="light"] span.flatpickr-weekday { color: #94a3b8 !important; }
+                    [data-theme="light"] .flatpickr-day { color: #475569 !important; }
+                    [data-theme="light"] .flatpickr-day:hover { background: rgba(0,0,0,0.05) !important; color: #1e293b !important; }
+                    [data-theme="light"] .flatpickr-day.selected, [data-theme="light"] .flatpickr-day.selected:hover { background: #D21723 !important; color: #fff !important; }
+                    [data-theme="light"] .flatpickr-day.today.selected, [data-theme="light"] .flatpickr-day.today.selected:hover { background: #D21723 !important; color: #fff !important; border: none !important; }
+                    [data-theme="light"] .flatpickr-day.today { border-color: rgba(210,23,35,0.4) !important; color: #1e293b !important; }
+                    [data-theme="light"] .flatpickr-day.prevMonthDay, [data-theme="light"] .flatpickr-day.nextMonthDay, [data-theme="light"] .flatpickr-day.flatpickr-disabled { color: rgba(0,0,0,0.15) !important; background: transparent !important; }
+                    [data-theme="light"] .numInputWrapper span.arrowUp::before, [data-theme="light"] .numInputWrapper span.arrowDown::before { color: #64748b !important; }
+                    [data-theme="light"] .numInputWrapper span:hover::before { color: #1e293b !important; }
+                `;
+                document.head.appendChild(style);
+            }
+        },
+        onClose(_, __, instance) {
+            instance.input.blur();
+        },
+        onChange(selectedDates) {
+            if (!selectedDates[0]) return;
+            const scrollY = window.scrollY;
+            const selectedDate = selectedDates[0];
+            if (consolidatedData && consolidatedData.length > 0) {
+                generarReporteCompleto(selectedDate).then(reporte => {
+                    currentReportData = reporte;
+                    cargarDatosDia();
+                    cargarDatosMes();
+                    cargarDatosAño();
+                    cargarDatosTendencia();
+                    if (window.scrollY !== scrollY) window.scrollTo({ top: scrollY, behavior: 'instant' });
+                });
+            }
+        }
+    });
+
+    window._datePicker = fp;
+
+    dateIconBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        const rect = dateIconBtn.getBoundingClientRect();
+        const cal = fp.calendarContainer;
+        fp.open();
+        requestAnimationFrame(() => {
+            const cw = cal.offsetWidth;
+            const ch = cal.offsetHeight;
+            const margin = 8;
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            // Centrado bajo el botón
+            let left = rect.left + (rect.width / 2) - (cw / 2);
+            let top  = rect.bottom + margin;
+            if (left < margin) left = margin;
+            if (left + cw > vw - margin) left = vw - cw - margin;
+            if (top + ch > vh - margin) top = rect.top - ch - margin;
+            cal.style.left = left + 'px';
+            cal.style.top  = top  + 'px';
+        });
+    });
+
+    // Permitir abrir al hacer clic en elementos badge de fecha
+    document.addEventListener('click', e => {
+        if (e.target && (e.target.id === 'dia-fecha' || e.target.classList.contains('date-badge'))) {
+            dateIconBtn.click();
+        }
+    });
+
+    if (updateBtn) {
+        updateBtn.addEventListener('click', () => {
+            const selectedDate = fp.selectedDates[0] || new Date();
+            updateReportWithDate(selectedDate, true);
+        });
+    }
 }
 
 function reconsolidateWithFilter() {
