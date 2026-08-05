@@ -735,6 +735,31 @@ class UploadQueue {
       // Actualizar base de datos local para persistencia inmediata (sin recarga)
       this.updateLocalDatabase(job.factura, result.urlImagen);
 
+      // CONSULTAR SUPABASE PARA TRAER IMAGEN FRESCA Y GARANTIZAR QUE SUBIÓ CORRECTAMENTE
+      if (typeof window.queryOpClient !== 'undefined' && job.data.lote) {
+        try {
+          console.log(`🔄 Consultando Supabase para verificar imagen de factura ${job.factura}...`);
+          const freshData = await window.queryOpClient.consultarOP(job.data.lote, true); // forceRefresh=true
+
+          if (freshData.success && freshData.data) {
+            const facturaData = freshData.data.find(f => f.factura === job.factura);
+            if (facturaData && facturaData.Ih3) {
+              console.log(`✅ Imagen verificada desde Supabase: ${facturaData.Ih3}`);
+
+              // Actualizar base de datos local con la URL fresca de Supabase
+              this.updateLocalDatabase(job.factura, facturaData.Ih3);
+
+              // Actualizar UI con la imagen desde Supabase
+              this.updateCardWithImage(job.factura, facturaData.Ih3);
+            } else {
+              console.warn(`⚠️ No se encontró imagen en Supabase para factura ${job.factura}`);
+            }
+          }
+        } catch (error) {
+          console.error(`❌ Error consultando Supabase para verificar imagen:`, error);
+        }
+      }
+
       // Iniciar recarga silenciosa de datos desde Sheets
       if (typeof silentReloadData === 'function') {
         silentReloadData();
@@ -767,12 +792,12 @@ class UploadQueue {
           const item = doc.datosSiesa.find(s => s.factura === factura);
           if (item) {
             item.confirmacion = "ENTREGADO"; // Marcamos como entregado
-            
+
             // Generar fecha en zona horaria de Colombia (UTC-5) sin milisegundos
             const now = new Date();
             const colombiaOffset = -5 * 60; // Colombia es UTC-5
             const localTime = new Date(now.getTime() + (colombiaOffset * 60 * 1000));
-            
+
             // Formatear como YYYY-MM-DD HH:MM:SS
             const year = localTime.getUTCFullYear();
             const month = String(localTime.getUTCMonth() + 1).padStart(2, '0');
@@ -780,9 +805,9 @@ class UploadQueue {
             const hours = String(localTime.getUTCHours()).padStart(2, '0');
             const minutes = String(localTime.getUTCMinutes()).padStart(2, '0');
             const seconds = String(localTime.getUTCSeconds()).padStart(2, '0');
-            
+
             item.fechaEntrega = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-            
+
             if (urlImagen) {
               item.Ih3 = urlImagen; // Agregar URL de la imagen si está disponible
             }
@@ -798,6 +823,57 @@ class UploadQueue {
         cacheData(database);
       }
     }
+  }
+
+  // Método para actualizar la tarjeta con la imagen desde Supabase
+  updateCardWithImage(factura, imageUrl) {
+    const card = document.querySelector(`[data-factura="${factura}"]`)?.closest('.siesa-item');
+    if (!card) return;
+
+    // Generar thumbnail URL
+    let thumbnailUrl = imageUrl;
+    if (imageUrl.includes('googleusercontent.com/d/')) {
+      const imageId = imageUrl.split('/').pop();
+      thumbnailUrl = `https://lh3.googleusercontent.com/d/${imageId}=s200`;
+    }
+
+    // Buscar o crear contenedor de thumbnail
+    let thumbnailContainer = card.querySelector('.ih3-thumbnail-container');
+    if (!thumbnailContainer) {
+      const detailsGrid = card.querySelector('.details-grid');
+      if (detailsGrid) {
+        thumbnailContainer = document.createElement('div');
+        thumbnailContainer.className = 'ih3-thumbnail-container';
+        detailsGrid.appendChild(thumbnailContainer);
+      }
+    }
+
+    if (thumbnailContainer) {
+      thumbnailContainer.innerHTML = `
+        <img src="${thumbnailUrl}"
+             class="ih3-thumbnail"
+             alt="Comprobante de entrega"
+             onclick="mostrarImagenCompleta('${imageUrl}')"
+             onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E📷%3C/text%3E%3C/svg%3E';">
+      `;
+    }
+
+    // Actualizar indicador de imagen en el header
+    const metaLine = card.querySelector('.factura-meta-line');
+    if (metaLine && !metaLine.innerHTML.includes('fa-image')) {
+      const separator = document.createElement('span');
+      separator.className = 'meta-separator';
+      separator.innerHTML = '•';
+
+      const imageMeta = document.createElement('span');
+      imageMeta.className = 'meta-item';
+      imageMeta.innerHTML = '<i class="fas fa-image"></i> Soporte';
+
+      metaLine.appendChild(separator);
+      metaLine.appendChild(imageMeta);
+    }
+
+    console.log(`✅ Tarjeta actualizada con imagen desde Supabase para factura ${factura}`);
   }
 }
 
