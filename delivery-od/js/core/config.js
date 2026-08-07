@@ -25,8 +25,8 @@ const CONFIG = {
     ACTIVITY_KEY: 'last_activity_timestamp',
 
     // Configuración de Supabase
-    SUPABASE_URL: "https://iladaofarozipitwaeti.supabase.co",
-    SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsYWRhb2Zhcm96aXBpdHdhZXRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NjYzMDksImV4cCI6MjA5MzA0MjMwOX0.4fyiibeZS10DCgov62d7tIFVzJHsklsBrbokAJ9ptK8",
+    SUPABASE_URL: "https://ymaojqjdnrpfkrtuezcw.supabase.co",
+    SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltYW9qcWpkbnJwZmtydHVlemN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4NTIwMTAsImV4cCI6MjEwMTQyODAxMH0.3Zzsw_sriPPjNM8emcOslLNSnadPs8cSguNUCA2MNu8",
 
     // Google Sheets API Key
     GOOGLE_SHEETS_API_KEY: "AIzaSyDjvIGX1Y6RwJhqVflM-gS6teAm1id5v-k"
@@ -98,7 +98,7 @@ function getSavedAppMode() {
 }
 
 // API URLs - SUPABASE (Migrado desde Google Sheets)
-const SUPABASE_URL = "https://iladaofarozipitwaeti.supabase.co";
+const SUPABASE_URL = "https://ymaojqjdnrpfkrtuezcw.supabase.co";
 const SUPABASE_FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
 
 // API para subir entregas con imágenes (Supabase Edge Function)

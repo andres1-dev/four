@@ -6,7 +6,7 @@ const EntregaUploader = {
   /**
    * URL de la Edge Function
    */
-  FUNCTION_URL: 'https://iladaofarozipitwaeti.supabase.co/functions/v1/upload-entregas',
+  FUNCTION_URL: 'https://ymaojqjdnrpfkrtuezcw.supabase.co/functions/v1/upload-entregas',
 
   /**
    * Sube una entrega con imagen comprimida
