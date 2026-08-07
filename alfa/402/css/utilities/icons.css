@@ -1,0 +1,86 @@
+/* ============================================
+   ICON ADJUSTMENTS
+   ============================================ */
+
+.codicon {
+    font-size: 16px !important;
+    width: 16px !important;
+    height: 16px !important;
+    line-height: 1 !important;
+    vertical-align: middle !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0;
+}
+
+.activity-icon .codicon {
+    font-size: 20px !important;
+    width: 20px !important;
+    height: 20px !important;
+}
+
+.tab .codicon {
+    opacity: 0.9;
+}
+
+.btn-primary .codicon,
+.btn-secondary .codicon,
+.btn-success .codicon,
+.btn-error .codicon,
+.btn-icon .codicon {
+    margin: 0;
+}
+
+.form-group label .codicon {
+    opacity: 0.8;
+    color: var(--primary);
+}
+
+.status-item .codicon,
+.modal-header .codicon,
+.sidebar-header .codicon {
+    margin: 0;
+}
+
+#themeToggle .codicon {
+    font-size: 18px !important;
+}
+
+.result-icon .codicon {
+    font-size: 18px !important;
+    width: 18px !important;
+    height: 18px !important;
+}
+
+.tree-item .codicon {
+    opacity: 0.8;
+}
+
+.number-btn .codicon {
+    font-size: 12px !important;
+    width: 12px !important;
+    height: 12px !important;
+}
+
+/* ============================================
+   COMPONENTS SPECIFIC ICONS & SPINNERS
+   ============================================ */
+.loading-spinner {
+    width: 14px !important;
+    height: 14px !important;
+    border-width: 2px !important;
+}
+
+.btn-primary .loading-spinner,
+.btn-secondary .loading-spinner,
+.btn-success .loading-spinner {
+    margin-right: 6px;
+}
+
+.upload-box .codicon {
+    font-size: 48px !important;
+    width: 48px !important;
+    height: 48px !important;
+    margin-bottom: 16px;
+}

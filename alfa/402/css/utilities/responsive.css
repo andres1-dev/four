@@ -1,0 +1,36 @@
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 200px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .editor-section {
+        padding: 16px;
+    }
+
+    .notification-container {
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+
+    .results-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .action-buttons .btn-primary,
+    .action-buttons .btn-secondary {
+        min-width: 100%;
+    }
+
+    .distribution-grid {
+        grid-template-columns: 1fr;
+    }
+}

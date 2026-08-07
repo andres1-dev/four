@@ -1,0 +1,255 @@
+/* ============================================
+   DISTRIBUTION - MAYORISTAS
+   ============================================ */
+
+.mayoristas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+}
+
+.mayorista-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background-color: var(--editor) !important;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.mayorista-item:hover {
+    background: var(--hover);
+    border-color: var(--text-secondary);
+}
+
+.mayorista-item input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    border: 2px solid var(--border);
+    border-radius: 3px;
+    background-color: var(--editor) !important;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin: 0;
+}
+
+.mayorista-item input[type="checkbox"]:checked {
+    background: var(--primary) !important;
+    border-color: var(--primary);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 6l3 3 5-5' stroke='white' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-size: 11px !important;
+}
+
+.mayorista-item label {
+    cursor: pointer;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+    margin: 0;
+    flex: 1;
+}
+
+/* Header de columna de mayorista */
+.mayorista-column-header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 2px 0;
+    align-items: flex-start;
+    width: 80px;
+    margin: 0 auto;
+}
+
+.mayorista-column-header .header-title {
+    font-weight: 700;
+    color: var(--primary);
+    font-size: 11px;
+    text-align: center;
+    width: 80px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mayorista-column-header .header-btn-row {
+    display: flex;
+    gap: 2px;
+    justify-content: flex-start;
+    align-items: center;
+    width: 80px;
+}
+
+.mayorista-column-header .header-controls-single-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 80px;
+}
+
+.mayorista-column-header .global-input-group {
+    display: flex;
+    align-items: stretch;
+    width: 80px;
+    height: 32px;
+    flex: 0 0 80px;
+}
+
+.mayorista-column-header .btn-sm {
+    padding: 0;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    background-color: var(--sidebar);
+    color: var(--text-secondary);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.mayorista-column-header .btn-sm:hover {
+    background-color: var(--hover);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+.mayorista-column-header .btn-sm .codicon {
+    font-size: 12px;
+}
+
+/* Inputs de mayorista */
+.mayorista-input {
+    width: 100%;
+    min-width: 60px;
+    max-width: 80px;
+    padding: 6px;
+    text-align: center;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background-color: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.global-mayorista-input:focus,
+.mayorista-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.1);
+}
+
+/* Ocultar flechas nativas */
+.mayorista-input::-webkit-outer-spin-button,
+.mayorista-input::-webkit-inner-spin-button,
+.global-mayorista-input::-webkit-outer-spin-button,
+.global-mayorista-input::-webkit-inner-spin-button,
+.number-input-group input[type="number"]::-webkit-outer-spin-button,
+.number-input-group input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.mayorista-input,
+.global-mayorista-input,
+.number-input-group input[type="number"] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+/* Input groups */
+.mayorista-column-header .input-group,
+.mayorista-column-header .global-input-group,
+#distribution-result td .item-input-group {
+    display: flex;
+    align-items: stretch;
+    height: 32px;
+    width: fit-content;
+}
+
+.global-mayorista-input,
+#distribution-result td .mayorista-input {
+    width: 60px;
+    height: 32px;
+    padding: 0 8px;
+    font-size: 13px;
+    font-family: inherit;
+    font-weight: 400;
+    text-align: center;
+    border: 1px solid var(--border);
+    border-radius: 4px 0 0 4px;
+    border-right: none;
+    background: var(--bg);
+    color: var(--text);
+    transition: border-color 0.2s ease;
+    box-sizing: border-box;
+}
+
+.global-mayorista-input:focus,
+#distribution-result td .mayorista-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.1);
+}
+
+/* Number controls (flechas) */
+.mayorista-column-header .number-controls,
+.mayorista-column-header .global-number-controls,
+#distribution-result td .item-number-controls {
+    display: flex;
+    flex-direction: column;
+    height: 32px;
+    width: 20px;
+    flex-shrink: 0;
+}
+
+.mayorista-column-header .number-btn,
+#distribution-result td .item-number-controls .number-btn {
+    flex: 1;
+    width: 20px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    background: var(--sidebar);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+
+.mayorista-column-header .number-btn:first-child,
+#distribution-result td .item-number-controls .number-btn:first-child {
+    border-radius: 0 4px 0 0;
+    border-bottom: none;
+}
+
+.mayorista-column-header .number-btn:last-child,
+#distribution-result td .item-number-controls .number-btn:last-child {
+    border-radius: 0 0 4px 0;
+}
+
+.mayorista-column-header .number-btn:hover,
+#distribution-result td .item-number-controls .number-btn:hover {
+    background: var(--hover);
+    color: var(--primary);
+}
+
+.mayorista-column-header .number-btn .codicon,
+#distribution-result td .item-number-controls .number-btn .codicon {
+    font-size: 10px !important;
+    line-height: 1;
+}
