@@ -6,8 +6,8 @@
  * Migración de GAS a Edge Function para mayor seguridad y simplicidad.
  */
 
-const EDGE_FUNCTION_URL = 'https://ymaojqjdnrpfkrtuezcw.supabase.co/functions/v1/token-auth';
-const TOKEN_AUTH_SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltYW9qcWpkbnJwZmtydHVlemN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4NTIwMTAsImV4cCI6MjEwMTQyODAxMH0.3Zzsw_sriPPjNM8emcOslLNSnadPs8cSguNUCA2MNu8';
+const EDGE_FUNCTION_URL = 'https://iladaofarozipitwaeti.supabase.co/functions/v1/token-auth';
+const TOKEN_AUTH_SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsYWRhb2Zhcm96aXBpdHdhZXRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NjYzMDksImV4cCI6MjA5MzA0MjMwOX0.4fyiibeZS10DCgov62d7tIFVzJHsklsBrbokAJ9ptK8';
 const APP_BASE_URL  = 'https://andres1-dev.github.io/four/income/login.html';
 
 /**
