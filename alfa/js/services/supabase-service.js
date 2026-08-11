@@ -887,6 +887,38 @@ async function loadSisprowebFromSupabase(ops = []) {
 }
 
 /**
+ * Llama a la Edge Function `sync-master` para sincronizar el catálogo master
+ * desde el proyecto externo hacia la tabla `master` local de Supabase.
+ * @returns {Promise<{success: boolean, count?: number, message?: string}>}
+ */
+async function syncMasterEdgeFunction() {
+    try {
+        Logger.info('supabase-service', 'Disparando Edge Function sync-master...');
+        const startTime = performance.now();
+        const url = `${SUPABASE_URL}/functions/v1/sync-master`;
+        const headers = (typeof supabase.getHeaders === 'function') ? supabase.getHeaders() : {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        };
+
+        const res = await fetch(url, { method: 'POST', headers });
+        if (!res.ok) {
+            const errJson = await res.json().catch(() => ({}));
+            throw new Error(errJson.error || errJson.message || `HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        const elapsed = (performance.now() - startTime).toFixed(0);
+        Logger.success('supabase-service', `sync-master completado en ${elapsed}ms: ${data.count || 0} registros procesados.`);
+        return { success: true, ...data };
+    } catch (err) {
+        Logger.warn('supabase-service', 'Error ejecutando sync-master Edge Function', err);
+        return { success: false, error: err.message };
+    }
+}
+
+/**
  * Carga referencias históricas desde Supabase
  */
 async function loadHistoricasFromSupabase() {
@@ -1207,6 +1239,7 @@ window.loadAuditoresFromSupabase = loadAuditoresFromSupabase;
 window.loadGestoresFromSupabase = loadGestoresFromSupabase;
 window.loadPreciosFromSupabase = loadPreciosFromSupabase;
 window.loadSisprowebFromSupabase = loadSisprowebFromSupabase;
+window.syncMasterEdgeFunction = syncMasterEdgeFunction;
 window.loadHistoricasFromSupabase = loadHistoricasFromSupabase;
 window.loadData2FromSupabase = loadData2FromSupabase;
 window.loadClientesFromSupabase = loadClientesFromSupabase;

@@ -138,7 +138,25 @@ async function loadPreciosData() {
 async function loadSisproData(ops = []) {
     if (DATA_SOURCES.SISPROWEB === 'supabase') {
         try {
-            const result = await loadSisprowebFromSupabase(ops);
+            // Disparar sincronización espejo en segundo plano al iniciar la app
+            if ((!ops || ops.length === 0) && typeof syncMasterEdgeFunction === 'function') {
+                syncMasterEdgeFunction().catch(err => Logger.warn('data-loader', 'Error en sync-master de fondo', err));
+            }
+
+            let result = await loadSisprowebFromSupabase(ops);
+
+            // Si se buscan OPs específicas y alguna no existe localmente, sincronizar con el servidor remoto
+            if (ops && ops.length > 0) {
+                const missingOps = ops.filter(op => !result.has(String(op).trim()));
+                if (missingOps.length > 0 && typeof syncMasterEdgeFunction === 'function') {
+                    Logger.info('data-loader', `${missingOps.length} OPs no encontradas en master local. Sincronizando datos remotos...`);
+                    const syncRes = await syncMasterEdgeFunction();
+                    if (syncRes && syncRes.success) {
+                        result = await loadSisprowebFromSupabase(ops);
+                    }
+                }
+            }
+
             if (!ops || ops.length === 0) {
                 // Carga completa al inicio: limpiar y refrescar
                 window.sisproMap.clear();
