@@ -522,13 +522,18 @@ async function saveToSisproInversiones(data) {
 
         // Verificar si ya existe un registro con la misma combinación (id_ingreso, productora)
         const existing = await supabase.select('ingresos', {
-            columns: 'id_ingreso',
+            columns: 'id_ingreso, fecha_ingreso, created_at',
             filters: { id_ingreso: record.id_ingreso, productora: record.productora }
         });
+
+        const nowISO = new Date().toISOString();
 
         let result;
         if (Array.isArray(existing) && existing.length > 0) {
             // Actualizar registro existente
+            record.fecha_ingreso = existing[0].fecha_ingreso || existing[0].created_at || nowISO;
+            record.created_at = existing[0].created_at || record.fecha_ingreso;
+            record.updated_at = nowISO;
             Logger.info('supabase-service', `Actualizando ingreso existente: ${record.id_ingreso} / ${record.productora}`);
             result = await supabase.update('ingresos', record, {
                 id_ingreso: record.id_ingreso,
@@ -536,6 +541,9 @@ async function saveToSisproInversiones(data) {
             });
         } else {
             // Insertar nuevo registro
+            record.fecha_ingreso = nowISO;
+            record.created_at = nowISO;
+            record.updated_at = nowISO;
             Logger.info('supabase-service', `Insertando nuevo ingreso: ${record.id_ingreso} / ${record.productora}`);
             result = await supabase.insert('ingresos', record);
         }
@@ -1457,13 +1465,16 @@ async function saveDistributionToSupabase(distributionData) {
 
         // Verificar si ya existe una distribución para este documento Y productora
         const existing = await supabase.select('distribuciones', {
+            columns: 'id_distribucion, created_at',
             filters: { id_distribucion: distributionData.Documento, productora: productora },
             limit: 1
         });
 
+        const nowISO = new Date().toISOString();
+        const hasExisting = Array.isArray(existing) && existing.length > 0;
         const record = {
             id_distribucion: distributionData.Documento,
-            fecha_distribucion: new Date().toISOString(),
+            fecha_distribucion: nowISO,
             datos_distribucion: distributionData,  // Guarda todo el objeto {Documento, Clientes}
             productora: productora,                // NIT del proveedor activo
             estado: 'PENDIENTE',                   // Estado inicial
@@ -1471,7 +1482,8 @@ async function saveDistributionToSupabase(distributionData) {
             inicio: null,                          // Se marca desde otra app
             fin: null,
             duracion: null,
-            pausas: []
+            pausas: [],
+            created_at: (hasExisting && existing[0].created_at) ? existing[0].created_at : nowISO
         };
 
         let result;
