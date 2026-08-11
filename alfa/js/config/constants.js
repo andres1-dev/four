@@ -7,6 +7,8 @@ const API_KEY = 'AIzaSyC7hjbRc0TGLgImv8gVZg8tsOeYWgXlPcM';
 const SPREADSHEET_ID = '133NiyjNApZGkEFs4jUvpJ9So-cSEzRVeW2FblwOCrjI';
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyM5AsR4WOLdfPWBp4uW_diONnaiaAThobOUE1Q4kwgSMXSsuorpdsmT8c52CeDXPgI/exec';  // POST
 const SISPROWEB_GAS_URL = 'https://script.google.com/macros/s/AKfycbynUt4GdCEYaGSqnbctsNXaib52MTm0cVQlehGnt0-6B7fOTv31HoYWjCLRndiQi8r1Pg/exec';  // POST
+const GAS_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzRk9ksTH3DWM2kXhYHeMQ5KqyLHVXygQulF_p__cX0cVkTHagGE8_7V63yLfCuL2_T/exec';  // Espejo Supabase → Sheets (Ingresos/Distribuciones)
+const GAS_CONSULTA_URL = 'PEGAR_URL_CONSULTA_GAS_AQUI'; // Reemplaza edge fn relacionar-ingresos-distribuciones
 
 // Supabase Configuration
 const SUPABASE_URL = 'https://ymaojqjdnrpfkrtuezcw.supabase.co';
@@ -205,10 +207,10 @@ function setGestoresMap(data) {
 }
 
 function setData2Maps(map, countMap, jsonMap) {
-    data2Map      = map;
+    data2Map = map;
     data2CountMap = countMap;
-    data2JsonMap  = jsonMap;
-    window.data2Map      = map;
+    data2JsonMap = jsonMap;
+    window.data2Map = map;
     window.data2CountMap = countMap;
-    window.data2JsonMap  = jsonMap;
+    window.data2JsonMap = jsonMap;
 }

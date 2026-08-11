@@ -540,6 +540,13 @@ async function saveToSisproInversiones(data) {
             result = await supabase.insert('ingresos', record);
         }
 
+        // Espejo a Google Sheets (fire & forget – no bloquea el flujo)
+        if (typeof saveIngresoToSheets === 'function') {
+            saveIngresoToSheets(record).catch(err =>
+                Logger.warn('supabase-service', 'Error espejo Sheets (ingresos)', err)
+            );
+        }
+
         const loadTime = performance.now() - startTime;
         Logger.success('supabase-service', `Registro guardado en ingresos en ${loadTime.toFixed(0)}ms`);
 
@@ -1479,6 +1486,13 @@ async function saveDistributionToSupabase(distributionData) {
             // Insertar nueva distribución
             result = await supabase.insert('distribuciones', record);
             Logger.success('supabase-service', `Distribución ${distributionData.Documento} creada`);
+        }
+
+        // Espejo a Google Sheets (fire & forget – no bloquea el flujo)
+        if (typeof saveDistribucionToSheets === 'function') {
+            saveDistribucionToSheets(record).catch(err =>
+                Logger.warn('supabase-service', 'Error espejo Sheets (distribuciones)', err)
+            );
         }
 
         const loadTime = performance.now() - startTime;
