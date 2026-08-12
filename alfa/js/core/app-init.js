@@ -42,7 +42,6 @@ async function loadDataFromSheets(silent = false) {
             loadBarrasData(),
             loadPreciosData(),
             loadHistoricasData(),
-            loadSisproData(), // Catálogo Master Local (sincronizado por Edge Function)
             // Tablas globales del proyecto secundario
             loadGlobalMaps().catch(err => Logger.warn('app-init', 'Tablas globales no disponibles', err))
         ]);
@@ -159,10 +158,7 @@ async function loadDistributionModuleData() {
         if (!window.clientesMap || window.clientesMap.size === 0) {
             await loadClientesData();
         }
-        await Promise.all([
-            loadSisproData(),    // carga bajo demanda con las OPs del módulo
-            initializeDistribution()
-        ]);
+        await initializeDistribution();
         window.distributionModuleLoaded = true;
         updateDataStats();
         Logger.info('app-init', 'Módulo distribución cargado');

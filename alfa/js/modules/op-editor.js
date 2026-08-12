@@ -1360,7 +1360,6 @@ async function reloadDataInBackgroundSilent() {
             // Fallback: solo recargar datos esenciales
             await Promise.all([
                 loadData2Data(),
-                loadSisproData(),
                 loadColoresData(),
                 loadPreciosData()
             ]);

@@ -41,6 +41,15 @@ async function cargarPedidosDesdeSheets() {
         }
         pedidosMap = await loadPedidosData();
         window.pedidosMap = pedidosMap; // Actualizar referencia global
+
+        // Cargar bajo demanda únicamente las OPs de los pedidos que falten en memoria
+        if (pedidosMap && pedidosMap.length > 0) {
+            const missingOpsInPedidos = [...new Set(pedidosMap.map(p => String(p.op || '').trim()).filter(op => op && (!window.sisproMap || !window.sisproMap.has(op))))];
+            if (missingOpsInPedidos.length > 0 && typeof loadSisproData === 'function') {
+                loadSisproData(missingOpsInPedidos).catch(err => console.warn('Error cargando OPs faltantes de pedidos:', err));
+            }
+        }
+
         renderOrdersBoard();
         // Verificar automáticamente cuáles OPs ya están en ingresos
         verificarOpsEnIngresos();

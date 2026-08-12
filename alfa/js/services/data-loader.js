@@ -133,53 +133,63 @@ async function loadPreciosData() {
 
 /**
  * Carga catálogo de productos desde la fuente configurada.
- * @param {string[]} [ops] - OPs a buscar. Si no se pasa o está vacío, carga todo el catálogo master local.
+ * Carga bajo demanda únicamente para las OPs especificadas que no estén ya en memoria.
+ * @param {string[]} [ops] - OPs a buscar.
  */
 async function loadSisproData(ops = []) {
     if (DATA_SOURCES.SISPROWEB === 'supabase') {
         try {
-            // Disparar sincronización espejo en segundo plano al iniciar la app
-            if ((!ops || ops.length === 0) && typeof syncMasterEdgeFunction === 'function') {
-                syncMasterEdgeFunction().catch(err => Logger.warn('data-loader', 'Error en sync-master de fondo', err));
+            // Si no se pasaron OPs específicas, omitir carga masiva
+            if (!ops || ops.length === 0) {
+                Logger.info('data-loader', 'Carga masiva de master omitida al inicio (solo bajo demanda)');
+                return window.sisproMap;
             }
 
-            let result = await loadSisprowebFromSupabase(ops);
+            const opsClean = [...new Set(ops.map(o => String(o).trim()).filter(Boolean))];
+            if (opsClean.length === 0) {
+                return window.sisproMap;
+            }
 
-            // Si se buscan OPs específicas y alguna no existe localmente, sincronizar con el servidor remoto
-            if (ops && ops.length > 0) {
-                const missingOps = ops.filter(op => !result.has(String(op).trim()));
-                if (missingOps.length > 0 && typeof syncMasterEdgeFunction === 'function') {
-                    Logger.info('data-loader', `${missingOps.length} OPs no encontradas en master local. Sincronizando datos remotos...`);
-                    const syncRes = await syncMasterEdgeFunction();
-                    if (syncRes && syncRes.success) {
-                        result = await loadSisprowebFromSupabase(ops);
-                    }
+            // Identificar qué OPs de la lista NO están en el mapa en memoria
+            const missingInMemory = opsClean.filter(op => !window.sisproMap.has(op));
+
+            if (missingInMemory.length === 0) {
+                return window.sisproMap;
+            }
+
+            Logger.info('data-loader', `Consultando ${missingInMemory.length} OPs faltantes en catálogo master local...`);
+            let result = await loadSisprowebFromSupabase(missingInMemory);
+
+            // Verificar si alguna OP requerida no existe en la tabla master local de Supabase
+            const stillMissing = missingInMemory.filter(op => !result.has(op));
+
+            if (stillMissing.length > 0 && typeof syncMasterEdgeFunction === 'function') {
+                Logger.info('data-loader', `${stillMissing.length} OPs no encontradas en master local. Sincronizando con servidor remoto (sync-master)...`);
+                const syncRes = await syncMasterEdgeFunction();
+                if (syncRes && syncRes.success) {
+                    const extraRes = await loadSisprowebFromSupabase(stillMissing);
+                    extraRes.forEach((value, key) => {
+                        result.set(key, value);
+                    });
                 }
             }
 
-            if (!ops || ops.length === 0) {
-                // Carga completa al inicio: limpiar y refrescar
-                window.sisproMap.clear();
-                result.forEach((value, key) => {
-                    window.sisproMap.set(key, value);
-                });
-            } else {
-                // Carga bajo demanda: fusionar en el mapa existente
-                result.forEach((value, key) => {
-                    window.sisproMap.set(key, value);
-                });
-            }
+            // Agregar OPs encontradas al mapa global sisproMap sin borrar las anteriores
+            result.forEach((value, key) => {
+                window.sisproMap.set(key, value);
+            });
+
             return window.sisproMap;
         } catch (error) {
-            Logger.error('data-loader', 'Error cargando SISPROWEB desde Supabase local. Retornando mapa actual.', error);
-            return window.sisproMap || new Map();
+            Logger.error('data-loader', 'Error en loadSisproData', error);
+            return window.sisproMap;
         }
     } else {
         Logger.warn('data-loader', 'Usando Google Sheets para SISPROWEB');
         if (typeof _originalSheets.loadSisproData === 'function') {
             return await _originalSheets.loadSisproData();
         }
-        return new Map();
+        return window.sisproMap || new Map();
     }
 }
 

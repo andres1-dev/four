@@ -9,6 +9,20 @@
     background-color: var(--editor);
 }
 
+/* Modo pantalla completa — oculta activity bar y sidebar */
+body.editor-fullscreen .activity-bar,
+body.editor-fullscreen .sidebar {
+    display: none !important;
+}
+
+body.editor-fullscreen .editor-container {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    width: 100vw;
+    height: 100vh;
+}
+
 /* Tab Content */
 .tab-content {
     flex: 1;

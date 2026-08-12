@@ -5,7 +5,7 @@ function setupTabSystem() {
 }
 
 function setupActivityBarTabs() {
-    document.querySelectorAll('.activity-icon').forEach(btn => {
+    document.querySelectorAll('.activity-icon[data-tab]').forEach(btn => {
         btn.addEventListener('click', function () {
             const tabName = this.dataset.tab;
 
@@ -28,6 +28,41 @@ function setupActivityBarTabs() {
             });
         });
     });
+
+    // ---- Botón Catálogo (toggle) ----
+    const catalogoBtn = document.getElementById('catalogoBtn');
+    const catalogoSidebar = document.getElementById('catalogo-sidebar');
+    const catalogoCloseBtn = document.getElementById('catalogoCloseBtn');
+
+    function openCatalogo() {
+        // Cerrar otros sidebars
+        document.querySelectorAll('.sidebar').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.activity-icon').forEach(i => i.classList.remove('active'));
+        catalogoSidebar.classList.add('active');
+        catalogoBtn.classList.add('active');
+    }
+
+    function closeCatalogo() {
+        catalogoSidebar.classList.remove('active');
+        catalogoBtn.classList.remove('active');
+    }
+
+    if (catalogoBtn && catalogoSidebar) {
+        catalogoBtn.addEventListener('click', function () {
+            if (catalogoSidebar.classList.contains('active')) {
+                closeCatalogo();
+            } else {
+                openCatalogo();
+            }
+        });
+    }
+
+    if (catalogoCloseBtn) {
+        catalogoCloseBtn.addEventListener('click', closeCatalogo);
+    }
+
+    window.openCatalogo = openCatalogo;
+    window.closeCatalogo = closeCatalogo;
 }
 
 function setupMainTabs() {

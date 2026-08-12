@@ -60,6 +60,17 @@ class SupabaseClient {
             this.accessToken = data.access_token;
             this.user = data.user;
 
+            // Guardar tokens en sessionStorage para que auth-guard pueda renovarlos
+            sessionStorage.setItem('supabase_token', data.access_token);
+            sessionStorage.setItem('supabase_refresh_token', data.refresh_token);
+            sessionStorage.setItem('supabase_token_exp', String(data.expires_at || (Math.floor(Date.now() / 1000) + (data.expires_in || 3600))));
+            sessionStorage.setItem('supabase_user', JSON.stringify(data.user));
+
+            // Programar renovación automática si auth-guard está disponible
+            if (typeof scheduleTokenRefresh === 'function') {
+                scheduleTokenRefresh();
+            }
+
             Logger.success('supabase-service', `Usuario autenticado: ${data.user.email}`);
             return data;
         } catch (error) {
@@ -103,21 +114,37 @@ class SupabaseClient {
         try {
             const response = await fetch(url, config);
             
-            // Manejar token expirado (401)
+            // Manejar token expirado (401) — intentar renovar antes de cerrar sesión
             if (response.status === 401) {
-                Logger.error('supabase-service', 'Token expirado o inválido');
-                
-                // Limpiar sesión
+                Logger.warn('supabase-service', 'Token rechazado (401), intentando renovar sesión...');
+
+                if (typeof refreshSession === 'function') {
+                    const newToken = await refreshSession();
+                    if (newToken) {
+                        // Reintentar la petición original con el nuevo token
+                        config.headers['Authorization'] = `Bearer ${newToken}`;
+                        const retryResponse = await fetch(url, config);
+                        if (retryResponse.ok) {
+                            if (retryResponse.status === 204 || options.method === 'DELETE') {
+                                return { success: true };
+                            }
+                            const retryText = await retryResponse.text();
+                            return retryText ? JSON.parse(retryText) : { success: true };
+                        }
+                    }
+                }
+
+                // Si la renovación falló, cerrar sesión
+                Logger.error('supabase-service', 'No se pudo renovar la sesión');
                 sessionStorage.clear();
                 this.accessToken = null;
                 this.user = null;
-                
-                // Redirigir a login
+
                 if (typeof window !== 'undefined') {
                     alert('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
                     window.location.href = 'login.html';
                 }
-                
+
                 throw new Error('JWT expired');
             }
             

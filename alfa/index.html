@@ -55,8 +55,8 @@
     <!-- Activity Bar -->
     <div class="activity-bar">
         <div class="activity-icons">
-            <button class="activity-icon active" data-tab="file-explorer" title="Explorador de Archivos">
-                <i class="codicon codicon-files"></i>
+            <button class="activity-icon" id="catalogoBtn" title="Catálogo">
+                <i class="codicon codicon-library"></i>
             </button>
             <button class="activity-icon" data-tab="csv-processor" title="Procesador CSV">
                 <i class="codicon codicon-symbol-array"></i>
@@ -77,9 +77,6 @@
             <button class="activity-icon" data-tab="printing-module" title="Impresión">
                 <i class="codicon codicon-file-pdf"></i>
             </button>
-            <button class="activity-icon" onclick="showGestionOpModal()" title="Gestión OPs (Consultar / Eliminar)" style="color: var(--error);">
-                <i class="codicon codicon-trash"></i>
-            </button>
         </div>
         <div class="activity-bottom">
             <button class="activity-icon" id="themeToggle" title="Cambiar Tema">
@@ -94,41 +91,68 @@
         </div>
     </div>
 
-    <!-- Sidebar -->
-    <div class="sidebar" id="file-explorer">
+    <!-- Sidebar Catálogo -->
+    <div class="sidebar catalogo-panel" id="catalogo-sidebar">
         <div class="sidebar-header">
-            <h3>EXPLORADOR</h3>
-            <div class="sidebar-actions">
-                <button class="btn-icon" title="Nuevo Archivo">
-                    <i class="codicon codicon-new-file"></i>
-                </button>
-                <button class="btn-icon" title="Refrescar">
-                    <i class="codicon codicon-refresh"></i>
-                </button>
-            </div>
+            <h3>CATÁLOGO</h3>
+            <button class="btn-icon" id="catalogoCloseBtn" title="Cerrar">
+                <i class="codicon codicon-close"></i>
+            </button>
         </div>
         <div class="sidebar-content">
-            <div class="file-tree">
-                <div class="tree-item">
-                    <i class="codicon codicon-folder"></i>
-                    <span>Procesos Activos</span>
-                </div>
-                <div class="tree-item">
-                    <i class="codicon codicon-folder"></i>
-                    <span>Órdenes de Producción</span>
-                </div>
-                <div class="tree-item">
-                    <i class="codicon codicon-folder"></i>
-                    <span>Archivos CSV</span>
-                </div>
-                <div class="tree-item">
-                    <i class="codicon codicon-folder"></i>
-                    <span>Distribuciones</span>
-                </div>
-                <div class="tree-item" onclick="showGestionOpModal()" style="cursor:pointer; color:var(--error, #f44747); margin-top:8px;">
-                    <i class="codicon codicon-trash"></i>
-                    <span>Gestión / Eliminar OPs</span>
-                </div>
+            <div class="catalogo-section-title">Tablas Maestras</div>
+            <div class="catalogo-grid">
+
+                <button class="catalogo-item" onclick="showColoresModal()" title="Colores">
+                    <i class="codicon codicon-symbol-color"></i>
+                    <span>Colores</span>
+                </button>
+
+                <button class="catalogo-item" onclick="showPreciosUpdateModal()" title="Precios">
+                    <i class="codicon codicon-tag"></i>
+                    <span>Precios</span>
+                </button>
+
+                <button class="catalogo-item" onclick="showSisproUpdateModal()" title="Códigos de Barras">
+                    <i class="codicon codicon-package"></i>
+                    <span>Cód. Barras</span>
+                </button>
+
+                <button class="catalogo-item" onclick="showClientesModal()" title="Clientes">
+                    <i class="codicon codicon-organization"></i>
+                    <span>Clientes</span>
+                </button>
+
+                <button class="catalogo-item" onclick="showUsuariosModal()" title="Usuarios">
+                    <i class="codicon codicon-person"></i>
+                    <span>Usuarios</span>
+                </button>
+
+                <button class="catalogo-item" onclick="showProveedoresModal()" title="Proveedores">
+                    <i class="codicon codicon-briefcase"></i>
+                    <span>Proveedores</span>
+                </button>
+
+                <button class="catalogo-item" onclick="showAuditoresModal()" title="Auditores">
+                    <i class="codicon codicon-check-all"></i>
+                    <span>Auditores</span>
+                </button>
+
+                <button class="catalogo-item" onclick="showGestoresModal()" title="Gestores">
+                    <i class="codicon codicon-account"></i>
+                    <span>Gestores</span>
+                </button>
+
+            </div>
+
+            <div class="catalogo-section-title" style="margin-top: 16px;">Gestión</div>
+            <div class="catalogo-grid">
+
+                <button class="catalogo-item catalogo-item--danger" onclick="showGestionOpModal()" title="Gestión de OPs">
+                    <i class="codicon codicon-server-process"></i>
+                    <span>Gestión OP</span>
+                </button>
+
             </div>
         </div>
     </div>
@@ -175,8 +199,8 @@
                 </button>
             </div>
             <div class="tab-actions">
-                <button class="btn-icon" id="splitEditor" title="Dividir Editor">
-                    <i class="codicon codicon-split-horizontal"></i>
+                <button class="btn-icon" id="splitEditor" title="Pantalla completa">
+                    <i class="codicon codicon-screen-full" id="splitEditorIcon"></i>
                 </button>
             </div>
         </div>

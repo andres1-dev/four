@@ -126,6 +126,42 @@ function setupAllEventListeners() {
     safeAdd('settingsBtn', 'click', () => window.showSettingsModal && window.showSettingsModal());
     safeAdd('logoutBtn', 'click', () => window.handleLogout && window.handleLogout());
 
+    // ---- Pantalla completa ----
+    const splitBtn  = document.getElementById('splitEditor');
+    const splitIcon = document.getElementById('splitEditorIcon');
+
+    function syncFullscreenUI() {
+        const isBrowserFS = !!document.fullscreenElement;
+        const isAppFS     = document.body.classList.contains('editor-fullscreen');
+        const isAny       = isBrowserFS || isAppFS;
+        if (splitIcon) {
+            splitIcon.className = isAny ? 'codicon codicon-screen-normal' : 'codicon codicon-screen-full';
+        }
+        if (splitBtn) {
+            splitBtn.title = isAny ? 'Restaurar' : 'Pantalla completa';
+        }
+    }
+
+    if (splitBtn) {
+        splitBtn.addEventListener('click', async () => {
+            if (!document.fullscreenElement) {
+                try {
+                    await document.documentElement.requestFullscreen();
+                } catch (_) { /* navegador bloqueó */ }
+            } else {
+                try {
+                    await document.exitFullscreen();
+                } catch (_) {}
+            }
+            syncFullscreenUI();
+        });
+    }
+
+    // Sincronizar icono si el usuario sale con F11 o Escape del navegador
+    document.addEventListener('fullscreenchange', () => {
+        syncFullscreenUI();
+    });
+
     // ---- Business Actions (Pending OPs, Editor, JSON) ----
     safeAdd('selectOP', 'change', () => window.loadOPData && window.loadOPData());
     safeAdd('generateJSONBtn', 'click', () => window.generateJSONForOP && window.generateJSONForOP());
