@@ -7,8 +7,8 @@
  * Cada pedido: { id, mayoristaId, op, referencia, prenda, cantidad, obs, fecha }
  */
 
-let pedidosMap = [];
-let pedidosSaving = false;
+let pedidosMap     = [];
+let pedidosSaving  = false;
 let mostrandoCompletados = false;  // Toggle para mostrar/ocultar completados
 let opsEnIngresosSet = new Set();  // OPs activas que ya están en la tabla ingresos
 let verificandoIngresos = false;
@@ -53,7 +53,7 @@ async function cargarPedidosDesdeSheets() {
         renderOrdersBoard();
         // Verificar automáticamente cuáles OPs ya están en ingresos
         verificarOpsEnIngresos();
-    } catch (err) {
+    } catch (err) { 
         console.error('Error cargando pedidos:', err);
         pedidosMap = [];
         window.pedidosMap = pedidosMap; // Actualizar referencia global
@@ -75,7 +75,7 @@ function renderOrdersBoard() {
     const pedidosActivos = pedidosMap.filter(p => p.estado !== false);
     const pedidosCompletados = pedidosMap.filter(p => p.estado === false);
     const lista = mostrandoCompletados ? pedidosCompletados : pedidosActivos;
-
+    
     // Ordenar por nombre de cliente
     lista.sort((a, b) => {
         const na = getClienteNombre(a.mayoristaId) || a.nombreCliente || '';
@@ -91,7 +91,7 @@ function renderOrdersBoard() {
     }
 
     // Totales resumen
-    const totalUds = pedidosActivos.reduce((s, p) => s + (p.cantidad || 0), 0);
+    const totalUds  = pedidosActivos.reduce((s, p) => s + (p.cantidad || 0), 0);
     const totalPeds = pedidosActivos.length;
     const opsConflicto = pedidosActivos.filter(p => opsEnIngresosSet.has(String(p.op))).length;
 
@@ -117,7 +117,7 @@ function renderOrdersBoard() {
                 <span class="orders-stat-lbl">completados</span>
             </div>
             ${alertaBadge}
-        </div>`;
+        </div>;`
 
     if (!lista.length) {
         container.innerHTML = statsHtml + `
@@ -162,7 +162,7 @@ function renderPedidoFila(p) {
         hour: '2-digit',
         minute: '2-digit'
     }) : '';
-
+    
     const esCompletado = p.estado === false;
     const yaEnIngresos = opsEnIngresosSet.has(String(p.op));
 
@@ -259,7 +259,7 @@ async function verificarOpsEnIngresos() {
         // Registrar cuáles OPs cruzaron
         encontrados.forEach(row => {
             if (row.id_ingreso) opsEnIngresosSet.add(String(row.id_ingreso));
-            if (row.lote) opsEnIngresosSet.add(String(row.lote));
+            if (row.lote)       opsEnIngresosSet.add(String(row.lote));
         });
 
         const count = pedidosActivos.filter(p => opsEnIngresosSet.has(String(p.op))).length;
@@ -417,10 +417,10 @@ async function obtenerDetallesOpGarantizado(opInput) {
                 if (res && res.length > 0 && res[0]) {
                     const row = res[0];
                     const sisproObj = {
-                        PRENDA: row.descripcion || '',
-                        LINEA: row.cuento || '',
-                        GENERO: row.genero || '',
-                        REFERENCIA: row.referencia || ''
+                        PRENDA:     row.descripcion || '',
+                        LINEA:      row.cuento      || '',
+                        GENERO:     row.genero      || '',
+                        REFERENCIA: row.referencia  || ''
                     };
                     if (window.sisproMap && window.sisproMap instanceof Map) {
                         window.sisproMap.set(key, sisproObj);
@@ -430,7 +430,7 @@ async function obtenerDetallesOpGarantizado(opInput) {
                 }
             }
         }
-    } catch (err) {
+    } catch(err) {
         console.error('Error en fallback directo master:', err);
     }
 
@@ -440,11 +440,11 @@ async function obtenerDetallesOpGarantizado(opInput) {
 let opDebounceTimer = null;
 
 async function onModalOpChange(val, immediate = false) {
-    const hint = document.getElementById('modal-op-hint');
+    const hint    = document.getElementById('modal-op-hint');
     const details = document.getElementById('modal-op-details');
-    const refEl = document.getElementById('modal-detail-ref');
-    const prendaEl = document.getElementById('modal-detail-prenda');
-    const generoEl = document.getElementById('modal-detail-genero');
+    const refEl   = document.getElementById('modal-detail-ref');
+    const prendaEl= document.getElementById('modal-detail-prenda');
+    const generoEl= document.getElementById('modal-detail-genero');
 
     if (!hint) return;
     const op = val.trim();
@@ -479,38 +479,38 @@ function mostrarDetallesOpModal(op, sispro, hint, details, refEl, prendaEl, gene
 
     hint.innerHTML = `<span class="orders-hint-found" style="color:var(--success); font-weight:600;"><i class="codicon codicon-check"></i> OP encontrada</span>`;
     if (details && refEl && prendaEl && generoEl) {
-        refEl.value = sispro.REFERENCIA || '';
-        prendaEl.value = sispro.PRENDA || '';
-        generoEl.value = sispro.GENERO || '';
+        refEl.value    = sispro.REFERENCIA || '';
+        prendaEl.value = sispro.PRENDA     || '';
+        generoEl.value = sispro.GENERO     || '';
         details.style.display = 'block';
     }
 }
 
 async function confirmarPedidoModal() {
     const mayoristaId = document.getElementById('modal-cliente')?.value;
-    const op = document.getElementById('modal-op')?.value.trim();
-    const qty = parseInt(document.getElementById('modal-qty')?.value) || 0;
-    const obs = document.getElementById('modal-obs')?.value.trim();
+    const op          = document.getElementById('modal-op')?.value.trim();
+    const qty         = parseInt(document.getElementById('modal-qty')?.value) || 0;
+    const obs         = document.getElementById('modal-obs')?.value.trim();
 
     if (!mayoristaId) { showMessage('Selecciona un cliente', 'warning', 1500); return; }
-    if (!op) { showMessage('Escribe una OP', 'warning', 1500); return; }
-    if (qty <= 0) { showMessage('Ingresa una cantidad válida', 'warning', 1500); return; }
+    if (!op)          { showMessage('Escribe una OP', 'warning', 1500); return; }
+    if (qty <= 0)     { showMessage('Ingresa una cantidad válida', 'warning', 1500); return; }
 
     // Búsqueda garantizada antes de guardar
     const sispro = await obtenerDetallesOpGarantizado(op);
 
     const pedido = {
-        id: `${mayoristaId}_${op}_${Date.now()}`,
+        id:            `${mayoristaId}_${op}_${Date.now()}`,
         mayoristaId,
         nombreCliente: getClienteNombre(mayoristaId),
         op,
-        referencia: sispro?.REFERENCIA || '',
-        prenda: sispro?.PRENDA || '',
-        genero: sispro?.GENERO || '',
-        cantidad: qty,
-        obs: obs || '',
-        fecha: new Date().toISOString(),
-        estado: true
+        referencia:    sispro?.REFERENCIA || '',
+        prenda:        sispro?.PRENDA     || '',
+        genero:        sispro?.GENERO     || '',
+        cantidad:      qty,
+        obs:           obs || '',
+        fecha:         new Date().toISOString(),
+        estado:        true
     };
 
     document.querySelector('.modal-agregar-pedido')?.remove();
@@ -525,7 +525,7 @@ async function abrirModalEditarPedido(id) {
     const pedido = pedidosMap.find(p => p.id === id);
     if (!pedido) return;
 
-    const mayoristas = getMayoristasActivos();
+    const mayoristas   = getMayoristasActivos();
     const optsClientes = mayoristas.map(([mid, c]) =>
         `<option value="${mid}" ${mid === pedido.mayoristaId ? 'selected' : ''}>${c.NOMBRE_CORTO}</option>`
     ).join('');
@@ -597,7 +597,7 @@ async function abrirModalEditarPedido(id) {
 }
 
 async function onEditOpChange(val, immediate = false) {
-    const hint = document.getElementById('edit-op-hint');
+    const hint    = document.getElementById('edit-op-hint');
     const details = document.getElementById('edit-op-details');
 
     if (!hint) return;
@@ -657,29 +657,29 @@ async function guardarEdicionPedido(id) {
     if (!pedido) return;
 
     const mayoristaId = document.getElementById('edit-cliente')?.value;
-    const op = document.getElementById('edit-op')?.value.trim();
-    const qty = parseInt(document.getElementById('edit-qty')?.value) || 0;
-    const obs = document.getElementById('edit-obs')?.value.trim();
+    const op          = document.getElementById('edit-op')?.value.trim();
+    const qty         = parseInt(document.getElementById('edit-qty')?.value) || 0;
+    const obs         = document.getElementById('edit-obs')?.value.trim();
 
     if (!mayoristaId) { showMessage('Selecciona un cliente', 'warning', 1500); return; }
-    if (!op) { showMessage('Escribe una OP', 'warning', 1500); return; }
-    if (qty <= 0) { showMessage('Ingresa una cantidad válida', 'warning', 1500); return; }
+    if (!op)          { showMessage('Escribe una OP', 'warning', 1500); return; }
+    if (qty <= 0)     { showMessage('Ingresa una cantidad válida', 'warning', 1500); return; }
 
     // Búsqueda garantizada antes de guardar
     const sispro = await obtenerDetallesOpGarantizado(op);
 
     const pedidoActualizado = {
-        id: pedido.id,
+        id:            pedido.id,
         mayoristaId,
         nombreCliente: getClienteNombre(mayoristaId),
         op,
-        referencia: sispro?.REFERENCIA || pedido.referencia || '',
-        prenda: sispro?.PRENDA || pedido.prenda || '',
-        genero: sispro?.GENERO || pedido.genero || '',
-        cantidad: qty,
-        obs: obs || '',
-        fecha: pedido.fecha,
-        estado: true
+        referencia:    sispro?.REFERENCIA || pedido.referencia || '',
+        prenda:        sispro?.PRENDA     || pedido.prenda     || '',
+        genero:        sispro?.GENERO     || pedido.genero     || '',
+        cantidad:      qty,
+        obs:           obs || '',
+        fecha:         pedido.fecha,
+        estado:        true
     };
 
     document.querySelector('.modal-agregar-pedido, .modal-editar-pedido')?.remove();
@@ -726,7 +726,7 @@ function getMayoristasActivos() {
         Logger.warn('orders', 'clientesMap no está cargado');
         return [];
     }
-
+    
     return Array.from(window.clientesMap.entries())
         .filter(([id, c]) => c.TIPO_CLIENTE === 'Mayorista' && c.ESTADO?.toUpperCase().trim() === 'ACTIVO')
         .sort((a, b) => a[1].NOMBRE_CORTO.localeCompare(b[1].NOMBRE_CORTO));
@@ -777,7 +777,7 @@ function aplicarPedidosDesdeModal(pedidos) {
 
 function mostrarModalPedidosParaLote(lote) {
     if (!lote) return;
-
+    
     // SIEMPRE cargar pedidos frescos desde Supabase antes de mostrar el modal
     // para garantizar que los datos estén actualizados
     cargarPedidosDesdeSheets().then(() => {
@@ -795,23 +795,23 @@ function renderModalPedidosParaLote(lote, pedidos) {
     document.querySelector('.modal-pedidos-lote')?.remove();
 
     // Obtener pedidos completos del lote (no solo cantidades agrupadas)
-    const pedidosDelLote = pedidosMap.filter(p =>
+    const pedidosDelLote = pedidosMap.filter(p => 
         String(p.op) === String(lote) && p.estado !== false
     );
 
     const totalUds = Object.values(pedidos).reduce((a, b) => a + b, 0);
-
+    
     // Agrupar pedidos por mayorista con sus observaciones
     const filas = Object.entries(pedidos).map(([mayoristaId, cantidad]) => {
         const nombre = getClienteNombre(mayoristaId);
-
+        
         // Obtener observaciones de los pedidos de este mayorista
         const pedidosMayorista = pedidosDelLote.filter(p => p.mayoristaId === mayoristaId);
         const observaciones = pedidosMayorista
             .filter(p => p.obs && p.obs.trim())
             .map(p => `<div class="orders-modal-obs-item">• ${p.obs}</div>`)
             .join('');
-
+        
         return `
             <div class="orders-modal-row">
                 <div class="orders-modal-info">
@@ -870,7 +870,7 @@ async function marcarPedidosComoCompletados(lote) {
     const loteStr = String(lote);
     const pedidos = window.pedidosMap || pedidosMap;
     const pedidosDelLote = pedidos.filter(p => String(p.op) === loteStr && p.estado !== false);
-
+    
     if (!pedidosDelLote.length) return;
 
     try {
@@ -882,10 +882,10 @@ async function marcarPedidosComoCompletados(lote) {
             };
             await actualizarPedidoEnSheets(pedidoActualizado);
         }
-
+        
         // Recargar pedidos para reflejar cambios
         await cargarPedidosDesdeSheets();
-
+        
         Logger.success('orders', `${pedidosDelLote.length} pedidos marcados como completados para OP ${lote}`);
     } catch (err) {
         Logger.error('orders', 'Error marcando pedidos como completados', err);
@@ -897,16 +897,16 @@ async function marcarPedidosComoCompletados(lote) {
 // EXPORTS
 // ============================================
 
-window.initOrdersModule = initOrdersModule;
-window.abrirModalAgregarPedido = abrirModalAgregarPedido;
-window.abrirModalEditarPedido = abrirModalEditarPedido;
-window.onModalOpChange = onModalOpChange;
-window.onEditOpChange = onEditOpChange;
-window.confirmarPedidoModal = confirmarPedidoModal;
-window.guardarEdicionPedido = guardarEdicionPedido;
-window.eliminarPedido = eliminarPedido;
-window.toggleFinalizados = toggleFinalizados;
+window.initOrdersModule             = initOrdersModule;
+window.abrirModalAgregarPedido      = abrirModalAgregarPedido;
+window.abrirModalEditarPedido       = abrirModalEditarPedido;
+window.onModalOpChange              = onModalOpChange;
+window.onEditOpChange               = onEditOpChange;
+window.confirmarPedidoModal         = confirmarPedidoModal;
+window.guardarEdicionPedido         = guardarEdicionPedido;
+window.eliminarPedido               = eliminarPedido;
+window.toggleFinalizados            = toggleFinalizados;
 window.getPedidosPendientesParaLote = getPedidosPendientesParaLote;
 window.marcarPedidosComoCompletados = marcarPedidosComoCompletados;
-window.mostrarModalPedidosParaLote = mostrarModalPedidosParaLote;
-window.aplicarPedidosDesdeModal = aplicarPedidosDesdeModal;
+window.mostrarModalPedidosParaLote  = mostrarModalPedidosParaLote;
+window.aplicarPedidosDesdeModal     = aplicarPedidosDesdeModal;

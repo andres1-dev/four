@@ -301,48 +301,10 @@ async function processExcel(file) {
                     loadSisproData(lotesEnExcel).catch(err => Logger.warn('excel-processor', 'Error cargando sispro', err))
                 ]);
                 Logger.info('excel-processor', `Datos bajo demanda cargados para ${lotesEnExcel.length} lotes del Excel`);
-
-                // Excel: detectar proveedor — solo Angeles tiene su propio NIT,
-                // cualquier otro caso (INVERSIONES, vacío, desconocido) → Universo.
-                // Cambiar proveedor con setProveedorActivo ANTES de recargar colores/historicas.
-                let lineaDetectada = '';
-                for (const r of hrRecords) {
-                    const l = (r.LINEA || r.linea || '').toString().trim().toUpperCase();
-                    if (l) { lineaDetectada = l; break; }
-                }
-                if (!lineaDetectada && window.sisproMap instanceof Map) {
-                    for (const op of lotesEnExcel) {
-                        const opStr = String(op).trim();
-                        const s = window.sisproMap.get(opStr) || window.sisproMap.get(opStr.split('.')[0]);
-                        if (s && s.LINEA) { lineaDetectada = s.LINEA.toString().trim().toUpperCase(); break; }
-                    }
-                }
-
-                const esAngeles   = lineaDetectada.includes('ANGELES') || lineaDetectada.includes('ÁNGELES');
-                const nuevoId     = esAngeles ? '900692469'  : '900616124';
-                const nuevoNombre = esAngeles
-                    ? 'TEXTILES Y CREACIONES LOS ANGELES SAS'
-                    : 'TEXTILES Y CREACIONES EL UNIVERSO SAS';
-
-                const actual = typeof getProveedorActivo === 'function' ? getProveedorActivo() : null;
-                const cambiando = !actual || actual.id !== nuevoId;
-
-                if (cambiando && typeof setProveedorActivo === 'function') {
-                    setProveedorActivo(nuevoId, nuevoNombre);
-                    Logger.info('excel-processor', `🏢 Proveedor → ${nuevoId} (${nuevoNombre}) — línea: '${lineaDetectada || 'no detectada'}'`);
-                }
-
-                // Recargar colores e historicas con await para que estén disponibles
-                // antes de validar/resolver los records del Excel.
-                if (cambiando) {
-                    await Promise.all([
-                        typeof loadColoresData    === 'function' ? loadColoresData()    : Promise.resolve(),
-                        typeof loadHistoricasData === 'function' ? loadHistoricasData() : Promise.resolve(),
-                    ]);
-                    Logger.info('excel-processor', `✅ Colores e históricos recargados para ${nuevoNombre}`);
-                    if (typeof showMessage             === 'function') showMessage(`Proveedor: ${nuevoNombre}`, 'info', 2500);
-                    if (typeof updateProveedorIndicator === 'function') updateProveedorIndicator();
-                    if (typeof updateDataStats          === 'function') updateDataStats();
+                
+                // Auto-detectar línea y actualizar el proveedor activo en la UI (proveedorIndicatorText)
+                if (typeof detectAndSetProveedorFromLotes === 'function') {
+                    detectAndSetProveedorFromLotes(lotesEnExcel, hrRecords);
                 }
             }
         }

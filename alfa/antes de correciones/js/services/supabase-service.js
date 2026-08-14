@@ -362,11 +362,8 @@ async function saveToSisproInversiones(data) {
         const loteEdit = esBusint ? (document.getElementById('opLoteEdit')?.value?.trim() || '') : '';
         const tipoEdit = esBusint ? (document.getElementById('opTipoEdit')?.value?.trim() || 'FULL') : 'FULL';
 
-        // Preferir un item de PRIMERAS (DI) como fuente de REFPROV, REFERENCIA y
-        // DESCRIPCION_LARGA, ya que esos campos deben reflejar el artículo principal.
-        // Si la OP no tiene items de PRIMERAS (p.ej. solo COBROS), se usa data[0]
-        // como fallback y el flujo continúa normalmente sin bloquear.
-        const primerItem = data.find(i => i.BODEGA === 'PRIMERAS') || data[0] || {};
+        // Obtener datos del primer item
+        const primerItem = data[0] || {};
         const total = parseInt(primerItem.TOTAL) || 0;  // Total declarado en OP (del CSV)
 
         // Calcular totales por bodega

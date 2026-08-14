@@ -159,39 +159,14 @@ async function processCSVData(rows) {
     }
     if (lotesEnCsv.size > 0) {
         const lotesArr = Array.from(lotesEnCsv);
-
-        // CSV siempre corresponde a Universo.
-        // Cambiar proveedor activo ANTES de cargar datos para que loadColoresData
-        // y loadHistoricasData usen el filtro correcto desde el inicio.
-        const UNIVERSO_ID     = '900616124';
-        const UNIVERSO_NOMBRE = 'TEXTILES Y CREACIONES EL UNIVERSO SAS';
-        const actual = (typeof getProveedorActivo === 'function') ? getProveedorActivo() : null;
-        const cambiandoProveedor = !actual || actual.id !== UNIVERSO_ID;
-
-        if (cambiandoProveedor && typeof setProveedorActivo === 'function') {
-            // setProveedorActivo solo actualiza estado/UI sin disparar recargas,
-            // así las cargas con await de abajo ya usan el NIT de Universo.
-            setProveedorActivo(UNIVERSO_ID, UNIVERSO_NOMBRE);
-            Logger.info('data-processing', `🏢 Proveedor cambiado a Universo para CSV`);
-        }
-
         await loadData2Data(lotesArr);
         await loadSisproData(lotesArr);
-
-        // Si cambió el proveedor, recargar colores e historicas con await
-        // para garantizar que estén disponibles ANTES de validar el CSV.
-        if (cambiandoProveedor) {
-            await Promise.all([
-                typeof loadColoresData    === 'function' ? loadColoresData()    : Promise.resolve(),
-                typeof loadHistoricasData === 'function' ? loadHistoricasData() : Promise.resolve(),
-            ]);
-            Logger.info('data-processing', `✅ Colores e históricos recargados para Universo`);
-            if (typeof showMessage          === 'function') showMessage(`Proveedor cambiado a ${UNIVERSO_NOMBRE}`, 'info', 2500);
-            if (typeof updateProveedorIndicator === 'function') updateProveedorIndicator();
-            if (typeof updateDataStats          === 'function') updateDataStats();
-        }
-
         Logger.info('data-processing', `Datos cargados bajo demanda para ${lotesEnCsv.size} lotes del CSV`);
+        
+        // Auto-detectar línea y actualizar el proveedor activo en la UI (proveedorIndicatorText)
+        if (typeof detectAndSetProveedorFromLotes === 'function') {
+            detectAndSetProveedorFromLotes(lotesArr);
+        }
     }
     // ────────────────────────────────────────────────────────────────────────────────────
 

@@ -78,9 +78,6 @@
             <button class="activity-icon" data-tab="printing-module" title="Impresión">
                 <i class="codicon codicon-file-pdf"></i>
             </button>
-            <button class="activity-icon" data-tab="ingresos-module" title="Consulta Ingresos">
-                <i class="codicon codicon-table"></i>
-            </button>
         </div>
         <div class="activity-bottom">
             <button class="activity-icon" id="themeToggle" title="Cambiar Tema">
@@ -191,11 +188,6 @@
                 <button class="tab" data-tab="printing-module">
                     <i class="codicon codicon-file-pdf"></i>
                     Impresión
-                    <span class="tab-close"><i class="codicon codicon-close"></i></span>
-                </button>
-                <button class="tab" data-tab="ingresos-module">
-                    <i class="codicon codicon-table"></i>
-                    Ingresos
                     <span class="tab-close"><i class="codicon codicon-close"></i></span>
                 </button>
                 <button class="tab" data-tab="admin-tab" style="display: none;" id="adminTabBtn">
@@ -879,130 +871,7 @@
                 </div>
             </div>
         </div>
-
-        <!-- Pestaña Consulta Ingresos -->
-        <div class="tab-content" id="ingresos-module-content">
-            <div class="editor-section">
-                <div class="section-header">
-                    <h3><i class="codicon codicon-table"></i> Consulta de Ingresos</h3>
-                    <div class="header-actions">
-                        <span id="ingresos-dot-status" class="ingresos-status-dot"></span>
-                        <span id="ingresos-status-text" style="font-size:11px; color:var(--text-secondary);">—</span>
-                        <button class="btn-icon" onclick="ingresosModule.reload()" title="Recargar desde Sheets">
-                            <i class="codicon codicon-refresh"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="section-content">
-
-                    <!-- Tarjetas de resumen -->
-                    <div class="ingresos-cards" id="ingresos-cards">
-                        <div class="ingresos-card" id="icard-total">
-                            <div class="icard-icon"><i class="codicon codicon-layers"></i></div>
-                            <div class="icard-body">
-                                <span class="icard-label">Total Registros</span>
-                                <span class="icard-value" id="icard-val-registros">—</span>
-                            </div>
-                        </div>
-                        <div class="ingresos-card" id="icard-cantidad">
-                            <div class="icard-icon icard-icon--primary"><i class="codicon codicon-symbol-numeric"></i></div>
-                            <div class="icard-body">
-                                <span class="icard-label">Total Unidades</span>
-                                <span class="icard-value" id="icard-val-cantidad">—</span>
-                            </div>
-                        </div>
-                        <div class="ingresos-card" id="icard-angeles">
-                            <div class="icard-icon icard-icon--angeles"><i class="codicon codicon-star-full"></i></div>
-                            <div class="icard-body">
-                                <span class="icard-label">Ángeles</span>
-                                <span class="icard-value" id="icard-val-angeles">—</span>
-                            </div>
-                        </div>
-                        <div class="ingresos-card" id="icard-universo">
-                            <div class="icard-icon icard-icon--universo"><i class="codicon codicon-globe"></i></div>
-                            <div class="icard-body">
-                                <span class="icard-label">Universo</span>
-                                <span class="icard-value" id="icard-val-universo">—</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Filtros -->
-                    <div class="ingresos-filter-bar">
-                        <div class="ingresos-chips">
-                            <button class="ingresos-chip active" id="ichip-today" onclick="ingresosModule.setPreset('today',this)">Hoy</button>
-                            <button class="ingresos-chip" id="ichip-week" onclick="ingresosModule.setPreset('week',this)">Semana</button>
-                            <button class="ingresos-chip" id="ichip-month" onclick="ingresosModule.setPreset('month',this)">Este Mes</button>
-                            <button class="ingresos-chip" id="ichip-last" onclick="ingresosModule.setPreset('last',this)">Mes Anterior</button>
-                            <button class="ingresos-chip" id="ichip-all" onclick="ingresosModule.setPreset('all',this)">Todo</button>
-                        </div>
-                        <div class="ingresos-dates">
-                            <div class="form-group" style="min-width:130px; margin:0;">
-                                <label><i class="codicon codicon-calendar"></i> Desde</label>
-                                <input type="date" id="ingresos-date-from" class="form-control" onchange="ingresosModule.onDateChange()">
-                            </div>
-                            <div class="form-group" style="min-width:130px; margin:0;">
-                                <label><i class="codicon codicon-calendar"></i> Hasta</label>
-                                <input type="date" id="ingresos-date-to" class="form-control" onchange="ingresosModule.onDateChange()">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Panel tabla -->
-                    <div class="results-panel" style="margin-top:0;">
-                        <div class="panel-header">
-                            <h4><i class="codicon codicon-list-flat"></i> Registros de Ingresos</h4>
-                            <div class="panel-actions">
-                                <div class="ingresos-search-wrap">
-                                    <i class="codicon codicon-search ingresos-search-icon"></i>
-                                    <input type="text" id="ingresos-search" class="form-control" placeholder="Buscar OP, lote, referencia, taller..." style="padding-left:28px; min-width:240px;" oninput="ingresosModule.onSearch()">
-                                </div>
-                                <div class="panel-badge" id="ingresos-badge">0</div>
-                                <select id="ingresos-page-size" class="form-control" style="width:auto; font-size:11px;" onchange="ingresosModule.changePageSize(this.value)">
-                                    <option value="20">20 / pág</option>
-                                    <option value="50" selected>50 / pág</option>
-                                    <option value="100">100 / pág</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="panel-content" style="padding:0; overflow-x:auto;">
-                            <table class="ingresos-table" id="ingresos-table">
-                                <thead>
-                                    <tr>
-                                        <th>Documento</th>
-                                        <th>Fecha</th>
-                                        <th>Taller</th>
-                                        <th>Línea</th>
-                                        <th>Lote</th>
-                                        <th>Ref. Prov.</th>
-                                        <th>Descripción</th>
-                                        <th>Cant.</th>
-                                        <th>Referencia</th>
-                                        <th>Tipo</th>
-                                        <th>Prenda</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="ingresos-tbody">
-                                    <tr><td colspan="11" class="ingresos-empty">Cargando datos...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="ingresos-footer">
-                            <button class="btn-secondary" id="ingresos-btn-prev" onclick="ingresosModule.changePage(-1)" disabled>
-                                <i class="codicon codicon-chevron-left"></i> Anterior
-                            </button>
-                            <span id="ingresos-pg-info" style="font-size:12px; color:var(--text-secondary);">Pág 1 de 1</span>
-                            <button class="btn-secondary" id="ingresos-btn-next" onclick="ingresosModule.changePage(1)" disabled>
-                                Siguiente <i class="codicon codicon-chevron-right"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-        </div>
-
-    </div><!-- /editor-container -->
+    </div>
 
     <!-- Modal Container -->
     <div id="modalContainer"></div>
@@ -1083,7 +952,6 @@
     </div>
 
     <script src="js/script.js"></script>
-    <script src="js/modules/ingresos.js"></script>
 </body>
 
 </html>
