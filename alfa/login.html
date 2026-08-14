@@ -6,16 +6,11 @@
     <title>Ingresos — Iniciar Sesión</title>
     <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
     <link href="https://cdn.jsdelivr.net/npm/@vscode/codicons@0.0.32/dist/codicon.css" rel="stylesheet">
-    <script>
-        (function(){
-            document.documentElement.className = localStorage.getItem('theme') || 'vscode-light';
-        })();
-    </script>
     <style>
         *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
-        /* ── Tokens ── */
-        html.vscode-light {
+        /* ── Tokens — valores fijos, el login no tiene modo claro/oscuro ── */
+        :root {
             --primary:      #0078d4;
             --primary-dim:  rgba(0,120,212,0.13);
             --primary-glow: rgba(0,120,212,0.38);
@@ -33,25 +28,9 @@
             --success:      #107c10;
             --input-bg:     rgba(255,255,255,0.6);
             --input-border: rgba(0,0,0,0.12);
-        }
-        html.vscode-dark {
-            --primary:      #3794ff;
-            --primary-dim:  rgba(55,148,255,0.14);
-            --primary-glow: rgba(55,148,255,0.42);
-            --glass:        rgba(18,20,28,0.62);
-            --glass-inner:  rgba(28,30,40,0.85);
-            --mirror:       rgba(255,255,255,0.06);
-            --mirror-edge:  rgba(255,255,255,0.14);
-            --border:       rgba(255,255,255,0.09);
-            --border-inner: rgba(255,255,255,0.06);
-            --border-focus: rgba(55,148,255,0.5);
-            --text:         #e2e4e8;
-            --text-2:       #7a7e88;
-            --error:        #f48771;
-            --error-dim:    rgba(244,135,113,0.1);
-            --success:      #89d185;
-            --input-bg:     rgba(255,255,255,0.05);
-            --input-border: rgba(255,255,255,0.1);
+            --bg1:          #b8cce0;
+            --bg2:          #cfdaec;
+            --bg3:          #a8bbd4;
         }
 
         /* ── Body ── */
@@ -61,20 +40,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            /* Fallback sólido primero, luego gradientes con valores fijos */
-            background-color: #a8bbd4;
-            background-image:
-                radial-gradient(ellipse 80% 60% at 20% 30%, #b8cce0 0%, transparent 70%),
-                radial-gradient(ellipse 60% 80% at 80% 70%, #cfdaec 0%, transparent 70%);
+            background:
+                radial-gradient(ellipse 80% 60% at 20% 30%, var(--bg1) 0%, transparent 70%),
+                radial-gradient(ellipse 60% 80% at 80% 70%, var(--bg2) 0%, transparent 70%),
+                var(--bg3);
             overflow: hidden;
             position: relative;
-        }
-
-        html.vscode-dark body {
-            background-color: #060810;
-            background-image:
-                radial-gradient(ellipse 80% 60% at 20% 30%, #080b12 0%, transparent 70%),
-                radial-gradient(ellipse 60% 80% at 80% 70%, #0d1018 0%, transparent 70%);
         }
 
         /* ── Canvas partículas ── */
@@ -240,10 +211,6 @@
         .field-input:-webkit-autofill:focus {
             -webkit-text-fill-color: var(--text);
             -webkit-box-shadow: 0 0 0 1000px rgba(240,245,255,.9) inset;
-        }
-        html.vscode-dark .field-input:-webkit-autofill,
-        html.vscode-dark .field-input:-webkit-autofill:focus {
-            -webkit-box-shadow: 0 0 0 1000px #1a1d26 inset;
         }
 
         .pw-input { padding-right: 42px; }
