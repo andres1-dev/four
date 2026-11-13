@@ -16,7 +16,7 @@ async function processCSV() {
     }
 
     const file = fileInput.files[0];
-    const ext  = file.name.split('.').pop().toLowerCase();
+    const ext = file.name.split('.').pop().toLowerCase();
 
     // ── Excel: delegar a excel-processor ──
     if (ext === 'xlsx' || ext === 'xls') {
@@ -163,7 +163,7 @@ async function processCSVData(rows) {
         // CSV siempre corresponde a Universo.
         // Cambiar proveedor activo ANTES de cargar datos para que loadColoresData
         // y loadHistoricasData usen el filtro correcto desde el inicio.
-        const UNIVERSO_ID     = '900616124';
+        const UNIVERSO_ID = '900616124';
         const UNIVERSO_NOMBRE = 'TEXTILES Y CREACIONES EL UNIVERSO SAS';
         const actual = (typeof getProveedorActivo === 'function') ? getProveedorActivo() : null;
         const cambiandoProveedor = !actual || actual.id !== UNIVERSO_ID;
@@ -182,13 +182,13 @@ async function processCSVData(rows) {
         // para garantizar que estén disponibles ANTES de validar el CSV.
         if (cambiandoProveedor) {
             await Promise.all([
-                typeof loadColoresData    === 'function' ? loadColoresData()    : Promise.resolve(),
+                typeof loadColoresData === 'function' ? loadColoresData() : Promise.resolve(),
                 typeof loadHistoricasData === 'function' ? loadHistoricasData() : Promise.resolve(),
             ]);
             Logger.info('data-processing', `✅ Colores e históricos recargados para Universo`);
-            if (typeof showMessage          === 'function') showMessage(`Proveedor cambiado a ${UNIVERSO_NOMBRE}`, 'info', 2500);
+            if (typeof showMessage === 'function') showMessage(`Proveedor cambiado a ${UNIVERSO_NOMBRE}`, 'info', 2500);
             if (typeof updateProveedorIndicator === 'function') updateProveedorIndicator();
-            if (typeof updateDataStats          === 'function') updateDataStats();
+            if (typeof updateDataStats === 'function') updateDataStats();
         }
 
         Logger.info('data-processing', `Datos cargados bajo demanda para ${lotesEnCsv.size} lotes del CSV`);
@@ -271,19 +271,19 @@ async function processCSVData(rows) {
         const prData = prDataMap.get(prKey);
 
         const { prenda: extractedPrenda, genero: extractedGenero } = extractPrendaGeneroFromDescripcion(descripcionLarga);
-        
+
         // Intentar traer datos de SISPROWEB si existen
         const sisproInfo = (window.sisproMap && window.sisproMap.has(op)) ? window.sisproMap.get(op) : null;
-        
+
         if (sisproInfo) {
             Logger.info('data-processing', `✅ OP ${op} encontrada en SISPRO: Linea=${sisproInfo.LINEA}`);
         } else {
             Logger.warn('data-processing', `❓ OP ${op} NO encontrada en SISPRO (${window.sisproMap?.size || 0} registros cargados)`);
         }
-        
+
         const prenda = sisproInfo?.PRENDA || extractedPrenda || normalizeText(row[23] || '');
         const genero = sisproInfo?.GENERO || extractedGenero;
-        
+
         // LÍNEA: Prioridad 1: SISPRO (tabla master), Prioridad 2: fallback por NIT del proveedor
         let linea = sisproInfo?.LINEA || '';
         if (!linea) {
@@ -309,12 +309,12 @@ async function processCSVData(rows) {
         } else {
             // Cálculos directos (sin cache)
             const estado = validarEstado(op, formatDate(row[4]), (row[19] || '').toString().trim());
-            
+
             // NUEVA LÓGICA: Validar parciales usando columna S (JSON) de DATA2
             const totalGeneral = row[19] || '';
             const trasladoNum = extractTrasladoNumber(row[7] || '');
             const validacionParcial = validarEstadoParcial(op, trasladoNum, totalGeneral, cantidad);
-            
+
             // Si es rechazado, agregar a errores y continuar
             if (validacionParcial.rechazar) {
                 Logger.warn('data-processing', `OP ${op} rechazada: ${validacionParcial.tipo} - ${validacionParcial.mensaje}`);
@@ -324,10 +324,10 @@ async function processCSVData(rows) {
                 opErrors.get(op).push(validacionParcial.mensaje);
                 continue;
             }
-            
+
             const opConSufijo = validacionParcial.sufijo;
             const esParcial = validacionParcial.esParcial;
-            
+
             const pvp = getPvp(referencia);
             const marca = getMarca(genero);
             const clase = getClaseByPVP(pvp);

@@ -5,9 +5,9 @@ window.printingClientesCache = null;
 // Clientes especiales que se manejan como anexos de tipo "CLIENTE"
 const PRINT_CLIENTES_ESPECIALES = {
     "ESTEBAN": { nombre: "Esteban", nit: "1007348825" },
-    "JESUS":   { nombre: "Jesús",   nit: "70825517" },
-    "ALEX":    { nombre: "Alex",    nit: "14838951" },
-    "RUBEN":   { nombre: "Ruben",   nit: "901920844" }
+    "JESUS": { nombre: "Jesús", nit: "70825517" },
+    "ALEX": { nombre: "Alex", nit: "14838951" },
+    "RUBEN": { nombre: "Ruben", nit: "901920844" }
 };
 
 // ============================================
@@ -59,14 +59,14 @@ async function print_getClientes() {
             if (id) {
                 map[id] = {
                     id,
-                    razonSocial:  row.razon_social  || '',
-                    nombreCorto:  row.nombre_corto  || '',
-                    tipoCliente:  row.tipo_cliente  || '',
-                    estado:       row.estado ? 'ACTIVO' : 'INACTIVO',
-                    direccion:    row.direccion     || '',
-                    telefono:     row.telefono      || '',
-                    email:        row.email         || '',
-                    tipoEmpresa:  row.tipo_empresa  || ''
+                    razonSocial: row.razon_social || '',
+                    nombreCorto: row.nombre_corto || '',
+                    tipoCliente: row.tipo_cliente || '',
+                    estado: row.estado ? 'ACTIVO' : 'INACTIVO',
+                    direccion: row.direccion || '',
+                    telefono: row.telefono || '',
+                    email: row.email || '',
+                    tipoEmpresa: row.tipo_empresa || ''
                 };
             }
         });
@@ -88,7 +88,7 @@ function print_mergeLoteData(registros, clientesMap) {
     fulls.forEach(full => {
         // Clonar para evitar mutaciones
         const principal = JSON.parse(JSON.stringify(full));
-        
+
         // HR y consolidación
         const hrMap = new Map();
         const rawHR = Array.isArray(principal.hr) ? principal.hr : [];
@@ -112,9 +112,9 @@ function print_mergeLoteData(registros, clientesMap) {
                     const cant = Number(h.cantidad) || 0;
                     totalCantidad += cant;
                     return {
-                        codigo:   String(h.codigo_color || '').trim(),
-                        color:    String(h.color || '').trim(),
-                        talla:    String(h.talla || '').trim(),
+                        codigo: String(h.codigo_color || '').trim(),
+                        color: String(h.color || '').trim(),
+                        talla: String(h.talla || '').trim(),
                         cantidad: cant
                     };
                 });
@@ -138,11 +138,11 @@ function print_mergeLoteData(registros, clientesMap) {
                     if (hrMap.has(key)) {
                         hrMap.get(key).cantidad += cant;
                     } else {
-                        hrMap.set(key, { 
+                        hrMap.set(key, {
                             codigo_color: String(h.codigo_color || '').trim(),
                             color: String(h.color || '').trim(),
                             talla: String(h.talla || '').trim(),
-                            cantidad: cant 
+                            cantidad: cant
                         });
                     }
                     totalCantidad += cant;
@@ -157,15 +157,15 @@ function print_mergeLoteData(registros, clientesMap) {
                 const cant = Number(h.cantidad) || 0;
                 // Si no es PROMO (que ya sumó arriba), sumar a la cantidad total
                 if (nombreAnexo !== 'PROMO') totalCantidad += cant;
-                
+
                 anexosNormales.push({
                     DOCUMENTO: anexo.refprov || '',
-                    CODIGO:    h.codigo_color || '',
-                    COLOR:     h.color || '',
-                    TALLA:     h.talla || '',
-                    TIPO:      nombreAnexo,
-                    CANTIDAD:  cant,
-                    REC:       anexo.id_ingreso || ''
+                    CODIGO: h.codigo_color || '',
+                    COLOR: h.color || '',
+                    TALLA: h.talla || '',
+                    TIPO: nombreAnexo,
+                    CANTIDAD: cant,
+                    REC: anexo.id_ingreso || ''
                 });
             });
 
@@ -173,19 +173,19 @@ function print_mergeLoteData(registros, clientesMap) {
             try {
                 const extra = typeof anexo.anexos === 'string' ? JSON.parse(anexo.anexos) : (Array.isArray(anexo.anexos) ? anexo.anexos : []);
                 if (extra.length > 0) anexosNormales.push(...extra);
-            } catch(e) {}
+            } catch (e) { }
         });
 
         // Actualizar datos del registro FULL
         principal.hr = Array.from(hrMap.values());
         principal.cantidad = totalCantidad;
-        
+
         // Unir con anexos que ya traía la columna 'anexos' de Supabase (si existen)
         let anexosBase = [];
         try {
             anexosBase = typeof principal.anexos === 'string' ? JSON.parse(principal.anexos) : (Array.isArray(principal.anexos) ? principal.anexos : []);
-        } catch(e) { anexosBase = []; }
-        
+        } catch (e) { anexosBase = []; }
+
         principal.anexos = [...anexosBase, ...anexosNormales];
         principal._clientesEspeciales = clientesEspecialesData;
 
@@ -219,7 +219,7 @@ async function print_fetchByIds(ids) {
 
     // 2. Identificar lotes para traer "hermanos" (anexos)
     const lotesUnicos = [...new Set(sisproData.map(r => r.lote).filter(l => l && l > 0))];
-    
+
     let allLoteData = [];
     if (lotesUnicos.length > 0) {
         const loteFilter = `(${lotesUnicos.join(',')})`;
@@ -253,7 +253,7 @@ async function print_fetchByIds(ids) {
     const distribucionesData = await supabase.request(`distribuciones?id_distribucion=in.${finalInFilter}&select=*`, { method: 'GET' });
 
     const distribucionesMap = {};
-    const colaboradorMap    = {};
+    const colaboradorMap = {};
     if (Array.isArray(distribucionesData)) {
         distribucionesData.forEach(row => {
             const doc = print_normalizeDocumento(row.id_distribucion);
@@ -268,7 +268,7 @@ async function print_fetchByIds(ids) {
     const resultadoFinal = [];
     mergedRecords.forEach(row => {
         const documento = print_normalizeDocumento(row.id_ingreso);
-        const rawPVP    = print_normalizePVP(row.pvp ? row.pvp.toString() : '');
+        const rawPVP = print_normalizePVP(row.pvp ? row.pvp.toString() : '');
 
         // Clientes de distribución (base de datos)
         let clientesEnriquecidos = {};
@@ -303,27 +303,28 @@ async function print_fetchByIds(ids) {
         }
 
         resultadoFinal.push({
-            DOCUMENTO:    documento,
-            REC:          documento,
-            FECHA:        print_normalizeDate(row.fecha_traslado),
-            TALLER:       row.taller    || '',
-            LINEA:        print_normalizeLinea(row.linea),
-            AUDITOR:      row.auditor   || '',
-            ESCANER:      row.escaner   || '',
-            LOTE:         row.lote      || 0,
-            REFPROV:      row.refprov   || '',
-            DESCRIPCIÓN:  row.descripcion || '',
-            DESCRIPCION:  row.descripcion || '',
-            CANTIDAD:     row.cantidad  || 0,
-            REFERENCIA:   row.referencia || '',
-            TIPO:         row.tipo      || 'FULL',
-            PVP:          rawPVP,
-            PRENDA:       row.prenda    || '',
-            GENERO:       row.genero    || '',
-            GESTOR:       row.gestor    || '',
-            PROVEEDOR:    row.proveedor || '',
-            CLASE:        row.clase     || print_getClaseByPVP(rawPVP),
-            HR:           (row.hr || []).map(h => ({
+            DOCUMENTO: documento,
+            REC: documento,
+            FECHA: print_normalizeDate(row.fecha_traslado),
+            TALLER: row.taller || '',
+            LINEA: print_normalizeLinea(row.linea),
+            AUDITOR: row.auditor || '',
+            ESCANER: row.escaner || '',
+            LOTE: row.lote || 0,
+            REFPROV: row.refprov || '',
+            DESCRIPCIÓN: row.descripcion || '',
+            DESCRIPCION: row.descripcion || '',
+            DESCRIPCION_LARGA: row.descripcion_larga || '',
+            CANTIDAD: row.cantidad || 0,
+            REFERENCIA: row.referencia || '',
+            TIPO: row.tipo || 'FULL',
+            PVP: rawPVP,
+            PRENDA: row.prenda || '',
+            GENERO: row.genero || '',
+            GESTOR: row.gestor || '',
+            PROVEEDOR: row.proveedor || '',
+            CLASE: row.clase || print_getClaseByPVP(rawPVP),
+            HR: (row.hr || []).map(h => ({
                 codigo_color: h.codigo_color || '',
                 color: h.color || '',
                 talla: h.talla || '',
@@ -331,13 +332,13 @@ async function print_fetchByIds(ids) {
                 referencia: h.referencia || '',
                 descripcion: h.descripcion || ''
             })),
-            ANEXOS:       row.anexos || [],
-            FUENTE:       'SUPABASE',
-            COLABORADOR:  colaboradorMap[documento] || '',
-            CLIENTES:     clientesEnriquecidos,
+            ANEXOS: row.anexos || [],
+            FUENTE: 'SUPABASE',
+            COLABORADOR: colaboradorMap[documento] || '',
+            CLIENTES: clientesEnriquecidos,
             DISTRIBUCION: {
-                Documento:   documento,
-                Clientes:    clientesEnriquecidos,
+                Documento: documento,
+                Clientes: clientesEnriquecidos,
                 Colaborador: colaboradorMap[documento] || ''
             }
         });
@@ -383,7 +384,7 @@ async function print_fetchByIds(ids) {
 // ============================================
 
 async function print_cargarDatos() {
-    const loader          = document.getElementById('printLoader');
+    const loader = document.getElementById('printLoader');
     const resultContainer = document.getElementById('printResultContainer');
 
     if (loader) loader.style.display = 'block';
