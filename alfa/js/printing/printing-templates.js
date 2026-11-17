@@ -63,7 +63,7 @@ function print_imprimirLoteDocumentos(listaProcesada, titulo = null) {
 
     // Registrar en la página principal la función que abrirá las pestañas hijas
     // para que todos los window.open salgan del origen con permisos ya concedidos
-    window._iniciarSecuenciaDesdeOpener = function(items, ventanaLote) {
+    window._iniciarSecuenciaDesdeOpener = function (items, ventanaLote) {
         let index = 0;
 
         function abrirSiguiente() {
@@ -71,7 +71,7 @@ function print_imprimirLoteDocumentos(listaProcesada, titulo = null) {
                 delete window._imprimirSiguiente;
                 delete window._iniciarSecuenciaDesdeOpener;
                 if (ventanaLote && !ventanaLote.closed) ventanaLote.close();
-                
+
                 // Limpiar el input de impresión al terminar la secuencia
                 limpiarInputImpresion();
                 return;
@@ -200,21 +200,21 @@ function print_generarContenidoInterno(datos, options = {}) {
     const proveedorNombre = datos.PROVEEDOR || '';
     if (!isModoCliente) {
         // Mapeo de nombres de proveedores a NITs
-        if (proveedorNombre.includes("TEXTILES Y CREACIONES EL UNIVERSO") || 
+        if (proveedorNombre.includes("TEXTILES Y CREACIONES EL UNIVERSO") ||
             proveedorNombre.includes("UNIVERSO")) {
             proveedorId = "900616124";
-        } else if (proveedorNombre.includes("TEXTILES Y CREACIONES LOS ANGELES") || 
-                   proveedorNombre.includes("ANGELES")) {
+        } else if (proveedorNombre.includes("TEXTILES Y CREACIONES LOS ANGELES") ||
+            proveedorNombre.includes("ANGELES")) {
             proveedorId = "900692469";
         } else if (proveedorNombre.includes("INVERSIONES URBANA")) {
             proveedorId = "901920844";
         }
-        
+
         // Si no se encontró el proveedor por nombre, intentar buscar en clientesMap
         // (algunos proveedores pueden estar registrados como clientes)
         if (!proveedorId && typeof window.clientesMap !== 'undefined') {
             for (const [nit, cliente] of window.clientesMap.entries()) {
-                if (cliente.RAZON_SOCIAL && 
+                if (cliente.RAZON_SOCIAL &&
                     proveedorNombre.toUpperCase().includes(cliente.RAZON_SOCIAL.toUpperCase())) {
                     proveedorId = nit;
                     break;
@@ -238,7 +238,7 @@ function print_generarContenidoInterno(datos, options = {}) {
                 <div class="title-section">
                     <div class="main-title">Separación de terceros para:</div>
                     <div class="provider-name">${isModoCliente ? (clienteData.razonSocial || clienteNombre) : (datos.PROVEEDOR || 'Proveedor no especificado')}</div>
-                    <div class="subtitle">${datos.DESCRIPCION || 'Sin descripción'}</div>
+                    <div class="subtitle">${datos.DESCRIPCION_LARGA || datos.DESCRIPCION || 'Sin descripción'}</div>
                 </div>
                 
                 <div class="info-grid">

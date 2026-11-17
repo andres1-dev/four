@@ -65,7 +65,7 @@ async function print_mostrarOpcionesImpresion() {
     print_showLoading(`Cargando REC ${ids[0]}...`);
 
     try {
-        const datos    = await print_fetchByIds(ids);
+        const datos = await print_fetchByIds(ids);
         const resultado = datos.find(item => item.REC == ids[0]);
 
         if (!resultado) {
@@ -103,7 +103,7 @@ async function print_mostrarOpcionesImpresion() {
             Object.keys(resultado.DISTRIBUCION.Clientes).forEach(cliente => {
                 html += `
                             <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
-                                <input type="checkbox" id="impCliente_${cliente.replace(/\s+/g,'_')}" class="opcion-impresion">
+                                <input type="checkbox" id="impCliente_${cliente.replace(/\s+/g, '_')}" class="opcion-impresion">
                                 Cliente: ${cliente}
                             </label>`;
             });
@@ -147,7 +147,7 @@ function print_confirmarImpresionSelectiva(recBuscado) {
 
     if (resultado.DISTRIBUCION?.Clientes) {
         Object.keys(resultado.DISTRIBUCION.Clientes).forEach(cliente => {
-            const cb = document.getElementById(`impCliente_${cliente.replace(/\s+/g,'_')}`);
+            const cb = document.getElementById(`impCliente_${cliente.replace(/\s+/g, '_')}`);
             if (cb?.checked) elementsToPrint.push({ datos: resultado, options: { modo: 'cliente', clienteNombre: cliente } });
         });
     }
@@ -171,14 +171,14 @@ async function print_buscarLoteRECs() {
     print_showLoading(`Cargando ${ids.length} documento(s)...`);
 
     try {
-        const datos    = await print_fetchByIds(ids);
+        const datos = await print_fetchByIds(ids);
         const foundItems = [];
-        const notFound   = [];
+        const notFound = [];
 
         ids.forEach(id => {
             const r = datos.find(item => item.REC == id);
             if (r) foundItems.push({ datos: r, options: { modo: 'completo', soloImpresionPrincipal: true } });
-            else   notFound.push(id);
+            else notFound.push(id);
         });
 
         if (foundItems.length) print_imprimirLoteDocumentos(foundItems, 'Impresión Múltiple');
@@ -211,9 +211,9 @@ async function print_imprimirSoloClientes() {
     print_showLoading(`Cargando clientes de REC ${ids[0]}...`);
 
     try {
-        const datos     = await print_fetchByIds(ids);
+        const datos = await print_fetchByIds(ids);
         const resultado = datos.find(item => item.REC == ids[0]);
-        const errores   = [];
+        const errores = [];
         const itemsParaLote = [];
 
         if (!resultado) {
