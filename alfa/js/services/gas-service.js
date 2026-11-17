@@ -1,7 +1,6 @@
 // ============================================================
 // ESPEJO SUPABASE → GOOGLE SHEETS
-// // HOJA PRINCIPAL (Código antiguo): 1O67ydfwQCnW-J-xDwzkghTFUMX9KF4tqizKLCJrz9LM
-// // HOJA NUEVA (Backup): 1iXIv5e_CqI25ahuWd4-rfxDfOFnk5N7-8QUoyuW9Rtc
+// Libro: 1O67ydfwQCnW-J-xDwzkghTFUMX9KF4tqizKLCJrz9LM
 // ============================================================
 
 /**
@@ -63,72 +62,6 @@ function saveDistribucionToSheets(record) {
         xhr.send(params.toString());
     });
 }
-
-/**
- * Elimina un ingreso del espejo de Google Sheets.
- * @param {string} idIngreso 
- * @param {string} productora 
- */
-function deleteIngresoFromSheets(idIngreso, productora = '') {
-    return new Promise((resolve) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', GAS_SHEETS_URL, true);
-        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-        xhr.timeout = 15000;
-
-        xhr.onload = function () {
-            try {
-                const res = JSON.parse(xhr.responseText);
-                Logger.info('gas-service', `Ingreso eliminado en Sheets: ${idIngreso}`);
-                resolve({ success: true, ...res });
-            } catch (e) {
-                resolve({ success: true });
-            }
-        };
-        xhr.onerror = () => { Logger.warn('gas-service', 'Error conexión GAS Sheets al eliminar ingreso'); resolve({ success: false }); };
-        xhr.ontimeout = () => { Logger.warn('gas-service', 'Timeout GAS Sheets al eliminar ingreso'); resolve({ success: false }); };
-
-        const params = new URLSearchParams();
-        params.append('action', 'eliminarIngreso');
-        params.append('datos', JSON.stringify({ id_ingreso: idIngreso, productora: productora }));
-        xhr.send(params.toString());
-    });
-}
-
-/**
- * Elimina una distribución del espejo de Google Sheets.
- * @param {string} idDistribucion 
- * @param {string} productora 
- */
-function deleteDistribucionFromSheets(idDistribucion, productora = '') {
-    return new Promise((resolve) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', GAS_SHEETS_URL, true);
-        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-        xhr.timeout = 15000;
-
-        xhr.onload = function () {
-            try {
-                const res = JSON.parse(xhr.responseText);
-                Logger.info('gas-service', `Distribución eliminada en Sheets: ${idDistribucion}`);
-                resolve({ success: true, ...res });
-            } catch (e) {
-                resolve({ success: true });
-            }
-        };
-        xhr.onerror = () => { Logger.warn('gas-service', 'Error conexión GAS Sheets al eliminar distribución'); resolve({ success: false }); };
-        xhr.ontimeout = () => { Logger.warn('gas-service', 'Timeout GAS Sheets al eliminar distribución'); resolve({ success: false }); };
-
-        const params = new URLSearchParams();
-        params.append('action', 'eliminarDistribucion');
-        params.append('datos', JSON.stringify({ id_distribucion: idDistribucion, productora: productora }));
-        xhr.send(params.toString());
-    });
-}
-
-// Exports
-window.deleteIngresoFromSheets = deleteIngresoFromSheets;
-window.deleteDistribucionFromSheets = deleteDistribucionFromSheets;
 
 // ============================================================
 
@@ -244,4 +177,4 @@ async function relacionarDesdeSheets({ idIngreso, fechaInicio, fechaFin, product
     }
 }
 
-window.relacionarDesdeSheets = relacionarDesdeSheets;
+window.relacionarDesdeSheets = relacionarDesdeSheets;

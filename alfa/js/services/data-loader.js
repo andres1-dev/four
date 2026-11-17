@@ -133,41 +133,53 @@ async function loadPreciosData() {
 
 /**
  * Carga catálogo de productos desde la fuente configurada.
- * Consulta directo al proyecto master externo vía EF query-master.
- * Sin tabla local, sin sync, sin fallback.
- * @param {string[]} ops - OPs a buscar.
+ * Carga bajo demanda únicamente para las OPs especificadas que no estén ya en memoria.
+ * @param {string[]} [ops] - OPs a buscar.
  */
 async function loadSisproData(ops = []) {
     if (DATA_SOURCES.SISPROWEB === 'supabase') {
         try {
+            // Si no se pasaron OPs específicas, omitir carga masiva
             if (!ops || ops.length === 0) {
-                Logger.info('data-loader', 'loadSisproData: sin OPs, omitido');
+                Logger.info('data-loader', 'Carga masiva de master omitida al inicio (solo bajo demanda)');
                 return window.sisproMap;
             }
 
             const opsClean = [...new Set(ops.map(o => String(o).trim()).filter(Boolean))];
-            if (opsClean.length === 0) return window.sisproMap;
-
-            // Solo consultar las OPs que NO están ya en memoria
-            const missingInMemory = opsClean.filter(op => !window.sisproMap.has(op));
-            if (missingInMemory.length === 0) {
-                Logger.info('data-loader', `loadSisproData: ${opsClean.length} OPs ya en memoria`);
+            if (opsClean.length === 0) {
                 return window.sisproMap;
             }
 
-            Logger.info('data-loader', `loadSisproData: consultando ${missingInMemory.length} OPs en master externo...`);
+            // Identificar qué OPs de la lista NO están en el mapa en memoria
+            const missingInMemory = opsClean.filter(op => !window.sisproMap.has(op));
 
-            // EF query-master — directo al proyecto secundario, solo trae LINEA
-            const result = await loadSisprowebFromSupabase(missingInMemory);
+            if (missingInMemory.length === 0) {
+                return window.sisproMap;
+            }
 
-            // Agregar al mapa global sin borrar lo anterior
+            Logger.info('data-loader', `Consultando ${missingInMemory.length} OPs faltantes en catálogo master local...`);
+            let result = await loadSisprowebFromSupabase(missingInMemory);
+
+            // Verificar si alguna OP requerida no existe en la tabla master local de Supabase
+            const stillMissing = missingInMemory.filter(op => !result.has(op));
+
+            if (stillMissing.length > 0 && typeof syncMasterEdgeFunction === 'function') {
+                Logger.info('data-loader', `${stillMissing.length} OPs no encontradas en master local. Sincronizando con servidor remoto (sync-master)...`);
+                const syncRes = await syncMasterEdgeFunction();
+                if (syncRes && syncRes.success) {
+                    const extraRes = await loadSisprowebFromSupabase(stillMissing);
+                    extraRes.forEach((value, key) => {
+                        result.set(key, value);
+                    });
+                }
+            }
+
+            // Agregar OPs encontradas al mapa global sisproMap sin borrar las anteriores
             result.forEach((value, key) => {
                 window.sisproMap.set(key, value);
             });
 
-            Logger.success('data-loader', `loadSisproData: ${result.size} OPs nuevas en sisproMap (total: ${window.sisproMap.size})`);
             return window.sisproMap;
-
         } catch (error) {
             Logger.error('data-loader', 'Error en loadSisproData', error);
             return window.sisproMap;
@@ -213,11 +225,10 @@ async function loadHistoricasData() {
  * Carga OPs confirmadas desde `ingresos` en Supabase,
  * filtrando por el proveedor activo (productora).
  * @param {string[]} [lotes] - Lotes a buscar. Si está vacío, retorna mapas vacíos.
- * @param {string[]} [ids]   - IDs de ingreso adicionales (Excel NUMDOC). Se pasan al RPC junto con lotes.
  */
-async function loadData2Data(lotes = [], ids = []) {
+async function loadData2Data(lotes = []) {
     try {
-        const { data2Map, data2CountMap, data2JsonMap } = await loadData2FromSupabase(lotes, ids);
+        const { data2Map, data2CountMap, data2JsonMap } = await loadData2FromSupabase(lotes);
 
         // Actualizar variables globales
         window.data2Map      = data2Map;
@@ -849,43 +860,18 @@ Logger.info('data-loader', 'Adaptador híbrido inicializado - Fuentes configurad
 
 
 /**
- * Carga códigos de barras SOLO para las refprovs dadas (on-demand).
- * Reemplaza la carga masiva loadBarrasFromSupabase() al subir archivos.
- * @param {string[]} refprovs - Referencias de proveedor presentes en el archivo
- */
-async function loadBarrasOnDemand(refprovs = []) {
-    if (!refprovs || refprovs.length === 0) return window.barrasMap || new Map();
-
-    try {
-        Logger.info('data-loader', `BARRAS on-demand: ${refprovs.length} refprovs...`);
-        const result = typeof loadBarrasByRefprovs === 'function'
-            ? await loadBarrasByRefprovs(refprovs)
-            : new Map();
-
-        if (typeof window.barrasMap !== 'undefined') {
-            window.barrasMap.clear();
-            result.forEach((value, key) => { window.barrasMap.set(key, value); });
-        } else {
-            window.barrasMap = result;
-        }
-        return window.barrasMap;
-    } catch (error) {
-        Logger.warn('data-loader', 'Error en loadBarrasOnDemand, barras vacías', error);
-        return window.barrasMap || new Map();
-    }
-}
-
-/**
- * Carga COMPLETA de códigos de barras (solo para uso admin/mantenimiento).
- * Durante el procesamiento de archivos usar loadBarrasOnDemand().
+ * Carga códigos de barras desde la fuente configurada
  */
 async function loadBarrasData() {
-    Logger.info('data-loader', 'Cargando BARRAS completas desde Supabase...');
+    Logger.info('data-loader', 'Cargando BARRAS desde Supabase...');
     const result = await loadBarrasFromSupabase();
     
+    // Actualizar mapa global SIN reemplazarlo (mantener la referencia)
     if (typeof window.barrasMap !== 'undefined') {
         window.barrasMap.clear();
-        result.forEach((value, key) => { window.barrasMap.set(key, value); });
+        result.forEach((value, key) => {
+            window.barrasMap.set(key, value);
+        });
     } else {
         window.barrasMap = result;
     }
@@ -893,6 +879,5 @@ async function loadBarrasData() {
     return window.barrasMap;
 }
 
-// Exports
-window.loadBarrasData      = loadBarrasData;
-window.loadBarrasOnDemand  = loadBarrasOnDemand;
+// Export
+window.loadBarrasData = loadBarrasData;

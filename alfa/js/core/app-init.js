@@ -28,17 +28,22 @@ async function loadDataFromSheets(silent = false) {
             window.initProveedorSelector();
         }
 
-        // UN SOLO Promise.all — solo tablas de configuración ligeras + pedidos
-        // COLORES, PRECIOS, HISTORICAS, BARRAS y GLOBAL MAPS ya NO se cargan al inicio.
-        // Se cargan estrictamente ON-DEMAND cuando el usuario sube un archivo (CSV o Excel).
+        // UN SOLO Promise.all — todas las tablas en paralelo simultáneo
         const [pedidos] = await Promise.all([
             // Pedidos - CRÍTICO para distribución, debe cargarse síncronamente
             loadPedidosData(),
-            // Config (pequeñas, rápidas) — siempre necesarias para validar escaners
+            // Config (pequeñas, rápidas)
             loadUsuariosData(),
             loadProveedoresData(),
             loadAuditoresData(),
-            loadGestoresData()
+            loadGestoresData(),
+            // Datos operativos
+            loadColoresData(),
+            loadBarrasData(),
+            loadPreciosData(),
+            loadHistoricasData(),
+            // Tablas globales del proyecto secundario
+            loadGlobalMaps().catch(err => Logger.warn('app-init', 'Tablas globales no disponibles', err))
         ]);
 
         // Inicializar pedidosMap global inmediatamente con los datos cargados
@@ -49,7 +54,7 @@ async function loadDataFromSheets(silent = false) {
         loadClientesData().catch(err => Logger.warn('app-init', 'Clientes no cargados en background', err))
             .then(() => updateDataStats());
 
-        Logger.info('app-init', 'Configuración base cargada. Colores/precios/historicas/barras se cargarán al subir un archivo.');
+        Logger.info('app-init', 'Datos base cargados. Módulos se cargarán bajo demanda.');
 
         // Cargar opciones dinámicas en los selects
         if (typeof loadAllDynamicOptions === 'function') {
@@ -81,28 +86,31 @@ async function loadDataFromSheets(silent = false) {
 
 /**
  * Recarga SOLO los datos necesarios después de guardar una OP.
- * Solo recarga DATA2 para los lotes del archivo actual (on-demand),
- * y actualiza los módulos de distribución e impresión si están activos.
+ * Optimización: No recarga hojas que no cambian (COLORES, PRECIOS, HISTORICAS, SISPROWEB, CLIENTES, CONFIG).
+ * Solo recarga DATA2 (para ver la OP como CONFIRMADA) y módulos dependientes (Distribución, Impresión).
  */
 async function loadDataAfterSave(silent = true) {
     updateStatus('Sincronizando datos...', 'loading');
 
     try {
-        // Recargar DATA2 solo para los lotes que están en el CSV/Excel actual en memoria
-        const lotesActuales = (typeof processedData !== 'undefined' && Array.isArray(processedData))
-            ? [...new Set(processedData.map(d => String(d.OP || '').trim()).filter(Boolean))]
-            : [];
-        await loadData2Data(lotesActuales);
+        // Solo recargar DATA2 (ingresos confirmados — la única tabla que cambió al guardar la OP)
+        await loadData2Data();
 
-        // Si el módulo de distribución está activo, refrescarlo (no recarga datos masivos)
+        // Si el módulo de distribución está activo, recargarlo
         if (window.distributionModuleLoaded) {
             await initializeDistribution();
         }
 
-        // El módulo de impresión es 100% on-demand — no necesita recarga global
-        // Solo se refresca si el usuario busca un REC específico.
+        // Si el módulo de impresión está activo, recargarlo
+        if (window.printingModuleLoaded) {
+            await print_cargarDatos().catch(err => {
+                console.error("Error cargando módulo de impresión:", err);
+            });
+        }
 
+        // Actualizar stats
         updateDataStats();
+
         updateStatus('Datos sincronizados', 'success');
 
         if (!silent) {
@@ -117,15 +125,25 @@ async function loadDataAfterSave(silent = true) {
 }
 
 /**
- * Carga datos necesarios para el procesador CSV y OPs pendientes.
- * Solo se llaman precios/colores/historicas/barras cuando hay un archivo ya parseado.
- * Esta función existe para compatibilidad; la carga real la hace processCSVData on-demand.
+ * Carga datos necesarios para el procesador CSV y OPs pendientes
  */
 async function loadProcessorModuleData() {
     if (window.processorModuleLoaded) return;
-    // Nada que precargar — todo se hace on-demand al subir el archivo
-    window.processorModuleLoaded = true;
-    Logger.info('app-init', 'Módulo procesador listo (carga on-demand al subir archivo)');
+    
+    const loading = showQuickLoading('Cargando datos del procesador...');
+    try {
+        await Promise.all([
+            loadPreciosData()
+        ]);
+        window.processorModuleLoaded = true;
+        updateDataStats();
+        Logger.info('app-init', 'Módulo procesador cargado');
+    } catch (error) {
+        Logger.error('app-init', 'Error cargando módulo procesador', error);
+        throw error;
+    } finally {
+        loading.close();
+    }
 }
 
 /**
@@ -153,21 +171,21 @@ async function loadDistributionModuleData() {
 }
 
 /**
- * Carga datos necesarios para el módulo de impresión.
- * La impresión es 100% on-demand: el usuario escribe un REC y se hace fetch.
- * No hay precarga global.
+ * Carga datos necesarios para el módulo de impresión
  */
 async function loadPrintingModuleData() {
     if (window.printingModuleLoaded) return;
     
-    const loading = showQuickLoading('Inicializando módulo de impresión...');
+    const loading = showQuickLoading('Cargando datos de impresión...');
     try {
-        await print_cargarDatos();
+        await Promise.all([
+            print_cargarDatos()
+        ]);
         window.printingModuleLoaded = true;
         updateDataStats();
-        Logger.info('app-init', 'Módulo impresión inicializado (búsqueda on-demand)');
+        Logger.info('app-init', 'Módulo impresión cargado');
     } catch (error) {
-        Logger.error('app-init', 'Error inicializando módulo impresión', error);
+        Logger.error('app-init', 'Error cargando módulo impresión', error);
         throw error;
     } finally {
         loading.close();
@@ -195,18 +213,16 @@ async function loadOrdersModuleData() {
 
 function updateDataStats() {
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-    // Usar optional chaining — estos mapas pueden estar vacíos al arranque (carga on-demand)
-    set('stat-colores',     window.coloresMap?.size    ?? 0);
-    set('stat-ops',         window.data2Map?.size      ?? 0);
-    set('stat-master',      window.sisproMap?.size     ?? 0);
-    set('stat-precios',     window.preciosMap?.size    ?? 0);
-    set('stat-productos',   window.barrasMap?.size     ?? 0);
-    set('stat-clientes',    window.clientesMap?.size   ?? 0);
-    set('stat-usuarios',    window.escanersMap?.size   ?? escanersMap?.size ?? 0);
-    set('stat-proveedores', window.proveedoresMap?.size ?? proveedoresMap?.size ?? 0);
-    set('stat-auditores',   window.auditoresMap?.size  ?? auditoresMap?.size  ?? 0);
-    set('stat-gestores',    window.gestoresMap?.size   ?? gestoresMap?.size   ?? 0);
-    set('stat-talleres',    window.globalTalleresMap?.size ?? 0);
+    set('stat-colores',   coloresMap.size);
+    set('stat-ops',       data2Map.size);
+    set('stat-master',    window.sisproMap?.size || 0);
+    set('stat-precios',   preciosMap.size);
+    set('stat-productos', barrasMap.size);  // Códigos de barras
+    set('stat-clientes',  clientesMap.size);
+    set('stat-usuarios',  escanersMap.size);
+    set('stat-proveedores', proveedoresMap.size);
+    set('stat-auditores', auditoresMap.size);
+    set('stat-gestores',  gestoresMap.size);
 }
 
 // ============================================

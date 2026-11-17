@@ -106,22 +106,13 @@ function setupPendientesSection(pendientes) {
     const buildOption = (grupo) => {
         const diferencia = grupo.total - grupo.cantidad;
         const option = document.createElement('option');
-        option.value = grupo.opSufijo || grupo.op;
-        option.dataset.op = grupo.op;
+        option.value = grupo.op;
         const primerItem = grupo.items[0];
         
         // Validar color — para BUSINT/Excel el COD_COLOR es código de barras, no está en coloresMap → siempre válido
         const tieneColor = primerItem.FUENTE === 'BUSINT'
             || !primerItem.COD_COLOR
             || coloresMap.has(primerItem.COD_COLOR.trim());
-
-        // Detectar si la OP tiene múltiples referencias discordantes en PRIMERAS (Posible REFVAR)
-        // La alerta de REFVAR aplica exclusivamente a PRIMERAS; Promociones tiene su propia referencia
-        const itemsPrimeras = grupo.items.filter(i => (i.BODEGA || '').trim().toUpperCase() === 'PRIMERAS');
-        const refsEnPrimeras = new Set(itemsPrimeras.map(i => (i.REFERENCIA || '').trim()).filter(Boolean));
-        const esPosibleRefVar = refsEnPrimeras.size > 1 || refsEnPrimeras.has('REFVAR') || itemsPrimeras.some(i => i.REFPROV === 'REFVAR');
-        const refPrimeras = itemsPrimeras.find(i => (i.REFERENCIA || '').trim())?.REFERENCIA || grupo.referencia || '';
-        const refAMostrar = esPosibleRefVar ? 'REFVAR' : refPrimeras;
 
         if (!tieneColor) {
             option.disabled = true;
@@ -130,24 +121,12 @@ function setupPendientesSection(pendientes) {
             let icono = '';
             if (grupo.esParcial) icono = '↳ ';
             else if (diferencia === 0) icono = '✔ ';
-
+            
             const diferenciaTexto = diferencia !== 0 ? ` ${diferencia > 0 ? '-' : '+'}${Math.abs(diferencia)}` : '';
-            option.textContent = `${icono}OP: ${grupo.opSufijo} | ${grupo.fecha} | ${refAMostrar} | ${grupo.prenda} | ${grupo.usuario} | ${grupo.cantidad}/${grupo.total}${diferenciaTexto}`;
+            
+            option.textContent = `${icono}OP: ${grupo.opSufijo} | ${grupo.fecha} | ${grupo.referencia} | ${grupo.prenda} | ${grupo.usuario} | ${grupo.cantidad}/${grupo.total}${diferenciaTexto}`;
         }
         
-        // Estilo sutil si es posible REFVAR (fila rojo claro, letra rojo oscuro, SIN bold, SIN emojis extra)
-        if (esPosibleRefVar) {
-            option.style.color = '#b71c1c';
-            option.style.backgroundColor = '#fde8e8';
-            option.style.fontWeight = 'normal';
-            option.classList.add('op-posible-refvar');
-            option.dataset.posibleRefvar = 'true';
-        } else {
-            option.style.color = '';
-            option.style.backgroundColor = '';
-            option.style.fontWeight = 'normal';
-        }
-
         // Agregar clase CSS para parciales
         if (grupo.esParcial) {
             option.classList.add('op-parcial');
@@ -167,56 +146,3 @@ function setupPendientesSection(pendientes) {
     const btn = document.getElementById('toggleParcialesBtn');
     if (btn) btn.style.display = 'none';
 }
-
-/**
- * Actualiza el texto y estilo de una OP en el selector cuando cambian sus referencias en el editor
- */
-function actualizarOpcionEnSelectOP(opNumero, esPosibleRefVar, refUnica) {
-    const selectOP = document.getElementById('selectOP');
-    if (!selectOP) return;
-
-    for (let i = 0; i < selectOP.options.length; i++) {
-        const option = selectOP.options[i];
-        if (option.value === opNumero || option.dataset?.op === opNumero || option.value.startsWith(opNumero + '.')) {
-            try {
-                const items = option.dataset.items ? JSON.parse(option.dataset.items) : [];
-                const primerItem = items[0] || {};
-                const cantidadTotal = items.reduce((s, it) => s + (parseInt(it.CANTIDAD) || 0), 0);
-                const totalOP = parseInt(primerItem.TOTAL) || 0;
-                const diferencia = totalOP - cantidadTotal;
-                const diferenciaTexto = diferencia !== 0 ? ` ${diferencia > 0 ? '-' : '+'}${Math.abs(diferencia)}` : '';
-                const opSufijo = primerItem.OP_SUFIJO || primerItem.OP || opNumero;
-                const fecha = primerItem.FECHA || '';
-                const prenda = primerItem.PRENDA || '';
-                const usuario = primerItem.USUARIO || '';
-                const esParcial = option.dataset.parcial === 'true';
-
-                let icono = '';
-                if (esParcial) icono = '↳ ';
-                else if (diferencia === 0) icono = '✔ ';
-
-                const refTexto = esPosibleRefVar ? 'REFVAR' : (refUnica || primerItem.REFERENCIA || '');
-                option.textContent = `${icono}OP: ${opSufijo} | ${fecha} | ${refTexto} | ${prenda} | ${usuario} | ${cantidadTotal}/${totalOP}${diferenciaTexto}`;
-
-                if (esPosibleRefVar) {
-                    option.style.color = '#b71c1c';
-                    option.style.backgroundColor = '#fde8e8';
-                    option.style.fontWeight = 'normal';
-                    option.classList.add('op-posible-refvar');
-                    option.dataset.posibleRefvar = 'true';
-                } else {
-                    option.style.color = '';
-                    option.style.backgroundColor = '';
-                    option.style.fontWeight = 'normal';
-                    option.classList.remove('op-posible-refvar');
-                    delete option.dataset.posibleRefvar;
-                }
-            } catch (e) {
-                // Ignore parsing errors
-            }
-            break;
-        }
-    }
-}
-
-window.actualizarOpcionEnSelectOP = actualizarOpcionEnSelectOP;

@@ -298,12 +298,7 @@ async function confirmarEliminarIngreso(idIngreso, productora) {
         }
         if (typeof updateDataStats === 'function') updateDataStats();
 
-        // Espejo a Google Sheets (eliminar fila de ingresos en backup)
-        if (typeof deleteIngresoFromSheets === 'function') {
-            deleteIngresoFromSheets(idIngreso, productora).catch(err => console.warn('Error borrando en backup sheets:', err));
-        }
-
-        if (typeof showMessage === 'function') showMessage(`Registro '${idIngreso}' eliminado de Ingresos y Backup`, 'success', 2500);
+        if (typeof showMessage === 'function') showMessage(`Registro '${idIngreso}' eliminado de Ingresos`, 'success', 2500);
         ejecutarBusquedaGestionOp();
     } catch (err) {
         console.error('Error eliminando de ingresos:', err);
@@ -331,12 +326,7 @@ async function confirmarEliminarDistribucion(idDist, productora) {
 
         if (typeof updateDataStats === 'function') updateDataStats();
 
-        // Espejo a Google Sheets (eliminar fila de distribuciones en backup)
-        if (typeof deleteDistribucionFromSheets === 'function') {
-            deleteDistribucionFromSheets(idDist, productora).catch(err => console.warn('Error borrando distribución en backup sheets:', err));
-        }
-
-        if (typeof showMessage === 'function') showMessage(`Distribución '${idDist}' eliminada de Supabase y Backup`, 'success', 2500);
+        if (typeof showMessage === 'function') showMessage(`Distribución '${idDist}' eliminada`, 'success', 2500);
         ejecutarBusquedaGestionOp();
     } catch (err) {
         console.error('Error eliminando de distribuciones:', err);
@@ -369,15 +359,7 @@ async function confirmarEliminarAmbos(idIngreso, idDist, prodIngreso, prodDist) 
         }
         if (typeof updateDataStats === 'function') updateDataStats();
 
-        // Espejo a Google Sheets (eliminar ambas filas en backup)
-        if (typeof deleteIngresoFromSheets === 'function') {
-            deleteIngresoFromSheets(idIngreso, prodIngreso).catch(err => console.warn(err));
-        }
-        if (typeof deleteDistribucionFromSheets === 'function') {
-            deleteDistribucionFromSheets(idDist, prodDist).catch(err => console.warn(err));
-        }
-
-        if (typeof showMessage === 'function') showMessage(`Registros '${idIngreso}' y '${idDist}' eliminados de Supabase y Backup`, 'success', 3000);
+        if (typeof showMessage === 'function') showMessage(`Registros '${idIngreso}' y '${idDist}' eliminados`, 'success', 3000);
         ejecutarBusquedaGestionOp();
     } catch (err) {
         console.error('Error eliminando ambos registros:', err);

@@ -337,19 +337,16 @@ function generateMayoristasUI() {
 // ── Búsqueda on-demand con debounce ──────────────────────────────────────────
 let _searchDebounce = null;
 
-/**
- * onRecInputChange — ya NO dispara búsqueda automática al escribir.
- * Solo limpia la vista si se borra el campo.
- * La búsqueda ocurre al presionar Enter o hacer clic en el botón Buscar.
- */
 function onRecInputChange() {
+    clearTimeout(_searchDebounce);
     const recNumber = document.getElementById('recInput').value.trim();
     if (!recNumber) {
         setCurrentRecData(null);
         const resultDiv = document.getElementById('distribution-result');
-        if (resultDiv) resultDiv.innerHTML = `<div class="empty-state"><i class="fa-solid fa-chart-bar empty-icon"></i><h5>Sin datos para mostrar</h5><p>Ingrese un número de REC y presione Enter o el botón Buscar.</p></div>`;
+        if (resultDiv) resultDiv.innerHTML = `<div class="empty-state"><i class="fa-solid fa-chart-bar empty-icon"></i><h5>Sin datos para mostrar</h5><p>Ingrese un número de REC y configure la distribución para ver los resultados.</p></div>`;
+        return;
     }
-    // No hace fetch — espera Enter o botón
+    _searchDebounce = setTimeout(() => searchDistributionRec(), 400);
 }
 
 function searchDistributionRec() {
@@ -1531,21 +1528,22 @@ function setupRecInputKeyboardSupport() {
 
 // Separamos el manejador para poder removerlo fácilmente
 function handleRecInputKeyDown(event) {
+    // Aseguramos que currentValue sea un número, incluso si el input está vacío
     const recInput = event.target;
     let currentValue = parseInt(recInput.value, 10) || 0;
 
-    if (event.key === 'Enter') {
-        event.preventDefault();
-        searchDistributionRec();      // ← búsqueda on-demand al presionar Enter
-    } else if (event.key === 'ArrowUp') {
+    if (event.key === 'ArrowUp') {
         event.preventDefault();
         recInput.value = currentValue + 1;
-        // ArrowUp/Down solo cambia el valor, NO dispara búsqueda automática
+        // Disparamos el evento 'input' para que searchDistributionRec se ejecute
+        recInput.dispatchEvent(new Event('input', { bubbles: true }));
     } else if (event.key === 'ArrowDown') {
         event.preventDefault();
+        // Evitamos valores negativos
         const newValue = Math.max(0, currentValue - 1);
         if (newValue !== currentValue) {
             recInput.value = newValue;
+            recInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
     }
 }

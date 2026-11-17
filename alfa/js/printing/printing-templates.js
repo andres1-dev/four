@@ -238,7 +238,7 @@ function print_generarContenidoInterno(datos, options = {}) {
                 <div class="title-section">
                     <div class="main-title">Separación de terceros para:</div>
                     <div class="provider-name">${isModoCliente ? (clienteData.razonSocial || clienteNombre) : (datos.PROVEEDOR || 'Proveedor no especificado')}</div>
-                    <div class="subtitle">${datos.DESCRIPCION_LARGA || datos.DESCRIPCION || 'Sin descripción'}</div>
+                    <div class="subtitle">${datos.DESCRIPCION || 'Sin descripción'}</div>
                 </div>
                 
                 <div class="info-grid">
