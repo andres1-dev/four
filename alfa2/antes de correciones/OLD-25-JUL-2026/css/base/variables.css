@@ -1,0 +1,99 @@
+/* ============================================
+   VARIABLES Y TEMAS
+   ============================================ */
+
+:root {
+    /* VS Code Light Theme Colors */
+    --vscode-light-bg: #ffffff;
+    --vscode-light-sidebar: #f3f3f3;
+    --vscode-light-editor: #fffffe;
+    --vscode-light-tab: #ffffff;
+    --vscode-light-tab-active: #ffffff;
+    --vscode-light-tab-border: #0078d4;
+    --vscode-light-text: #333333;
+    --vscode-light-text-secondary: #616161;
+    --vscode-light-border: #e1e4e8;
+    --vscode-light-hover: #f0f0f0;
+
+    /* VS Code Dark Theme Colors */
+    --vscode-dark-bg: #1e1e1e;
+    --vscode-dark-sidebar: #252526;
+    --vscode-dark-editor: #1e1e1e;
+    --vscode-dark-tab: #2d2d2d;
+    --vscode-dark-tab-active: #1e1e1e;
+    --vscode-dark-tab-border: #0078d4;
+    --vscode-dark-text: #cccccc;
+    --vscode-dark-text-secondary: #969696;
+    --vscode-dark-border: #3e3e42;
+    --vscode-dark-hover: #2a2d2e;
+
+    /* Common Colors */
+    --primary: #0078d4;
+    --primary-dim: rgba(0, 120, 212, 0.1);
+    --success: #0dbc79;
+    --success-dim: rgba(13, 188, 121, 0.1);
+    --warning: #ff8c00;
+    --warning-dim: rgba(255, 140, 0, 0.1);
+    --error: #f44747;
+    --error-dim: rgba(244, 71, 71, 0.1);
+    --info: #3794ff;
+    --info-dim: rgba(55, 148, 255, 0.1);
+
+    /* UI Specific */
+    --input-bg: var(--bg);
+    --button-bg: var(--sidebar);
+    --sidebar-bg: var(--sidebar);
+    --card-bg: var(--editor);
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.vscode-dark {
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* Theme Classes */
+.vscode-light {
+    --bg: var(--vscode-light-bg);
+    --sidebar: var(--vscode-light-sidebar);
+    --editor: var(--vscode-light-editor);
+    --tab: var(--vscode-light-tab);
+    --tab-active: var(--vscode-light-tab-active);
+    --tab-border: var(--vscode-light-tab-border);
+    --text: var(--vscode-light-text);
+    --text-secondary: var(--vscode-light-text-secondary);
+    --border: var(--vscode-light-border);
+    --hover: var(--vscode-light-hover);
+}
+
+.vscode-dark {
+    --bg: var(--vscode-dark-bg);
+    --sidebar: var(--vscode-dark-sidebar);
+    --editor: var(--vscode-dark-editor);
+    --tab: var(--vscode-dark-tab);
+    --tab-active: var(--vscode-dark-tab-active);
+    --tab-border: var(--vscode-dark-tab-border);
+    --text: var(--vscode-dark-text);
+    --text-secondary: var(--vscode-dark-text-secondary);
+    --border: var(--vscode-dark-border);
+    --hover: var(--vscode-dark-hover);
+}
+
+/* Variables adicionales para el botón de warning */
+.vscode-light {
+    --warning-hover: #d67f00;
+}
+
+.vscode-dark {
+    --warning-hover: #ffa726;
+}
+
+/* Color de resaltado para búsqueda */
+.vscode-light {
+    --primary-light: #e3f2fd;
+}
+
+.vscode-dark {
+    --primary-light: rgba(33, 150, 243, 0.2);
+}

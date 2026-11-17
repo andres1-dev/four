@@ -427,10 +427,10 @@ function validarEstadoParcial(lote, traslado, totalGeneral, cantidad) {
     }
 
     const loteStr = lote.toString().trim();
-    const trasladoStr = traslado.toString().trim();
-    const registrosExistentes = data2JsonMap.get(loteStr);
+    const mapaJson = window.data2JsonMap || (typeof data2JsonMap !== 'undefined' ? data2JsonMap : null);
+    const registrosExistentes = mapaJson ? mapaJson.get(loteStr) : null;
 
-    // 1. LOTE NO EXISTE → NUEVO
+    // 1. LOTE NO EXISTE EN HISTORIAL → NUEVO
     if (!registrosExistentes || registrosExistentes.length === 0) {
         return { 
             tipo: 'NUEVO', 
@@ -440,62 +440,63 @@ function validarEstadoParcial(lote, traslado, totalGeneral, cantidad) {
         };
     }
 
-    // Ordenar registros por fecha: [0] es el más NUEVO, [length-1] es el ORIGINAL (más antiguo)
+    // 2. VALIDAR TRASLADOS EXISTENTES
+    // Soporta un solo traslado o un array de traslados de la OP en el CSV
+    const listaTraslados = (Array.isArray(traslado) ? traslado : [traslado])
+        .map(t => (t || '').toString().replace(/\D/g, '').replace(/^0+/, ''))
+        .filter(Boolean);
+
+    for (const trasladoStr of listaTraslados) {
+        const existeTrasladoEnHistorial = registrosExistentes.some(reg => {
+            // Revisar encabezado principal
+            if ((reg.TRASLADO || '').toString().trim() === trasladoStr) return true;
+            
+            // Revisar otros traslados adicionales
+            if (reg.OTROS_TRASLADOS && Array.isArray(reg.OTROS_TRASLADOS)) {
+                if (reg.OTROS_TRASLADOS.some(t => t.toString().trim() === trasladoStr)) return true;
+            }
+
+            // Revisar traslados internos en los anexos
+            if (reg.ANEXOS && Array.isArray(reg.ANEXOS)) {
+                return reg.ANEXOS.some(a => (a.TRASLADO || '').toString().trim() === trasladoStr);
+            }
+            return false;
+        });
+
+        if (existeTrasladoEnHistorial) {
+            return { 
+                tipo: 'REPETIDO', 
+                mensaje: `El Traslado ${trasladoStr} ya existe en el historial de esta OP`, 
+                esParcial: false, 
+                sufijo: loteStr,
+                rechazar: true
+            };
+        }
+    }
+
+    // Ordenar registros por fecha (el primero registrado es el original)
     const registrosOrdenados = [...registrosExistentes].sort((a, b) => {
         const fechaA = parseFechaToTimestamp(a.FECHA);
         const fechaB = parseFechaToTimestamp(b.FECHA);
-        return fechaB - fechaA;
+        return fechaA - fechaB;
     });
 
-    const ultimoRegistro = registrosOrdenados[0];
-    const registroOriginal = registrosOrdenados[registrosOrdenados.length - 1]; // El primero que se creó
-    
-    // 2. TRASLADO EXISTENTE EN CABECERA, OTROS_TRASLADOS O ANEXOS → REPETIDO (Rechazo inmediato)
-    const existeTrasladoEnHistorial = registrosExistentes.some(reg => {
-        // Revisar encabezado principal
-        if ((reg.TRASLADO || '').toString().trim() === trasladoStr) return true;
-        
-        // Revisar otros traslados adicionales (DI desde traslados secundarios)
-        if (reg.OTROS_TRASLADOS && Array.isArray(reg.OTROS_TRASLADOS)) {
-            if (reg.OTROS_TRASLADOS.some(t => t.toString().trim() === trasladoStr)) return true;
-        }
+    const registroOriginal = registrosOrdenados[0];
 
-        // Revisar traslados internos en los anexos
-        if (reg.ANEXOS && Array.isArray(reg.ANEXOS)) {
-            return reg.ANEXOS.some(a => (a.TRASLADO || '').toString().trim() === trasladoStr);
-        }
-        return false;
-    });
+    // 3. PASO A: Sumatoria acumulada de todas las entregas previas
+    const sumaTotalesGenerales = registrosExistentes.reduce((acc, reg) => {
+        return acc + (Math.round(parseFloat(reg.TOTAL_GENERAL)) || 0);
+    }, 0);
 
-    if (existeTrasladoEnHistorial) {
-        return { 
-            tipo: 'REPETIDO', 
-            mensaje: `El Traslado ${trasladoStr} ya existe en el historial (Cabecera o Anexos) de esta OP`, 
-            esParcial: false, 
-            sufijo: loteStr,
-            rechazar: true
-        };
-    }
+    // 4. PASO B: Cantidad máxima de la OP
+    const totalOriginal = Math.round(parseFloat(registroOriginal.TOTAL)) || 0;
+    const totalDeclaradoCSV = Math.round(parseFloat(totalGeneral)) || 0;
+    const totalCalculado = (Math.round(parseFloat(registroOriginal.TOTAL_GENERAL)) || 0) + (Math.round(parseFloat(registroOriginal.DIFERENCIA)) || 0);
 
-    // 3. PASO A: VALIDAR DIFERENCIA DEL JSON ORIGINAL
-    // Si la diferencia original fue 0, no hay saldo pendiente que reclamar.
-    const diferenciaOriginal = Math.round(parseFloat(registroOriginal.DIFERENCIA)) || 0;
-    if (diferenciaOriginal === 0) {
-        return { 
-            tipo: 'REPETIDO', 
-            mensaje: `Lote ${loteStr} ya está completo (Diferencia Original = 0)`, 
-            esParcial: false, 
-            sufijo: loteStr,
-            rechazar: true
-        };
-    }
+    const cantidadMaxima = totalOriginal || totalDeclaradoCSV || totalCalculado || Math.round(parseFloat(registroOriginal.CANTIDAD)) || 0;
 
-    // 4. PASO B: VALIDAR SUMATORIA ACUMULADA VS CANTIDAD MÁXIMA
-    // Usamos Math.round(parseFloat()) para manejar con seguridad el formato "7.00" del CSV
-    const cantidadMaxima = Math.round(parseFloat(registroOriginal.CANTIDAD)) || 0;
-    const sumaTotalesGenerales = registrosExistentes.reduce((acc, reg) => acc + (Math.round(parseFloat(reg.TOTAL_GENERAL)) || 0), 0);
-
-    if (sumaTotalesGenerales === cantidadMaxima) {
+    // 5. PASO C: Validar si la OP ya alcanzó o completó su tope máximo
+    if (cantidadMaxima > 0 && sumaTotalesGenerales >= cantidadMaxima) {
         return { 
             tipo: 'REPETIDO', 
             mensaje: `Lote ${loteStr} ya alcanzó su tope máximo (${sumaTotalesGenerales}/${cantidadMaxima})`, 
@@ -505,29 +506,32 @@ function validarEstadoParcial(lote, traslado, totalGeneral, cantidad) {
         };
     }
 
-    // 5. PASO C: VALIDAR SALDO RESTANTE VS CANTIDAD CSV (ÍNDICE 9)
-    const saldoRestante = cantidadMaxima - sumaTotalesGenerales;
+    // 6. PASO D: Saldo disponible y cálculo de sufijo de parcial (.2, .3, etc.)
+    const saldoRestante = cantidadMaxima > 0 ? (cantidadMaxima - sumaTotalesGenerales) : 0;
     const cantidadCSV = Math.round(parseFloat(cantidad)) || 0;
 
-    if (cantidadCSV <= saldoRestante) {
-        const numeroParcial = registrosExistentes.length + 1;
-        return {
-            tipo: 'PARCIAL',
-            mensaje: `Parcial ${numeroParcial} (${cantidadCSV} ingresan / ${saldoRestante} saldo)`,
-            esParcial: true,
-            sufijo: `${loteStr}.${numeroParcial}`,
-            saldoDisponible: saldoRestante,
-            saldoRestante: saldoRestante - cantidadCSV
-        };
-    }
+    // Determinar siguiente número de sufijo analizando los id_ingreso existentes
+    let maxSufijoNum = 1;
+    registrosExistentes.forEach(reg => {
+        const idIng = (reg.id_ingreso || '').toString();
+        const match = idIng.match(/\.(\d+)$/);
+        if (match) {
+            const num = parseInt(match[1]);
+            if (!isNaN(num) && num > maxSufijoNum) maxSufijoNum = num;
+        }
+    });
 
-    // 6. RECHAZO: SUPERA EL SALDO RESTANTE
+    // Si había entregas previas pero ninguna tenía sufijo .N, la siguiente es .2
+    const numeroParcial = (maxSufijoNum > 1) ? (maxSufijoNum + 1) : (registrosExistentes.length + 1);
+    const sufijo = `${loteStr}.${numeroParcial}`;
+
     return {
-        tipo: 'RECHAZADO',
-        mensaje: `Cantidad ${cantidadCSV} supera el saldo real disponible ${saldoRestante}`,
-        esParcial: false,
-        sufijo: loteStr,
-        rechazar: true
+        tipo: 'PARCIAL',
+        mensaje: `Parcial ${numeroParcial} (${cantidadCSV} ingresan / ${saldoRestante} saldo disponible)`,
+        esParcial: true,
+        sufijo: sufijo,
+        saldoDisponible: saldoRestante,
+        saldoRestante: Math.max(0, saldoRestante - cantidadCSV)
     };
 }
 

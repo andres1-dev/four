@@ -39,24 +39,18 @@ async function cargarPedidosDesdeSheets() {
             console.error('loadPedidosData no está definida');
             return;
         }
-        pedidosMap = await loadPedidosData();
-        window.pedidosMap = pedidosMap; // Actualizar referencia global
 
-        // Cargar bajo demanda únicamente las OPs de los pedidos que falten en memoria
-        if (pedidosMap && pedidosMap.length > 0) {
-            const missingOpsInPedidos = [...new Set(pedidosMap.map(p => String(p.op || '').trim()).filter(op => op && (!window.sisproMap || !window.sisproMap.has(op))))];
-            if (missingOpsInPedidos.length > 0 && typeof loadSisproData === 'function') {
-                loadSisproData(missingOpsInPedidos).catch(err => console.warn('Error cargando OPs faltantes de pedidos:', err));
-            }
-        }
+        // Cargar SOLO pedidos activos (estado !== false) — los cumplidos no se traen
+        const todos = await loadPedidosData();
+        pedidosMap = (todos || []).filter(p => p.estado !== false);
+        window.pedidosMap = pedidosMap;
 
         renderOrdersBoard();
-        // Verificar automáticamente cuáles OPs ya están en ingresos
         verificarOpsEnIngresos();
     } catch (err) {
         console.error('Error cargando pedidos:', err);
         pedidosMap = [];
-        window.pedidosMap = pedidosMap; // Actualizar referencia global
+        window.pedidosMap = pedidosMap;
         renderOrdersBoard();
     }
 }
@@ -319,10 +313,8 @@ function abrirModalAgregarPedido() {
                 <div class="orders-add-field">
                     <label>OP <span class="required-mark">*</span></label>
                     <input type="text" id="modal-op" class="form-control" placeholder="ej: 2425"
-                        oninput="onModalOpChange(this.value)"
-                        onchange="onModalOpChange(this.value, true)"
                         onblur="onModalOpChange(this.value, true)"
-                        onkeydown="if(event.key==='Enter') { onModalOpChange(this.value, true); document.getElementById('modal-qty').focus(); }">
+                        onkeydown="if(event.key==='Enter'||event.key==='Tab'){ onModalOpChange(this.value, true); if(event.key==='Enter'){ event.preventDefault(); document.getElementById('modal-qty').focus(); } }">
                 </div>
                 <div class="orders-add-field orders-add-field-sm">
                     <label>Cantidad <span class="required-mark">*</span></label>
@@ -369,7 +361,8 @@ function abrirModalAgregarPedido() {
 // ============================================
 
 /**
- * Garantiza la búsqueda de la OP en el catálogo master (memoria + Supabase local + fallback).
+ * Obtiene detalles completos de una OP desde el catálogo master externo.
+ * Usa fetchOpsDetailFromMaster (EF query-master) — sin tabla local, sin sync.
  * Maneja variantes como '6264.2' derivando la OP base '6264'.
  */
 async function obtenerDetallesOpGarantizado(opInput) {
@@ -377,77 +370,54 @@ async function obtenerDetallesOpGarantizado(opInput) {
     const op = String(opInput).trim();
     if (!op) return null;
 
-    // Candidatos de claves a intentar: OP exacta, OP base sin decimal (. o _), y sin ceros iniciales
-    const baseOp = op.split('.')[0].split('_')[0].trim();
-    const cleanOp = op.replace(/^0+/, '');
+    // Candidatos: OP exacta + base sin decimal/guión + sin ceros iniciales
+    const baseOp    = op.split('.')[0].split('_')[0].trim();
+    const cleanOp   = op.replace(/^0+/, '');
     const cleanBase = baseOp.replace(/^0+/, '');
-
     const candidateKeys = [...new Set([op, baseOp, cleanOp, cleanBase].filter(Boolean))];
 
-    // 1. Buscar en memoria (window.sisproMap)
-    if (window.sisproMap && window.sisproMap instanceof Map) {
+    // 1. Revisar sisproMap en memoria primero (evita fetch repetido para la misma OP)
+    if (window.sisproMap instanceof Map) {
         for (const key of candidateKeys) {
             const hit = window.sisproMap.get(key);
-            if (hit && (hit.REFERENCIA || hit.PRENDA)) return hit;
+            if (hit && (hit.REFERENCIA || hit.PRENDA || hit.LINEA)) return hit;
         }
     }
 
-    // 2. Consultar catálogo local Supabase (loadSisproData)
-    if (typeof loadSisproData === 'function') {
+    // 2. Consultar EF query-master on-demand
+    if (typeof fetchOpsDetailFromMaster === 'function') {
         try {
-            await loadSisproData(candidateKeys);
-            if (window.sisproMap && window.sisproMap instanceof Map) {
+            const detailMap = await fetchOpsDetailFromMaster(candidateKeys);
+            if (detailMap.size > 0) {
+                // Guardar en sisproMap para reusar sin nuevo fetch
+                detailMap.forEach((val, key) => {
+                    if (window.sisproMap instanceof Map) window.sisproMap.set(key, val);
+                });
                 for (const key of candidateKeys) {
-                    const hit = window.sisproMap.get(key);
-                    if (hit && (hit.REFERENCIA || hit.PRENDA)) return hit;
+                    const hit = detailMap.get(key);
+                    if (hit) return hit;
                 }
             }
         } catch (e) {
-            console.warn('Error consultando catálogo master:', candidateKeys, e);
+            console.warn('[orders] Error consultando master para OP:', op, e.message);
         }
-    }
-
-    // 3. Fallback directo a Supabase master
-    try {
-        if (typeof SUPABASE_URL !== 'undefined' && typeof supabase !== 'undefined') {
-            const headers = supabase.getHeaders();
-            for (const key of candidateKeys) {
-                const url = `${SUPABASE_URL}/rest/v1/master?id_master=eq.${encodeURIComponent(key)}&select=id_master,referencia,descripcion,cuento,genero`;
-                const res = await fetch(url, { headers }).then(r => r.ok ? r.json() : []).catch(() => []);
-                if (res && res.length > 0 && res[0]) {
-                    const row = res[0];
-                    const sisproObj = {
-                        PRENDA: row.descripcion || '',
-                        LINEA: row.cuento || '',
-                        GENERO: row.genero || '',
-                        REFERENCIA: row.referencia || ''
-                    };
-                    if (window.sisproMap && window.sisproMap instanceof Map) {
-                        window.sisproMap.set(key, sisproObj);
-                        window.sisproMap.set(op, sisproObj);
-                    }
-                    return sisproObj;
-                }
-            }
-        }
-    } catch (err) {
-        console.error('Error en fallback directo master:', err);
     }
 
     return null;
 }
 
-let opDebounceTimer = null;
 
 async function onModalOpChange(val, immediate = false) {
-    const hint = document.getElementById('modal-op-hint');
+    if (!immediate) return; // Solo busca con Enter, Tab o blur — nunca al escribir
+
+    const hint    = document.getElementById('modal-op-hint');
     const details = document.getElementById('modal-op-details');
-    const refEl = document.getElementById('modal-detail-ref');
-    const prendaEl = document.getElementById('modal-detail-prenda');
-    const generoEl = document.getElementById('modal-detail-genero');
+    const refEl   = document.getElementById('modal-detail-ref');
+    const prendaEl= document.getElementById('modal-detail-prenda');
+    const generoEl= document.getElementById('modal-detail-genero');
 
     if (!hint) return;
-    const op = val.trim();
+    const op = (val || '').trim();
 
     if (!op) {
         hint.innerHTML = '';
@@ -455,19 +425,9 @@ async function onModalOpChange(val, immediate = false) {
         return;
     }
 
-    if (opDebounceTimer) clearTimeout(opDebounceTimer);
-
-    const ejecutar = async () => {
-        hint.innerHTML = `<span class="orders-hint-loading" style="color:var(--text-muted);font-size:12px;"><i class="codicon codicon-loading codicon-modifier-spin"></i> Buscando OP en catálogo...</span>`;
-        const sispro = await obtenerDetallesOpGarantizado(op);
-        mostrarDetallesOpModal(op, sispro, hint, details, refEl, prendaEl, generoEl);
-    };
-
-    if (immediate) {
-        await ejecutar();
-    } else {
-        opDebounceTimer = setTimeout(ejecutar, 350);
-    }
+    hint.innerHTML = `<span class="orders-hint-loading" style="color:var(--text-muted);font-size:12px;"><i class="codicon codicon-loading codicon-modifier-spin"></i> Buscando OP en catálogo...</span>`;
+    const sispro = await obtenerDetallesOpGarantizado(op);
+    mostrarDetallesOpModal(op, sispro, hint, details, refEl, prendaEl, generoEl);
 }
 
 function mostrarDetallesOpModal(op, sispro, hint, details, refEl, prendaEl, generoEl) {
@@ -566,10 +526,8 @@ async function abrirModalEditarPedido(id) {
                 <div class="orders-add-field">
                     <label>OP <span class="required-mark">*</span></label>
                     <input type="text" id="edit-op" class="form-control" value="${pedido.op}"
-                        oninput="onEditOpChange(this.value)"
-                        onchange="onEditOpChange(this.value, true)"
                         onblur="onEditOpChange(this.value, true)"
-                        onkeydown="if(event.key==='Enter') { onEditOpChange(this.value, true); document.getElementById('edit-qty').focus(); }">
+                        onkeydown="if(event.key==='Enter'||event.key==='Tab'){ onEditOpChange(this.value, true); if(event.key==='Enter'){ event.preventDefault(); document.getElementById('edit-qty').focus(); } }">
                 </div>
                 <div class="orders-add-field orders-add-field-sm">
                     <label>Cantidad <span class="required-mark">*</span></label>
@@ -597,11 +555,13 @@ async function abrirModalEditarPedido(id) {
 }
 
 async function onEditOpChange(val, immediate = false) {
-    const hint = document.getElementById('edit-op-hint');
+    if (!immediate) return; // Solo busca con Enter, Tab o blur
+
+    const hint    = document.getElementById('edit-op-hint');
     const details = document.getElementById('edit-op-details');
 
     if (!hint) return;
-    const op = val.trim();
+    const op = (val || '').trim();
 
     if (!op) {
         hint.innerHTML = '';
@@ -609,19 +569,9 @@ async function onEditOpChange(val, immediate = false) {
         return;
     }
 
-    if (opDebounceTimer) clearTimeout(opDebounceTimer);
-
-    const ejecutar = async () => {
-        hint.innerHTML = `<span class="orders-hint-loading" style="color:var(--text-muted);font-size:12px;"><i class="codicon codicon-loading codicon-modifier-spin"></i> Buscando OP en catálogo...</span>`;
-        const sispro = await obtenerDetallesOpGarantizado(op);
-        mostrarDetallesEditOpModal(op, sispro, hint, details);
-    };
-
-    if (immediate) {
-        await ejecutar();
-    } else {
-        opDebounceTimer = setTimeout(ejecutar, 350);
-    }
+    hint.innerHTML = `<span class="orders-hint-loading" style="color:var(--text-muted);font-size:12px;"><i class="codicon codicon-loading codicon-modifier-spin"></i> Buscando OP en catálogo...</span>`;
+    const sispro = await obtenerDetallesOpGarantizado(op);
+    mostrarDetallesEditOpModal(op, sispro, hint, details);
 }
 
 function mostrarDetallesEditOpModal(op, sispro, hint, details) {

@@ -264,26 +264,35 @@
 
 /* Input numérico con controles +/- estilo distribución */
 .editor-input-group {
-    display: flex;
+    display: inline-flex;
     align-items: stretch;
     height: 35px;
     width: 110px;
+    vertical-align: middle;
 }
 
 .editor-input {
     width: 100%;
-    padding: 0 8px;
+    min-width: 0;
     height: 35px;
+    padding: 0 8px;
     border: 1px solid var(--border);
-    border-radius: 4px 0 0 4px;
-    border-right: none;
+    border-radius: 4px;
     background: var(--input-bg);
     color: var(--text);
     font-size: 13px;
-    text-align: right;
-    transition: border-color 0.2s ease;
+    text-align: center;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
     appearance: textfield;
     -moz-appearance: textfield;
+    box-sizing: border-box;
+}
+
+.editor-input-group .editor-input {
+    flex: 1;
+    min-width: 0;
+    border-radius: 4px 0 0 4px;
+    border-right: none;
 }
 
 .editor-input::-webkit-outer-spin-button,
@@ -296,6 +305,8 @@
     border-color: var(--primary);
     box-shadow: 0 0 0 2px var(--primary-dim);
     outline: none;
+    position: relative;
+    z-index: 1;
 }
 
 .editor-select {
@@ -364,4 +375,26 @@
 .editor-number-btn .codicon {
     font-size: 10px !important;
     line-height: 1;
+}
+
+/* ============================================
+   REFVAR ALERT — Header en rojo suave
+   ============================================ */
+
+.refvar-alert-header {
+    background: rgba(211, 47, 47, 0.07) !important;
+}
+
+.refvar-alert-header .codicon-list-tree {
+    color: #e53935 !important;
+}
+
+#btnConvertirRefVar {
+    display: none;
+}
+
+#btnConvertirRefVar.visible {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 5px;
 }

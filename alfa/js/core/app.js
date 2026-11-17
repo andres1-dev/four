@@ -175,7 +175,8 @@ function setupAllEventListeners() {
     safeAdd('moduleConfigBtn', 'click', () => {
         if (typeof window.showModuleSettings === 'function') window.showModuleSettings();
     });
-    safeAdd('recInput', 'input', () => window.searchDistributionRec && window.searchDistributionRec());
+    // recInput: búsqueda on-demand — se activa por Enter (handleRecInputKeyDown) o botón #searchRecBtn
+    // El evento 'input' solo limpia la vista al borrar el campo (via oninput="onRecInputChange()" en HTML)
     safeAdd('reloadDataBtn', 'click', () => window.reloadAllDistributionData && window.reloadAllDistributionData());
     
     // Solo agregar el listener de guardado si no existe ya en distribution.js 

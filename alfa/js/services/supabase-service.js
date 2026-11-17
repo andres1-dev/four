@@ -113,7 +113,7 @@ class SupabaseClient {
 
         try {
             const response = await fetch(url, config);
-            
+
             // Manejar token expirado (401) — intentar renovar antes de cerrar sesión
             if (response.status === 401) {
                 Logger.warn('supabase-service', 'Token rechazado (401), intentando renovar sesión...');
@@ -147,7 +147,7 @@ class SupabaseClient {
 
                 throw new Error('JWT expired');
             }
-            
+
             if (!response.ok) {
                 // Intentar parsear error como JSON
                 let errorMessage = `HTTP Error: ${response.status}`;
@@ -168,7 +168,7 @@ class SupabaseClient {
 
             // Intentar parsear como JSON
             const text = await response.text();
-            
+
             // Si no hay contenido, retornar array vacío para GET o success para otros
             if (!text || text.length === 0) {
                 return options.method === 'GET' ? [] : { success: true };
@@ -224,9 +224,9 @@ class SupabaseClient {
      */
     async select(table, options = {}) {
         const { columns = '*', filters = {}, order = null, limit = null, offset = null } = options;
-        
+
         let queryString = `select=${columns}`;
-        
+
         // Agregar filtros
         const filterString = this.buildQueryString(filters);
         if (filterString) {
@@ -287,7 +287,7 @@ class SupabaseClient {
             });
             const cr = headRes.headers.get('content-range'); // "0-0/10915"
             if (cr) total = parseInt(cr.split('/')[1]);
-        } catch (_) {}
+        } catch (_) { }
 
         if (!total || total <= pageSize) return firstPage;
 
@@ -303,14 +303,37 @@ class SupabaseClient {
 
     /**
      * Upsert (insert o update si existe)
+     * Compatible tanto con Edge Function como con fallback directo
      * @param {string} table - Nombre de la tabla
      * @param {Object|Array} data - Datos a insertar/actualizar
-     * @param {string} onConflict - Columna(s) para detectar conflictos (ej: 'id_ingreso,productora')
+     * @param {string} onConflict - Columna(s) para detectar conflictos (ej: 'referencia')
      */
     async upsert(table, data, onConflict = 'id') {
-        // Asegurar que data es un array
         const dataArray = Array.isArray(data) ? data : [data];
-        
+
+        // Mapeo a acciones del gateway para evitar egreso y pasar por la EF
+        const gatewayMap = {
+            'precios': 'upsert_precio',
+            'usuarios': 'upsert_usuario',
+            'proveedores': 'upsert_proveedor',
+            'auditores': 'upsert_auditor',
+            'gestores': 'upsert_gestor',
+            'colores': 'upsert_color',
+            'clientes': 'upsert_cliente',
+            'pedidos': 'upsert_pedido',
+            'barras': 'upsert_barra',
+            'historicas': 'upsert_historica'
+        };
+
+        if (gatewayMap[table]) {
+            try {
+                return await this.callGateway(gatewayMap[table], dataArray);
+            } catch (err) {
+                Logger.warn('supabase-service', `Fallo upsert vía gateway para ${table}, intentando directo: ${err.message}`);
+            }
+        }
+
+        // Llamada REST directa autenticada
         return await this.request(`${table}?on_conflict=${onConflict}`, {
             method: 'POST',
             headers: {
@@ -318,6 +341,54 @@ class SupabaseClient {
             },
             body: JSON.stringify(dataArray)
         });
+    }
+
+    /**
+     * Realiza una petición por medio de la Edge Function api-gateway (Bajo demanda, sin egreso masivo)
+     */
+    async callGateway(action, payload = {}) {
+        const token = this.accessToken || sessionStorage.getItem('supabase_token') || this.key;
+        const gatewayUrl = `${this.url}/functions/v1/api-gateway`;
+        const config = {
+            method: 'POST',
+            headers: {
+                'apikey': this.key,
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ action, payload })
+        };
+
+        try {
+            const response = await fetch(gatewayUrl, config);
+            if (response.status === 401 && typeof refreshSession === 'function') {
+                const newToken = await refreshSession();
+                if (newToken) {
+                    config.headers['Authorization'] = `Bearer ${newToken}`;
+                    const retryRes = await fetch(gatewayUrl, config);
+                    if (retryRes.ok) {
+                        const rData = await retryRes.json();
+                        if (rData.error) throw new Error(rData.error);
+                        return rData.data;
+                    }
+                }
+                sessionStorage.clear();
+                window.location.href = 'login.html';
+                throw new Error('Sesión expirada');
+            }
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error || `HTTP ${response.status}`);
+            }
+
+            const resData = await response.json();
+            if (resData.error) throw new Error(resData.error);
+            return resData.data;
+        } catch (err) {
+            Logger.error('supabase-service', `Error en callGateway (${action})`, err);
+            throw err;
+        }
     }
 }
 
@@ -354,7 +425,7 @@ async function saveToSisproInversiones(data) {
         // Leer prenda, género y línea del editor (siempre desde los campos editables)
         const prendaEdit = document.getElementById('opPrendaEdit')?.value?.trim() || '';
         const generoEdit = document.getElementById('opGeneroEdit')?.value?.trim() || '';
-        const lineaEdit  = document.getElementById('opLineaEdit')?.value?.trim() || '';
+        const lineaEdit = document.getElementById('opLineaEdit')?.value?.trim() || '';
 
         // Para Excel/BUSINT: leer lote y tipo editables
         const primerItemCheck = data[0] || {};
@@ -388,8 +459,9 @@ async function saveToSisproInversiones(data) {
                     talla: item.TALLA,
                     cantidad: parseInt(item.CANTIDAD) || 0
                 };
-                // Agregar referencia y descripcion si es REFVAR (usar campos HR específicos)
-                if (item.REFERENCIA === 'REFVAR' || item.REFERENCIA_HISTORICA === 'REFVAR') {
+                // Agregar referencia y descripcion SOLO si es REFVAR (usar campos HR específicos)
+                const esRefVarActual = (item.REFERENCIA === 'REFVAR' || item.REFERENCIA_HISTORICA === 'REFVAR' || document.getElementById('opRefReadonly')?.value?.trim() === 'REFVAR');
+                if (esRefVarActual) {
                     hrEntry.referencia = item.HR_REFERENCIA || item.REFERENCIA_HISTORICA || item.REFERENCIA || '';
                     hrEntry.descripcion = item.HR_DESCRIPCION || item.DESCRIPCION_LARGA || item.DESCRIPCION || '';
                 }
@@ -444,17 +516,38 @@ async function saveToSisproInversiones(data) {
         const cantidad = cantidadFull + cantidadPromo;  // PRIMERAS + PROMO (lo que se distribuye)
         const totalRelativo = cantidadFull + cantidadPromo + cantidadCobros;
         const totalGeneral = cantidadFull + cantidadPromo + cantidadCobros + cantidadSinConfeccionar;
-        const diferencia = total - totalGeneral;  // Diferencia entre declarado y contado
+
+        // Si es un parcial, tener en cuenta las entregas anteriores para calcular la diferencia restante real
+        let acumuladoAnterior = 0;
+        const loteOpKey = (loteEdit || primerItem.OP || '').toString().trim();
+        const jsonMapGlobal = window.data2JsonMap || (typeof data2JsonMap !== 'undefined' ? data2JsonMap : null);
+        if (jsonMapGlobal && jsonMapGlobal.has(loteOpKey)) {
+            const previos = jsonMapGlobal.get(loteOpKey);
+            if (Array.isArray(previos)) {
+                acumuladoAnterior = previos.reduce((acc, r) => acc + (Math.round(parseFloat(r.TOTAL_GENERAL)) || 0), 0);
+            }
+        }
+        const diferencia = total - (acumuladoAnterior + totalGeneral);  // Diferencia restante de la OP
         const costoUnitario = parseFloat(primerItem.COSTO) || 0;
 
-        // Obtener referencia histórica
-        // Para BUSINT/Excel: la referencia ya viene resuelta en el item (REFERENCIA_HISTORICA)
-        // Para CSV: buscar en historicasMap
-        const referenciaHistorica = (primerItem.FUENTE === 'BUSINT' && primerItem.REFERENCIA_HISTORICA)
-            ? primerItem.REFERENCIA_HISTORICA
-            : (typeof getReferenciaHistorica === 'function')
-                ? getReferenciaHistorica(primerItem.REFERENCIA)
-                : primerItem.REFERENCIA;
+        // Referencia principal editada en cabecera
+        const referenciaEditHeader = document.getElementById('opRefReadonly')?.value?.trim();
+        const esRefVarOP = (referenciaEditHeader === 'REFVAR');
+
+        // 1. REFERENCIA: Código interno o histórico
+        const refBase = referenciaEditHeader || primerItem.REFERENCIA;
+        const referenciaHistorica = esRefVarOP
+            ? 'REFVAR'
+            : (primerItem.FUENTE === 'BUSINT' && primerItem.REFERENCIA_HISTORICA && !referenciaEditHeader)
+                ? primerItem.REFERENCIA_HISTORICA
+                : (typeof getReferenciaHistorica === 'function')
+                    ? getReferenciaHistorica(refBase)
+                    : refBase;
+
+        // 2. REFPROV: Referencia de proveedor real (o REFVAR si aplica)
+        const refProvFinal = esRefVarOP
+            ? 'REFVAR'
+            : (primerItem.REFPROV || primerItem.REFERENCIA_PROV || primerItem.REFERENCIA || refBase);
 
         // Calcular otros_traslados (traslados adicionales de la misma OP)
         const otrosTraslados = [];
@@ -462,16 +555,16 @@ async function saveToSisproInversiones(data) {
             const opStr = (primerItem.OP || '').toString().trim();
             const trasladoActual = (parseInt(primerItem.TRASLADO) || 0).toString();
             const set = new Set();
-            
+
             for (let i = 0; i < lastCsvRows.length; i++) {
                 const row = lastCsvRows[i];
                 if (row.length < 8) continue;
                 if ((row[2] || '').toString().trim() !== opStr) continue;
-                
-                const t = (typeof extractTrasladoNumber === 'function') 
+
+                const t = (typeof extractTrasladoNumber === 'function')
                     ? extractTrasladoNumber(row[7] || '')
                     : (row[7] || '').toString().trim();
-                    
+
                 if (t && t !== trasladoActual) {
                     set.add(t.toString().trim());
                 }
@@ -501,7 +594,7 @@ async function saveToSisproInversiones(data) {
             if (!ddmmyyyy) return null;
             const parts = ddmmyyyy.toString().trim().split('/');
             if (parts.length !== 3) return ddmmyyyy;
-            return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+            return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
         };
 
         // Mapear a las columnas de la tabla ingresos
@@ -514,8 +607,10 @@ async function saveToSisproInversiones(data) {
             gestor: gestor,
             escaner: escaner,
             lote: parseInt(loteEdit || primerItem.OP) || 0,
-            refprov: primerItem.REFERENCIA,
-            descripcion: getDescripcion(prendaEdit || primerItem.PRENDA, generoEdit || primerItem.GENERO, getMarca(generoEdit || primerItem.GENERO, productora), primerItem.REFERENCIA),
+            refprov: refProvFinal,
+            descripcion: esRefVarOP
+                ? 'PRENDAS VARIAS CHICA CHIC'
+                : getDescripcion(prendaEdit || primerItem.PRENDA, generoEdit || primerItem.GENERO, getMarca(generoEdit || primerItem.GENERO, productora), refProvFinal),
             descripcion_larga: primerItem.DESCRIPCION_LARGA,
             total: total,
             cantidad: cantidad,
@@ -550,33 +645,9 @@ async function saveToSisproInversiones(data) {
             }
         };
 
-        // Verificar si ya existe un registro con la misma combinación (id_ingreso, productora)
-        const existing = await supabase.select('ingresos', {
-            columns: 'id_ingreso, fecha_ingreso, created_at',
-            filters: { id_ingreso: record.id_ingreso, productora: record.productora }
-        });
-
-        const nowISO = new Date().toISOString();
-
-        let result;
-        if (Array.isArray(existing) && existing.length > 0) {
-            // Actualizar registro existente
-            record.fecha_ingreso = existing[0].fecha_ingreso || existing[0].created_at || nowISO;
-            record.created_at = existing[0].created_at || record.fecha_ingreso;
-            record.updated_at = nowISO;
-            Logger.info('supabase-service', `Actualizando ingreso existente: ${record.id_ingreso} / ${record.productora}`);
-            result = await supabase.update('ingresos', record, {
-                id_ingreso: record.id_ingreso,
-                productora: record.productora
-            });
-        } else {
-            // Insertar nuevo registro
-            record.fecha_ingreso = nowISO;
-            record.created_at = nowISO;
-            record.updated_at = nowISO;
-            Logger.info('supabase-service', `Insertando nuevo ingreso: ${record.id_ingreso} / ${record.productora}`);
-            result = await supabase.insert('ingresos', record);
-        }
+        // Guardar ingreso vía Edge Function api-gateway (RPC atómico upsert_ingreso)
+        Logger.info('supabase-service', `Guardando ingreso vía Edge Function: ${record.id_ingreso} / ${record.productora}`);
+        const result = await supabase.callGateway('upsert_ingreso', record);
 
         // Espejo a Google Sheets (fire & forget – no bloquea el flujo)
         if (typeof saveIngresoToSheets === 'function') {
@@ -613,7 +684,7 @@ async function getSisproInversiones(filters = {}) {
             filters: filters,
             order: 'created_at.desc'
         });
-        
+
         Logger.success('supabase-service', `${result.length} registros encontrados`);
         return result;
     } catch (error) {
@@ -646,10 +717,10 @@ async function deleteSisproInversiones(filters) {
 async function testSupabaseConnection() {
     try {
         Logger.info('supabase-service', 'Verificando conexión con Supabase...');
-        
+
         // Intentar una consulta simple
         await supabase.select('ingresos', { limit: 1 });
-        
+
         Logger.success('supabase-service', 'Conexión con Supabase exitosa');
         return true;
     } catch (error) {
@@ -669,13 +740,13 @@ async function loadUsuariosFromSupabase() {
     try {
         Logger.info('supabase-service', 'Cargando usuarios desde Supabase...');
         const startTime = performance.now();
-        
+
         const result = await supabase.select('usuarios', {
             order: 'nombre_usuario.asc'
         });
-        
+
         const usuariosMap = new Map();
-        
+
         // Validar que result sea un array
         if (Array.isArray(result)) {
             result.forEach(row => {
@@ -685,10 +756,10 @@ async function loadUsuariosFromSupabase() {
                 });
             });
         }
-        
+
         const loadTime = performance.now() - startTime;
         Logger.success('supabase-service', `${usuariosMap.size} USUARIOS cargados en ${loadTime.toFixed(0)}ms`);
-        
+
         return usuariosMap;
     } catch (error) {
         Logger.error('supabase-service', 'Error cargando usuarios', error);
@@ -703,13 +774,13 @@ async function loadProveedoresFromSupabase() {
     try {
         Logger.info('supabase-service', 'Cargando proveedores desde Supabase...');
         const startTime = performance.now();
-        
+
         const result = await supabase.select('proveedores', {
             order: 'nombre_proveedor.asc'
         });
-        
+
         const proveedoresMap = new Map();
-        
+
         // Validar que result sea un array
         if (Array.isArray(result)) {
             result.forEach(row => {
@@ -719,10 +790,10 @@ async function loadProveedoresFromSupabase() {
                 });
             });
         }
-        
+
         const loadTime = performance.now() - startTime;
         Logger.success('supabase-service', `${proveedoresMap.size} PROVEEDORES cargados en ${loadTime.toFixed(0)}ms`);
-        
+
         return proveedoresMap;
     } catch (error) {
         Logger.error('supabase-service', 'Error cargando proveedores', error);
@@ -737,13 +808,13 @@ async function loadAuditoresFromSupabase() {
     try {
         Logger.info('supabase-service', 'Cargando auditores desde Supabase...');
         const startTime = performance.now();
-        
+
         const result = await supabase.select('auditores', {
             order: 'nombre_auditor.asc'
         });
-        
+
         const auditoresMap = new Map();
-        
+
         // Validar que result sea un array
         if (Array.isArray(result)) {
             result.forEach(row => {
@@ -753,10 +824,10 @@ async function loadAuditoresFromSupabase() {
                 });
             });
         }
-        
+
         const loadTime = performance.now() - startTime;
         Logger.success('supabase-service', `${auditoresMap.size} AUDITORES cargados en ${loadTime.toFixed(0)}ms`);
-        
+
         return auditoresMap;
     } catch (error) {
         Logger.error('supabase-service', 'Error cargando auditores', error);
@@ -771,13 +842,13 @@ async function loadGestoresFromSupabase() {
     try {
         Logger.info('supabase-service', 'Cargando gestores desde Supabase...');
         const startTime = performance.now();
-        
+
         const result = await supabase.select('gestores', {
             order: 'nombre_gestor.asc'
         });
-        
+
         const gestoresMap = new Map();
-        
+
         // Validar que result sea un array
         if (Array.isArray(result)) {
             result.forEach(row => {
@@ -787,10 +858,10 @@ async function loadGestoresFromSupabase() {
                 });
             });
         }
-        
+
         const loadTime = performance.now() - startTime;
         Logger.success('supabase-service', `${gestoresMap.size} GESTORES cargados en ${loadTime.toFixed(0)}ms`);
-        
+
         return gestoresMap;
     } catch (error) {
         Logger.error('supabase-service', 'Error cargando gestores', error);
@@ -837,21 +908,21 @@ async function loadPreciosFromSupabase() {
     try {
         Logger.info('supabase-service', 'Cargando precios desde Supabase...');
         const startTime = performance.now();
-        
+
         const result = await loadAllRecords('precios');
-        
+
         const preciosMap = new Map();
-        
+
         // Validar que result sea un array
         if (Array.isArray(result)) {
             result.forEach(row => {
                 preciosMap.set(row.referencia, row.pvp.toString());
             });
         }
-        
+
         const loadTime = performance.now() - startTime;
         Logger.success('supabase-service', `${preciosMap.size} PRECIOS cargados en ${loadTime.toFixed(0)}ms`);
-        
+
         return preciosMap;
     } catch (error) {
         Logger.error('supabase-service', 'Error cargando precios', error);
@@ -860,58 +931,127 @@ async function loadPreciosFromSupabase() {
 }
 
 /**
- * Carga catálogo de productos desde la tabla `master` LOCAL de Supabase
- * (Sincronizada por la Edge Function sync-master)
- * Mapeo: id_master → OP, descripcion → PRENDA, cuento → LINEA, genero → GENERO, referencia → REFERENCIA
- * 
- * @param {string[]} [ops] - OPs a buscar. Si está vacío o no se especifica, carga toda la tabla master local.
+ * Carga SOLO la LINEA (cuento) de las OPs solicitadas desde el catálogo master externo.
+ * Usado por el procesador CSV — no necesita prenda/genero/referencia, solo la línea.
+ * Consulta directo a zpikjjcbievfpzegupmw via EF query-master, sin tabla local.
+ *
+ * @param {string[]} ops - OPs a buscar
+ * @returns {Promise<Map<string, {PRENDA:'', LINEA:string, GENERO:'', REFERENCIA:''}>>}
  */
 async function loadSisprowebFromSupabase(ops = []) {
-    try {
-        const startTime = performance.now();
-        let result;
+    if (!ops || ops.length === 0) {
+        Logger.info('supabase-service', 'SISPROWEB: sin OPs, omitido');
+        return new Map();
+    }
 
-        if (ops && ops.length > 0) {
-            const opsClean = [...new Set(ops.map(o => String(o).trim()).filter(Boolean))];
-            Logger.info('supabase-service', `SISPROWEB (Master Local): consultando ${opsClean.length} OPs...`);
-            
-            const inFilter = `id_master=in.(${opsClean.join(',')})`;
-            const url = `${SUPABASE_URL}/rest/v1/master?select=id_master,referencia,descripcion,cuento,genero&${inFilter}`;
-            const headers = supabase.getHeaders();
-            const res = await fetch(url, { headers });
-            
-            if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.message || errData.error || `HTTP ${res.status}`);
-            }
-            result = await res.json();
-        } else {
-            Logger.info('supabase-service', 'SISPROWEB (Master Local): cargando catálogo completo...');
-            result = await supabase.selectAll('master', {
-                columns: 'id_master,referencia,descripcion,cuento,genero'
-            });
+    try {
+        const opsClean = [...new Set(ops.map(o => String(o).trim()).filter(Boolean))];
+        if (!opsClean.length) return new Map();
+
+        Logger.info('supabase-service', `SISPROWEB on-demand: consultando ${opsClean.length} OPs (solo LINEA)...`);
+        const startTime = performance.now();
+
+        // Llamar EF query-master directamente — sin tabla local, sin sync
+        const QUERY_MASTER_URL = `${SUPABASE_URL}/functions/v1/query-master`;
+        const token = supabase.accessToken || sessionStorage.getItem('supabase_token') || SUPABASE_ANON_KEY;
+
+        const res = await fetch(QUERY_MASTER_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type':  'application/json',
+                'apikey':        SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ action: 'get_lineas_by_ops', payload: { ops: opsClean } })
+        });
+
+        if (!res.ok) {
+            const e = await res.json().catch(() => ({}));
+            throw new Error(e.error || `query-master HTTP ${res.status}`);
         }
 
-        const sisproMap = new Map();
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
 
-        (result || []).forEach(row => {
-            const opKey = (row.id_master || '').toString().trim();
-            if (opKey) {
-                sisproMap.set(opKey, {
-                    PRENDA:     row.descripcion || '',
-                    LINEA:      row.cuento      || '',
-                    GENERO:     row.genero      || '',
-                    REFERENCIA: row.referencia  || ''
+        const sisproMap = new Map();
+        (json.data || []).forEach(row => {
+            if (row.op) {
+                sisproMap.set(row.op, {
+                    PRENDA:     '',        // CSV obtiene esto de sus propias columnas
+                    LINEA:      row.linea || '',
+                    GENERO:     '',
+                    REFERENCIA: ''
                 });
             }
         });
 
         const ms = (performance.now() - startTime).toFixed(0);
-        Logger.success('supabase-service', `SISPROWEB (Master Local): ${sisproMap.size} OPs cargadas en ${ms}ms`);
+        Logger.success('supabase-service', `SISPROWEB on-demand: ${sisproMap.size}/${opsClean.length} líneas en ${ms}ms`);
         return sisproMap;
 
     } catch (error) {
-        Logger.error('supabase-service', 'Error cargando sisproweb desde tabla master local', error);
+        Logger.error('supabase-service', 'Error en loadSisprowebFromSupabase', error);
+        throw error;
+    }
+}
+
+/**
+ * Obtiene detalle completo de OPs desde el catálogo master externo.
+ * Usado por el módulo de Pedidos: referencia, prenda, línea, género.
+ * Consulta directo a zpikjjcbievfpzegupmw via EF query-master.
+ *
+ * @param {string[]} ops - OPs a buscar
+ * @returns {Promise<Map<string, {PRENDA, LINEA, GENERO, REFERENCIA}>>}
+ */
+async function fetchOpsDetailFromMaster(ops = []) {
+    if (!ops || ops.length === 0) return new Map();
+
+    try {
+        const opsClean = [...new Set(ops.map(o => String(o).trim()).filter(Boolean))];
+        if (!opsClean.length) return new Map();
+
+        Logger.info('supabase-service', `MASTER detalle: consultando ${opsClean.length} OPs...`);
+        const startTime = performance.now();
+
+        const QUERY_MASTER_URL = `${SUPABASE_URL}/functions/v1/query-master`;
+        const token = supabase.accessToken || sessionStorage.getItem('supabase_token') || SUPABASE_ANON_KEY;
+
+        const res = await fetch(QUERY_MASTER_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type':  'application/json',
+                'apikey':        SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ action: 'get_ops_detail', payload: { ops: opsClean } })
+        });
+
+        if (!res.ok) {
+            const e = await res.json().catch(() => ({}));
+            throw new Error(e.error || `query-master HTTP ${res.status}`);
+        }
+
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+
+        const detailMap = new Map();
+        (json.data || []).forEach(row => {
+            if (row.op) {
+                detailMap.set(row.op, {
+                    PRENDA:     row.prenda     || '',
+                    LINEA:      row.linea      || '',
+                    GENERO:     row.genero     || '',
+                    REFERENCIA: row.referencia || ''
+                });
+            }
+        });
+
+        const ms = (performance.now() - startTime).toFixed(0);
+        Logger.success('supabase-service', `MASTER detalle: ${detailMap.size}/${opsClean.length} OPs en ${ms}ms`);
+        return detailMap;
+
+    } catch (error) {
+        Logger.error('supabase-service', 'Error en fetchOpsDetailFromMaster', error);
         throw error;
     }
 }
@@ -996,39 +1136,33 @@ async function loadHistoricasFromSupabase() {
  * formato que usaba la hoja DATA2, para que validarEstado() y
  * validarEstadoParcial() funcionen sin cambios.
  */
-async function loadData2FromSupabase(lotes = []) {
+async function loadData2FromSupabase(lotes = [], ids = []) {
     try {
         Logger.info('supabase-service', 'Cargando ingresos confirmados desde Supabase...');
         const startTime = performance.now();
 
         let result;
 
-        if (lotes.length > 0) {
-            // Bajo demanda: solo los lotes del CSV o Excel — 1 sola request con filtro IN
-            // NOTA: Se consulta la tabla 'ingresos' sin restringir por el proveedor seleccionado en la UI,
-            // para garantizar que la validación de OPs (confirmados / pendientes) funcione correctamente 
-            // con cualquier productora o línea.
-            const lotesClean = [...new Set(lotes.map(l => String(l).trim()).filter(Boolean))];
-            let qs = `select=id_ingreso,lote,fecha_traslado,total,total_relativo,cantidad,diferencia,traslado,otros_traslados,anexos,total_general,detalle_cantidades,productora` +
-                     `&lote=in.(${lotesClean.join(',')})&order=created_at.asc`;
-            const url = `${SUPABASE_URL}/rest/v1/ingresos?${qs}`;
-            const headers = supabase.getHeaders();
-            const res = await fetch(url, { headers });
-            if (!res.ok) {
-                Logger.error('supabase-service', `loadData2: HTTP ${res.status} — ${url.substring(0, 120)}`);
-                return { data2Map: new Map(), data2CountMap: new Map(), data2JsonMap: new Map() };
-            }
-            result = await res.json();
-            Logger.info('supabase-service', `Ingresos bajo demanda: ${lotesClean.length} lotes, ${result.length} registros`);
+        const allItems = [
+            ...(Array.isArray(lotes) ? lotes : [lotes]),
+            ...(Array.isArray(ids) ? ids : [ids])
+        ];
+
+        const lotesClean = [...new Set(allItems.map(l => parseInt(l)).filter(n => !isNaN(n) && n > 0))];
+        const idsClean = [...new Set(allItems.map(l => (l || '').toString().trim()).filter(Boolean))];
+
+        if (lotesClean.length > 0 || idsClean.length > 0) {
+            // Bajo demanda vía Edge Function (api-gateway -> RPC get_lotes_data2)
+            result = await supabase.callGateway('get_lotes_data2', { lotes: lotesClean, ids: idsClean });
+            Logger.info('supabase-service', `Ingresos bajo demanda vía EF: ${lotesClean.length} lotes, ${idsClean.length} IDs, ${result?.length || 0} registros`);
         } else {
-            // Sin lotes → mapa vacío, no hacer request
-            Logger.info('supabase-service', 'loadData2: sin lotes, retornando mapas vacíos');
+            Logger.info('supabase-service', 'loadData2: sin lotes ni IDs, retornando mapas vacíos');
             return { data2Map: new Map(), data2CountMap: new Map(), data2JsonMap: new Map() };
         }
 
-        const data2Map     = new Map();
+        const data2Map = new Map();
         const data2CountMap = new Map();
-        const data2JsonMap  = new Map();
+        const data2JsonMap = new Map();
 
         // Convierte fecha ISO (YYYY-MM-DD) de Supabase a DD/MM/YYYY que usan normalizeFecha() y parseFechaToTimestamp()
         const isoToDD_MM_YYYY = (isoStr) => {
@@ -1036,7 +1170,7 @@ async function loadData2FromSupabase(lotes = []) {
             const s = isoStr.toString().trim().split('T')[0]; // quitar hora si existe
             const parts = s.split('-');
             if (parts.length !== 3) return isoStr; // si ya es DD/MM/YYYY u otro formato, lo devuelve tal cual
-            return `${parts[2].padStart(2,'0')}/${parts[1].padStart(2,'0')}/${parts[0]}`;
+            return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
         };
 
         // Normaliza un valor total/cantidad a entero-string para comparar con row[19] del CSV
@@ -1048,43 +1182,48 @@ async function loadData2FromSupabase(lotes = []) {
 
         if (Array.isArray(result)) {
             result.forEach(row => {
-                const lote   = (row.lote || '').toString().trim();
-                const fecha  = isoToDD_MM_YYYY(row.fecha_traslado || ''); // DD/MM/YYYY
+                const lote = (row.lote || '').toString().trim();
+                const idIngreso = (row.id_ingreso || '').toString().trim();
+                const fecha = isoToDD_MM_YYYY(row.fecha_traslado || ''); // DD/MM/YYYY
                 const fechaNorm = normalizeFecha(fecha);
 
                 // Insertar TODAS las variantes de total/cantidad para que validarEstado()
                 // encuentre la clave sin importar qué campo fue guardado como total declarado.
-                // GUIA usa: op|fecha|row[9] donde row[9]=jsonData.CANTIDAD=primerItem.TOTAL (del CSV)
-                // En Supabase ese valor puede estar en total, total_relativo o cantidad según cuándo se guardó.
                 const variantes = new Set([
                     row.total,
                     row.total_relativo,
                     row.cantidad
                 ]);
-                variantes.forEach(val => {
-                    if (val !== null && val !== undefined) {
-                        const totalNorm = normTotal(val);
-                        data2Map.set(`${lote}|${fechaNorm}|${totalNorm}`, true);
-                    }
-                });
 
-                // ── data2CountMap ──
-                data2CountMap.set(lote, (data2CountMap.get(lote) || 0) + 1);
+                // Registrar bajo lote y bajo id_ingreso (soporta tanto CSV donde lote=id_ingreso como Excel donde lote != id_ingreso)
+                const claves = new Set([lote, idIngreso].filter(Boolean));
 
-                // ── data2JsonMap: objetos con los campos que lee validarEstadoParcial() ──
-                // FECHA debe estar en DD/MM/YYYY para que parseFechaToTimestamp() funcione correctamente
-                if (lote) {
-                    if (!data2JsonMap.has(lote)) data2JsonMap.set(lote, []);
-                    data2JsonMap.get(lote).push({
-                        FECHA:         fecha,                                                          // DD/MM/YYYY
-                        TRASLADO:      (row.traslado || '').toString(),
-                        OTROS_TRASLADOS: Array.isArray(row.otros_traslados) ? row.otros_traslados : [],
-                        ANEXOS:        Array.isArray(row.anexos) ? row.anexos : [],
-                        DIFERENCIA:    row.diferencia ?? 0,
-                        CANTIDAD:      row.cantidad   ?? 0,   // PRIMERAS+PROMO (máximo distribuible)
-                        TOTAL_GENERAL: row.total_general ?? 0  // lo que realmente ingresó
+                claves.forEach(k => {
+                    variantes.forEach(val => {
+                        if (val !== null && val !== undefined) {
+                            const totalNorm = normTotal(val);
+                            data2Map.set(`${k}|${fechaNorm}|${totalNorm}`, true);
+                        }
                     });
-                }
+
+                    // ── data2CountMap ──
+                    data2CountMap.set(k, (data2CountMap.get(k) || 0) + 1);
+
+                    // ── data2JsonMap: objetos con los campos que lee validarEstadoParcial() ──
+                    if (!data2JsonMap.has(k)) data2JsonMap.set(k, []);
+                    data2JsonMap.get(k).push({
+                        id_ingreso: idIngreso,
+                        lote: lote,
+                        FECHA: fecha,                                                          // DD/MM/YYYY
+                        TRASLADO: (row.traslado || '').toString(),
+                        OTROS_TRASLADOS: Array.isArray(row.otros_traslados) ? row.otros_traslados : [],
+                        ANEXOS: Array.isArray(row.anexos) ? row.anexos : [],
+                        DIFERENCIA: row.diferencia ?? 0,
+                        CANTIDAD: row.cantidad ?? 0,   // PRIMERAS+PROMO (máximo distribuible)
+                        TOTAL_GENERAL: row.total_general ?? 0, // lo que realmente ingresó
+                        TOTAL: row.total ?? 0  // Total de la orden de producción original
+                    });
+                });
             });
         }
 
@@ -1109,13 +1248,13 @@ async function loadClientesFromSupabase() {
     try {
         Logger.info('supabase-service', 'Cargando CLIENTES desde Supabase...');
         const startTime = performance.now();
-        
+
         const result = await supabase.select('clientes', {
             order: 'nombre_corto.asc'
         });
-        
+
         const clientesMap = new Map();
-        
+
         // Validar que result sea un array
         if (Array.isArray(result)) {
             result.forEach(row => {
@@ -1132,10 +1271,10 @@ async function loadClientesFromSupabase() {
                 });
             });
         }
-        
+
         const loadTime = performance.now() - startTime;
         Logger.success('supabase-service', `${clientesMap.size} CLIENTES cargados en ${loadTime.toFixed(0)}ms`);
-        
+
         return clientesMap;
     } catch (error) {
         Logger.error('supabase-service', 'Error cargando clientes', error);
@@ -1148,34 +1287,36 @@ async function loadClientesFromSupabase() {
  */
 async function loadPedidosFromSupabase() {
     try {
-        Logger.info('supabase-service', 'Cargando PEDIDOS desde Supabase...');
+        Logger.info('supabase-service', 'Cargando PEDIDOS activos desde Supabase...');
         const startTime = performance.now();
-        
+
+        // Solo traer pedidos activos (estado = true) — los cumplidos no se cargan al inicio
         const result = await supabase.selectAll('pedidos', {
+            filters: { estado: true },
             order: 'fecha.desc'
         });
-        
+
         let pedidos = [];
-        
+
         if (Array.isArray(result)) {
             pedidos = result.map(row => ({
-                id:            row.id_pedido,
-                mayoristaId:   row.mayorista_id   || '',
+                id: row.id_pedido,
+                mayoristaId: row.mayorista_id || '',
                 nombreCliente: row.nombre_cliente || '',
-                op:            row.op             || '',
-                referencia:    row.referencia     || '',
-                prenda:        row.prenda         || '',
-                genero:        row.genero         || '',
-                cantidad:      row.cantidad       || 0,
-                obs:           row.obs            || '',
-                fecha:         row.fecha          || '',
-                estado:        row.estado !== undefined ? row.estado : true
+                op: row.op || '',
+                referencia: row.referencia || '',
+                prenda: row.prenda || '',
+                genero: row.genero || '',
+                cantidad: row.cantidad || 0,
+                obs: row.obs || '',
+                fecha: row.fecha || '',
+                estado: true
             }));
         }
-        
+
         const loadTime = performance.now() - startTime;
-        Logger.success('supabase-service', `${pedidos.length} PEDIDOS cargados en ${loadTime.toFixed(0)}ms`);
-        
+        Logger.success('supabase-service', `${pedidos.length} PEDIDOS activos cargados en ${loadTime.toFixed(0)}ms`);
+
         return pedidos;
     } catch (error) {
         Logger.error('supabase-service', 'Error cargando pedidos', error);
@@ -1186,34 +1327,6 @@ async function loadPedidosFromSupabase() {
 /**
  * Carga todos los datos de configuración desde Supabase
  */
-async function loadAllConfigFromSupabase() {
-    Logger.info('supabase-service', 'Cargando toda la configuración desde Supabase...');
-    const startTime = performance.now();
-
-    try {
-        const [usuarios, proveedores, auditores, gestores] = await Promise.all([
-            loadUsuariosFromSupabase(),
-            loadProveedoresFromSupabase(),
-            loadAuditoresFromSupabase(),
-            loadGestoresFromSupabase()
-        ]);
-
-        // Actualizar mapas globales
-        if (typeof setEscanersMap === 'function') setEscanersMap(usuarios);
-        if (typeof setProveedoresMap === 'function') setProveedoresMap(proveedores);
-        if (typeof setAuditoresMap === 'function') setAuditoresMap(auditores);
-        if (typeof setGestoresMap === 'function') setGestoresMap(gestores);
-
-        const loadTime = performance.now() - startTime;
-        Logger.success('supabase-service', `Configuración completa cargada en ${loadTime.toFixed(0)}ms`);
-
-        return { usuarios, proveedores, auditores, gestores };
-    } catch (error) {
-        Logger.error('supabase-service', 'Error cargando configuración', error);
-        throw error;
-    }
-}
-
 /**
  * Carga colores desde Supabase
  */
@@ -1221,7 +1334,7 @@ async function loadColoresFromSupabase() {
     try {
         Logger.info('supabase-service', 'Cargando COLORES desde Supabase...');
         const startTime = performance.now();
-        
+
         // Filtrar por productora activa si está disponible
         const proveedorActivo = (typeof getProveedorActivo === 'function') ? getProveedorActivo() : null;
         const filters = proveedorActivo ? { productora: proveedorActivo.id } : {};
@@ -1230,21 +1343,21 @@ async function loadColoresFromSupabase() {
             filters,
             order: 'id_color.asc'
         });
-        
+
         const coloresMap = new Map();
-        
+
         // Validar que result sea un array
         if (Array.isArray(result)) {
             result.forEach(row => {
                 coloresMap.set(row.id_color, row.nombre_color);
             });
         }
-        
+
         const loadTime = performance.now() - startTime;
-        Logger.success('supabase-service', `${coloresMap.size} COLORES cargados` + 
+        Logger.success('supabase-service', `${coloresMap.size} COLORES cargados` +
             (proveedorActivo ? ` (productora: ${proveedorActivo.id})` : ' (sin filtro)') +
             ` en ${loadTime.toFixed(0)}ms`);
-        
+
         return coloresMap;
     } catch (error) {
         Logger.error('supabase-service', 'Error cargando colores', error);
@@ -1268,35 +1381,31 @@ window.loadProveedoresFromSupabase = loadProveedoresFromSupabase;
 window.loadAuditoresFromSupabase = loadAuditoresFromSupabase;
 window.loadGestoresFromSupabase = loadGestoresFromSupabase;
 window.loadPreciosFromSupabase = loadPreciosFromSupabase;
-window.loadSisprowebFromSupabase = loadSisprowebFromSupabase;
-window.syncMasterEdgeFunction = syncMasterEdgeFunction;
+window.loadSisprowebFromSupabase  = loadSisprowebFromSupabase;
+window.syncMasterEdgeFunction     = syncMasterEdgeFunction;
+window.fetchOpsDetailFromMaster   = fetchOpsDetailFromMaster;
 window.loadHistoricasFromSupabase = loadHistoricasFromSupabase;
 window.loadData2FromSupabase = loadData2FromSupabase;
 window.loadClientesFromSupabase = loadClientesFromSupabase;
 window.loadPedidosFromSupabase = loadPedidosFromSupabase;
 window.loadColoresFromSupabase = loadColoresFromSupabase;
-window.loadAllConfigFromSupabase = loadAllConfigFromSupabase;
 
 /**
- * Carga datos de distribución desde Supabase (reemplaza getSheetDataAsJSON_1 y getSheetDataAsJSON_2)
- * Obtiene registros de ingresos con tipo='FULL'
+ * Carga datos de distribución desde Supabase
+ * Optimizado: consulta FULL y PENDIENTES vía Edge Function / RPC sin descargar toda la tabla
  */
 async function loadDistributionDataFromSupabase() {
     try {
-        Logger.info('supabase-service', 'Cargando datos de distribución desde Supabase...');
+        Logger.info('supabase-service', 'Cargando datos de distribución vía Edge Function...');
         const startTime = performance.now();
 
-        // Consulta 1: registros FULL (los principales)
-        const resultFull = await supabase.selectAll('ingresos', {
-            filters: { tipo: 'FULL' },
-            order: 'created_at.desc'
-        });
+        const proveedorActivo = (typeof getProveedorActivo === 'function') ? getProveedorActivo() : null;
+        const productora = proveedorActivo ? proveedorActivo.id : null;
 
-        // Consulta 2: registros PENDIENTES — sus HR se suman al FULL del mismo lote
-        const resultPendiente = await supabase.selectAll('ingresos', {
-            filters: { tipo: 'PENDIENTES' },
-            order: 'created_at.asc'
-        });
+        // Llamar a la Edge Function api-gateway (acción: get_distribution_data)
+        const resData = await supabase.callGateway('get_distribution_data', { productora });
+        const resultFull = resData?.full || [];
+        const resultPendiente = resData?.pendientes || [];
 
         // Acumular HR de pendientes por lote
         const lotesHrPendientes = {};  // lote → array de filas HR
@@ -1321,8 +1430,8 @@ async function loadDistributionDataFromSupabase() {
                     row.hr.forEach(item => {
                         lotesHrPendientes[lote].push([
                             item.codigo_color || '',
-                            item.color        || '',
-                            item.talla        || '',
+                            item.color || '',
+                            item.talla || '',
                             item.cantidad ? item.cantidad.toString() : '0'
                         ]);
                     });
@@ -1341,8 +1450,8 @@ async function loadDistributionDataFromSupabase() {
                 if (Array.isArray(row.hr)) {
                     hrArray = row.hr.map(item => [
                         item.codigo_color || '',
-                        item.color        || '',
-                        item.talla        || '',
+                        item.color || '',
+                        item.talla || '',
                         item.cantidad ? item.cantidad.toString() : '0'
                     ]);
                 }
@@ -1358,7 +1467,7 @@ async function loadDistributionDataFromSupabase() {
                         if (itemHr[0]) {
                             if (combinedHrMap[itemHr[0]]) {
                                 const existente = parseInt(combinedHrMap[itemHr[0]][3]) || 0;
-                                const nueva     = parseInt(itemHr[3]) || 0;
+                                const nueva = parseInt(itemHr[3]) || 0;
                                 combinedHrMap[itemHr[0]][3] = (existente + nueva).toString();
                             } else {
                                 combinedHrMap[itemHr[0]] = [...itemHr];
@@ -1375,24 +1484,24 @@ async function loadDistributionDataFromSupabase() {
                 }
 
                 distributionData.push({
-                    "A":          row.id_ingreso      || '',
-                    "FECHA":      row.fecha_traslado  || '',
-                    "TALLER":     row.taller          || '',
-                    "LINEA":      row.linea            || '',
-                    "AUDITOR":    row.auditor          || '',
-                    "ESCANER":    row.escaner          || '',
-                    "LOTE":       lote,
-                    "REFERENCIA": row.referencia       || '',
-                    "DESCRIPCIÓN":row.descripcion      || '',
-                    "CANTIDAD":   row.cantidad ? row.cantidad.toString() : '0',
-                    "TEMPLO":     '',
-                    "TIPO":       row.tipo             || 'FULL',
-                    "PVP":        row.pvp ? row.pvp.toString() : '0',
-                    "PRENDA":     row.prenda           || '',
-                    "GENERO":     row.genero           || '',
-                    "HR":         hrArray,
-                    "PROVEEDOR":  row.proveedor        || '',
-                    "ANEXO":      anexos
+                    "A": row.id_ingreso || '',
+                    "FECHA": row.fecha_traslado || '',
+                    "TALLER": row.taller || '',
+                    "LINEA": row.linea || '',
+                    "AUDITOR": row.auditor || '',
+                    "ESCANER": row.escaner || '',
+                    "LOTE": lote,
+                    "REFERENCIA": row.referencia || '',
+                    "DESCRIPCIÓN": row.descripcion || '',
+                    "CANTIDAD": row.cantidad ? row.cantidad.toString() : '0',
+                    "TEMPLO": '',
+                    "TIPO": row.tipo || 'FULL',
+                    "PVP": row.pvp ? row.pvp.toString() : '0',
+                    "PRENDA": row.prenda || '',
+                    "GENERO": row.genero || '',
+                    "HR": hrArray,
+                    "PROVEEDOR": row.proveedor || '',
+                    "ANEXO": anexos
                 });
             });
         }
@@ -1455,8 +1564,8 @@ async function buscarRecEnSupabase(recNumber) {
     if (Array.isArray(fullRow.hr)) {
         hrArray = fullRow.hr.map(item => [
             item.codigo_color || '',
-            item.color        || '',
-            item.talla        || '',
+            item.color || '',
+            item.talla || '',
             item.cantidad ? item.cantidad.toString() : '0'
         ]);
     }
@@ -1466,8 +1575,8 @@ async function buscarRecEnSupabase(recNumber) {
     pendientesRows.forEach(row => {
         anexosPendientes.push({
             DOCUMENTO: row.id_ingreso || '',
-            TIPO:      'PENDIENTES',
-            CANTIDAD:  row.cantidad ? row.cantidad.toString() : '0'
+            TIPO: 'PENDIENTES',
+            CANTIDAD: row.cantidad ? row.cantidad.toString() : '0'
         });
         if (Array.isArray(row.hr) && row.hr.length > 0) {
             const combinedHrMap = {};
@@ -1475,9 +1584,9 @@ async function buscarRecEnSupabase(recNumber) {
             row.hr.forEach(item => {
                 const key = item.codigo_color || '';
                 if (!key) return;
-                const hrRow = [key, item.color||'', item.talla||'', item.cantidad ? item.cantidad.toString() : '0'];
+                const hrRow = [key, item.color || '', item.talla || '', item.cantidad ? item.cantidad.toString() : '0'];
                 if (combinedHrMap[key]) {
-                    combinedHrMap[key][3] = (parseInt(combinedHrMap[key][3])||0) + (parseInt(hrRow[3])||0) + '';
+                    combinedHrMap[key][3] = (parseInt(combinedHrMap[key][3]) || 0) + (parseInt(hrRow[3]) || 0) + '';
                 } else {
                     combinedHrMap[key] = hrRow;
                 }
@@ -1489,24 +1598,24 @@ async function buscarRecEnSupabase(recNumber) {
     const anexos = [...(Array.isArray(fullRow.anexos) ? fullRow.anexos : []), ...anexosPendientes];
 
     return {
-        "A":          fullRow.id_ingreso   || '',
-        "FECHA":      fullRow.fecha_traslado || '',
-        "TALLER":     fullRow.taller        || '',
-        "LINEA":      fullRow.linea         || '',
-        "AUDITOR":    fullRow.auditor       || '',
-        "ESCANER":    fullRow.escaner       || '',
-        "LOTE":       lote,
-        "REFERENCIA": fullRow.referencia    || '',
-        "DESCRIPCIÓN":fullRow.descripcion   || '',
-        "CANTIDAD":   fullRow.cantidad ? fullRow.cantidad.toString() : '0',
-        "TEMPLO":     '',
-        "TIPO":       fullRow.tipo          || 'FULL',
-        "PVP":        fullRow.pvp ? fullRow.pvp.toString() : '0',
-        "PRENDA":     fullRow.prenda        || '',
-        "GENERO":     fullRow.genero        || '',
-        "HR":         hrArray,
-        "PROVEEDOR":  fullRow.proveedor     || '',
-        "ANEXO":      anexos
+        "A": fullRow.id_ingreso || '',
+        "FECHA": fullRow.fecha_traslado || '',
+        "TALLER": fullRow.taller || '',
+        "LINEA": fullRow.linea || '',
+        "AUDITOR": fullRow.auditor || '',
+        "ESCANER": fullRow.escaner || '',
+        "LOTE": lote,
+        "REFERENCIA": fullRow.referencia || '',
+        "DESCRIPCIÓN": fullRow.descripcion || '',
+        "CANTIDAD": fullRow.cantidad ? fullRow.cantidad.toString() : '0',
+        "TEMPLO": '',
+        "TIPO": fullRow.tipo || 'FULL',
+        "PVP": fullRow.pvp ? fullRow.pvp.toString() : '0',
+        "PRENDA": fullRow.prenda || '',
+        "GENERO": fullRow.genero || '',
+        "HR": hrArray,
+        "PROVEEDOR": fullRow.proveedor || '',
+        "ANEXO": anexos
     };
 }
 
@@ -1599,7 +1708,7 @@ async function updateDistributionStatus(documento, estado) {
         }
 
         const record = { estado: estado };
-        
+
         // Si se marca como FINALIZADO, registrar el fin
         if (estado === 'FINALIZADO') {
             record.fin = new Date().toISOString();
@@ -1645,8 +1754,8 @@ async function addDistributionPause(documento, pausa) {
         const proveedorActivo = (typeof getProveedorActivo === 'function') ? getProveedorActivo() : null;
         const productora = proveedorActivo ? proveedorActivo.id : '';
 
-        const result = await supabase.update('distribuciones', 
-            { pausas: pausas }, 
+        const result = await supabase.update('distribuciones',
+            { pausas: pausas },
             { id_distribucion: documento, productora: productora }
         );
 
@@ -1727,13 +1836,13 @@ async function loadBarrasFromSupabase() {
     try {
         Logger.info('supabase-service', 'Cargando BARRAS desde Supabase...');
         const startTime = performance.now();
-        
+
         const result = await loadAllRecords('barras', {
             order: 'refprov.asc'
         });
-        
+
         const barrasMap = new Map();
-        
+
         // Validar que result sea un array
         if (Array.isArray(result)) {
             result.forEach(row => {
@@ -1742,10 +1851,10 @@ async function loadBarrasFromSupabase() {
                 barrasMap.set(key, row.barra);
             });
         }
-        
+
         const loadTime = performance.now() - startTime;
         Logger.success('supabase-service', `${barrasMap.size} BARRAS cargadas en ${loadTime.toFixed(0)}ms`);
-        
+
         return barrasMap;
     } catch (error) {
         Logger.error('supabase-service', 'Error cargando barras', error);
@@ -1768,10 +1877,10 @@ async function saveBarraData(refprov, talla, idColor, barra) {
             id_color: idColor,
             barra: barra
         };
-        
+
         // Usar upsert para insertar o actualizar
         const result = await supabase.upsert('barras', record);
-        
+
         Logger.success('supabase-service', `Barra guardada: ${refprov}|${talla}|${idColor}`);
         return result;
     } catch (error) {
@@ -1788,7 +1897,7 @@ async function saveBarrasBatch(barrasArray) {
     try {
         Logger.info('supabase-service', `Guardando ${barrasArray.length} barras en lote...`);
         const startTime = performance.now();
-        
+
         // Preparar registros
         const records = barrasArray.map(item => ({
             refprov: item.refprov || item.estilo,
@@ -1796,13 +1905,13 @@ async function saveBarrasBatch(barrasArray) {
             id_color: item.id_color || item.color,
             barra: item.barra
         }));
-        
+
         // Usar upsert para insertar o actualizar en lote
         const result = await supabase.upsert('barras', records);
-        
+
         const loadTime = performance.now() - startTime;
         Logger.success('supabase-service', `${barrasArray.length} barras guardadas en ${loadTime.toFixed(0)}ms`);
-        
+
         return result;
     } catch (error) {
         Logger.error('supabase-service', 'Error guardando barras en lote', error);
@@ -1827,11 +1936,11 @@ async function getBarra(refprov, talla, idColor) {
             },
             limit: 1
         });
-        
+
         if (Array.isArray(result) && result.length > 0) {
             return result[0].barra;
         }
-        
+
         return null;
     } catch (error) {
         Logger.error('supabase-service', 'Error buscando barra', error);
@@ -1844,3 +1953,238 @@ window.loadBarrasFromSupabase = loadBarrasFromSupabase;
 window.saveBarraData = saveBarraData;
 window.saveBarrasBatch = saveBarrasBatch;
 window.getBarra = getBarra;
+
+
+// ============================================
+// FUNCIONES ON-DEMAND — carga estricta por IDs
+// Solo traen los registros que existen en el
+// archivo subido (CSV o Excel), nada más.
+// ============================================
+
+/**
+ * Carga SOLO los colores cuyos id_color están en la lista dada.
+ * Reemplaza la carga masiva loadColoresFromSupabase() para CSV/Excel.
+ * @param {string[]} ids - Códigos de color extraídos del archivo
+ * @param {string} [productora] - NIT del proveedor activo (opcional)
+ * @returns {Promise<Map<string,string>>} id_color → nombre_color
+ */
+async function loadColoresByIds(ids, productora = '') {
+    if (!ids || ids.length === 0) return new Map();
+
+    try {
+        const idsClean = [...new Set(ids.map(i => String(i).trim()).filter(Boolean))];
+        if (idsClean.length === 0) return new Map();
+
+        Logger.info('supabase-service', `COLORES on-demand: consultando ${idsClean.length} códigos...`);
+        const startTime = performance.now();
+
+        const ON_DEMAND_URL = `${SUPABASE_URL}/functions/v1/on-demand-query`;
+        const token = supabase.accessToken || sessionStorage.getItem('supabase_token') || SUPABASE_ANON_KEY;
+
+        const res = await fetch(ON_DEMAND_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type':  'application/json',
+                'apikey':        SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                action:  'get_colores_by_ids',
+                payload: { ids: idsClean, productora: productora || '' }
+            })
+        });
+
+        if (!res.ok) {
+            const e = await res.json().catch(() => ({}));
+            throw new Error(e.error || `on-demand-query HTTP ${res.status}`);
+        }
+
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+
+        const coloresMap = new Map();
+        (Array.isArray(json.data) ? json.data : []).forEach(row => {
+            if (row.id_color) coloresMap.set(String(row.id_color).trim(), row.nombre_color || '');
+        });
+
+        const ms = (performance.now() - startTime).toFixed(0);
+        Logger.success('supabase-service', `COLORES on-demand: ${coloresMap.size}/${idsClean.length} encontrados en ${ms}ms`);
+        return coloresMap;
+    } catch (error) {
+        Logger.error('supabase-service', 'Error en loadColoresByIds', error);
+        throw error;
+    }
+}
+
+/**
+ * Carga SOLO los precios cuyas referencias están en la lista dada.
+ * Reemplaza la carga masiva loadPreciosFromSupabase() para CSV/Excel.
+ * @param {string[]} refs - Referencias extraídas del archivo
+ * @returns {Promise<Map<string,string>>} referencia → pvp
+ */
+async function loadPreciosByRefs(refs) {
+    if (!refs || refs.length === 0) return new Map();
+
+    try {
+        const refsClean = [...new Set(refs.map(r => String(r).trim()).filter(Boolean))];
+        if (refsClean.length === 0) return new Map();
+
+        Logger.info('supabase-service', `PRECIOS on-demand: consultando ${refsClean.length} referencias...`);
+        const startTime = performance.now();
+
+        const ON_DEMAND_URL = `${SUPABASE_URL}/functions/v1/on-demand-query`;
+        const token = supabase.accessToken || sessionStorage.getItem('supabase_token') || SUPABASE_ANON_KEY;
+
+        const res = await fetch(ON_DEMAND_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type':  'application/json',
+                'apikey':        SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                action:  'get_precios_by_refs',
+                payload: { refs: refsClean }
+            })
+        });
+
+        if (!res.ok) {
+            const e = await res.json().catch(() => ({}));
+            throw new Error(e.error || `on-demand-query HTTP ${res.status}`);
+        }
+
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+
+        const preciosMap = new Map();
+        (Array.isArray(json.data) ? json.data : []).forEach(row => {
+            if (row.referencia) preciosMap.set(String(row.referencia).trim(), String(row.pvp ?? ''));
+        });
+
+        const ms = (performance.now() - startTime).toFixed(0);
+        Logger.success('supabase-service', `PRECIOS on-demand: ${preciosMap.size}/${refsClean.length} encontrados en ${ms}ms`);
+        return preciosMap;
+    } catch (error) {
+        Logger.error('supabase-service', 'Error en loadPreciosByRefs', error);
+        throw error;
+    }
+}
+
+/**
+ * Carga SOLO las historicas cuyas refprov están en la lista dada.
+ * Reemplaza la carga masiva loadHistoricasFromSupabase() para CSV/Excel.
+ * @param {string[]} refprovs - Refprovs extraídas del archivo
+ * @param {string} [productora] - NIT del proveedor activo (opcional)
+ * @returns {Promise<Map<string,string>>} refprov → referencia
+ */
+async function loadHistoricasByRefprovs(refprovs, productora = '') {
+    if (!refprovs || refprovs.length === 0) return new Map();
+
+    try {
+        const refsClean = [...new Set(refprovs.map(r => String(r).trim()).filter(Boolean))];
+        if (refsClean.length === 0) return new Map();
+
+        Logger.info('supabase-service', `HISTORICAS on-demand: consultando ${refsClean.length} refprovs...`);
+        const startTime = performance.now();
+
+        // Llamar EF on-demand-query — no va directo a PostgREST, sin egreso masivo
+        const ON_DEMAND_URL = `${SUPABASE_URL}/functions/v1/on-demand-query`;
+        const token = supabase.accessToken || sessionStorage.getItem('supabase_token') || SUPABASE_ANON_KEY;
+
+        const res = await fetch(ON_DEMAND_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type':  'application/json',
+                'apikey':        SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                action:  'get_historicas_by_refprovs',
+                payload: { refprovs: refsClean, productora: productora || '' }
+            })
+        });
+
+        if (!res.ok) {
+            const e = await res.json().catch(() => ({}));
+            throw new Error(e.error || `on-demand-query HTTP ${res.status}`);
+        }
+
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+
+        const historicasMap = new Map();
+        (Array.isArray(json.data) ? json.data : []).forEach(row => {
+            if (row.refprov && row.referencia) {
+                historicasMap.set(String(row.refprov).trim(), String(row.referencia).trim());
+            }
+        });
+
+        const ms = (performance.now() - startTime).toFixed(0);
+        Logger.success('supabase-service', `HISTORICAS on-demand: ${historicasMap.size}/${refsClean.length} encontradas en ${ms}ms`);
+        return historicasMap;
+    } catch (error) {
+        Logger.error('supabase-service', 'Error en loadHistoricasByRefprovs', error);
+        throw error;
+    }
+}
+
+/**
+ * Carga SOLO las barras cuyas refprov están en la lista dada.
+ * Reemplaza la carga masiva loadBarrasFromSupabase() para CSV/Excel.
+ * @param {string[]} refprovs - Refprovs/referencias extraídas del archivo
+ * @returns {Promise<Map<string,string>>} refprov|talla|id_color → barra
+ */
+async function loadBarrasByRefprovs(refprovs) {
+    if (!refprovs || refprovs.length === 0) return new Map();
+
+    try {
+        const refsClean = [...new Set(refprovs.map(r => String(r).trim()).filter(Boolean))];
+        if (refsClean.length === 0) return new Map();
+
+        Logger.info('supabase-service', `BARRAS on-demand: consultando ${refsClean.length} refprovs...`);
+        const startTime = performance.now();
+
+        const ON_DEMAND_URL = `${SUPABASE_URL}/functions/v1/on-demand-query`;
+        const token = supabase.accessToken || sessionStorage.getItem('supabase_token') || SUPABASE_ANON_KEY;
+
+        const res = await fetch(ON_DEMAND_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type':  'application/json',
+                'apikey':        SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                action:  'get_barras_by_refprovs',
+                payload: { refprovs: refsClean }
+            })
+        });
+
+        if (!res.ok) {
+            const e = await res.json().catch(() => ({}));
+            throw new Error(e.error || `on-demand-query HTTP ${res.status}`);
+        }
+
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+
+        const barrasMap = new Map();
+        (Array.isArray(json.data) ? json.data : []).forEach(row => {
+            const key = `${row.refprov}|${row.talla}|${row.id_color}`;
+            barrasMap.set(key, row.barra || '');
+        });
+
+        const ms = (performance.now() - startTime).toFixed(0);
+        Logger.success('supabase-service', `BARRAS on-demand: ${barrasMap.size} registros en ${ms}ms`);
+        return barrasMap;
+    } catch (error) {
+        Logger.error('supabase-service', 'Error en loadBarrasByRefprovs', error);
+        return new Map();
+    }
+}
+
+// Exports on-demand
+window.loadColoresByIds          = loadColoresByIds;
+window.loadPreciosByRefs         = loadPreciosByRefs;
+window.loadHistoricasByRefprovs  = loadHistoricasByRefprovs;
+window.loadBarrasByRefprovs      = loadBarrasByRefprovs;

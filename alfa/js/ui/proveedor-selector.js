@@ -295,28 +295,17 @@ function selectProveedor(id, nombre) {
         window.refreshLineaFromActiveNIT();
     }
 
-    // Recargar ingresos confirmados filtrados por el nuevo proveedor
-    if (typeof loadData2Data === 'function') {
-        loadData2Data().catch(err =>
-            Logger.warn('proveedor-selector', 'No se pudo recargar ingresos confirmados', err)
-        );
-    }
+    // Al cambiar proveedor manualmente, limpiar mapas para no mezclar datos de proveedores.
+    // La próxima carga de archivo (CSV/Excel) rellenará estos mapas on-demand con los IDs correctos.
+    if (typeof window.coloresMap !== 'undefined')   window.coloresMap.clear();
+    if (typeof window.historicasMap !== 'undefined') window.historicasMap.clear();
+    if (typeof window.preciosMap !== 'undefined')    window.preciosMap.clear();
+    if (typeof updateDataStats === 'function')       updateDataStats();
 
-    // Recargar historicas filtradas por el nuevo proveedor
-    if (typeof loadHistoricasData === 'function') {
-        loadHistoricasData().catch(err =>
-            Logger.warn('proveedor-selector', 'No se pudo recargar historicas', err)
-        );
-    }
-
-    // Recargar colores filtrados por el nuevo proveedor
-    if (typeof loadColoresData === 'function') {
-        loadColoresData().then(() => {
-            if (typeof updateDataStats === 'function') updateDataStats();
-        }).catch(err =>
-            Logger.warn('proveedor-selector', 'No se pudo recargar colores', err)
-        );
-    }
+    // data2 se limpia también — se recargará on-demand al subir el próximo archivo
+    if (typeof window.data2Map !== 'undefined')      window.data2Map.clear();
+    if (typeof window.data2CountMap !== 'undefined') window.data2CountMap.clear();
+    if (typeof window.data2JsonMap !== 'undefined')  window.data2JsonMap.clear();
 
     // Actualizar indicador en la UI
     updateProveedorIndicator();
@@ -354,28 +343,14 @@ function clearProveedorActivo() {
         window.refreshLineaFromActiveNIT();
     }
 
-    // Recargar ingresos confirmados sin filtro de productora
-    if (typeof loadData2Data === 'function') {
-        loadData2Data().catch(err =>
-            Logger.warn('proveedor-selector', 'No se pudo recargar ingresos confirmados', err)
-        );
-    }
-
-    // Recargar historicas sin filtro de productora
-    if (typeof loadHistoricasData === 'function') {
-        loadHistoricasData().catch(err =>
-            Logger.warn('proveedor-selector', 'No se pudo recargar historicas', err)
-        );
-    }
-
-    // Recargar colores sin filtro de productora
-    if (typeof loadColoresData === 'function') {
-        loadColoresData().then(() => {
-            if (typeof updateDataStats === 'function') updateDataStats();
-        }).catch(err =>
-            Logger.warn('proveedor-selector', 'No se pudo recargar colores', err)
-        );
-    }
+    // Limpiar mapas al quitar el proveedor (igual que al cambiar)
+    if (typeof window.coloresMap !== 'undefined')    window.coloresMap.clear();
+    if (typeof window.historicasMap !== 'undefined') window.historicasMap.clear();
+    if (typeof window.preciosMap !== 'undefined')    window.preciosMap.clear();
+    if (typeof window.data2Map !== 'undefined')      window.data2Map.clear();
+    if (typeof window.data2CountMap !== 'undefined') window.data2CountMap.clear();
+    if (typeof window.data2JsonMap !== 'undefined')  window.data2JsonMap.clear();
+    if (typeof updateDataStats === 'function')       updateDataStats();
 
     updateProveedorIndicator();
     closeProveedorSelector();

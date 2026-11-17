@@ -25,6 +25,7 @@
         "js/services/gas-service.js",
         "js/services/google-sheets.js",
         "js/services/supabase-service.js",
+        "js/services/on-demand-service.js",  // Cliente EF on-demand-query (colores, historicas, global maps)
         "js/services/data-loader.js",  // Adaptador híbrido Sheets/Supabase
 
         // 4. Capa de Interfaz (UI Components)

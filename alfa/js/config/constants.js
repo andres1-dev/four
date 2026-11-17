@@ -7,25 +7,17 @@ const API_KEY = 'AIzaSyC7hjbRc0TGLgImv8gVZg8tsOeYWgXlPcM';
 const SPREADSHEET_ID = '133NiyjNApZGkEFs4jUvpJ9So-cSEzRVeW2FblwOCrjI';
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyM5AsR4WOLdfPWBp4uW_diONnaiaAThobOUE1Q4kwgSMXSsuorpdsmT8c52CeDXPgI/exec';  // POST
 const SISPROWEB_GAS_URL = 'https://script.google.com/macros/s/AKfycbynUt4GdCEYaGSqnbctsNXaib52MTm0cVQlehGnt0-6B7fOTv31HoYWjCLRndiQi8r1Pg/exec';  // POST
-const GAS_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzRk9ksTH3DWM2kXhYHeMQ5KqyLHVXygQulF_p__cX0cVkTHagGE8_7V63yLfCuL2_T/exec';  // Espejo Supabase → Sheets (Ingresos/Distribuciones)
-const GAS_CONSULTA_URL = 'PEGAR_URL_CONSULTA_GAS_AQUI'; // Reemplaza edge fn relacionar-ingresos-distribuciones
+const GAS_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzrh_opcsm3axk7nrQY7Nc1acAIiYax-F01qIFkhPV6G4Bwu0LQbVmeW1SAJqwHUCWERg/exec';  // Espejo Supabase → Sheets (Ingresos/Distribuciones) - NUEVO BACKUP
 
-// Supabase Configuration
+// Supabase Configuration (Proyecto ymaojqjdnrpfkrtuezcw)
 const SUPABASE_URL = 'https://ymaojqjdnrpfkrtuezcw.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltYW9qcWpkbnJwZmtydHVlemN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4NTIwMTAsImV4cCI6MjEwMTQyODAxMH0.3Zzsw_sriPPjNM8emcOslLNSnadPs8cSguNUCA2MNu8';
+const SUPABASE_GATEWAY_URL = 'https://ymaojqjdnrpfkrtuezcw.supabase.co/functions/v1/api-gateway';
 
 // Configuración secundaria para Catálogo MASTER (proyecto zpikjjcbievfpzegupmw)
 const SUPABASE_MASTER_URL = 'https://zpikjjcbievfpzegupmw.supabase.co';
 const SUPABASE_MASTER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwaWtqamNiaWV2ZnB6ZWd1cG13Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NzU1NDEsImV4cCI6MjA5MjQ1MTU0MX0.HJxSSIcUSVrf5IAsjwnkf3eq0xZobchtlg1k_iFjW_g';
 const SUPABASE_MASTER_QUERY_URL = 'https://zpikjjcbievfpzegupmw.supabase.co/functions/v1/query';
-
-// Constantes de Distribución
-const DIS_API_KEY = API_KEY;
-const DISTRIBUTION_API_KEY = DIS_API_KEY;
-const SOURCE_SPREADSHEET_ID = "1esc5REq0c03nHLpGcLwZRW29yq2gZnrpbz75gCCjrqc";
-const DISTRIBUTION_SPREADSHEET_ID = '1d5dCCCgiWXfM6vHu3zGGKlvK2EycJtT7Uk4JqUjDOfE';
-const DISTRIBUTION_SHEET_NAME = 'DATA';
-const DISTRIBUTION_GAS_URL = 'https://script.google.com/macros/s/AKfycbzjzmTx_vvl_wGYY9A1_7kP13XH30BGhxgtvf5EXpGDwJ5Wat8DhSOEHM-kx6J2j51DmA/exec'; // POST SIN GET
 
 // ============================================
 // HOJAS DE CONFIGURACIÓN DINÁMICA
@@ -103,6 +95,10 @@ window.proveedoresMap = proveedoresMap;
 window.escanersMap = escanersMap;
 window.auditoresMap = auditoresMap;
 window.gestoresMap = gestoresMap;
+
+// barrasMap — se carga on-demand al subir un archivo, no al inicio
+let barrasMap = new Map();
+window.barrasMap = barrasMap;
 
 // Variables de distribución
 let allRecData = [];

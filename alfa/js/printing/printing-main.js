@@ -314,6 +314,7 @@ async function print_fetchByIds(ids) {
             REFPROV:      row.refprov   || '',
             DESCRIPCIÓN:  row.descripcion || '',
             DESCRIPCION:  row.descripcion || '',
+            DESCRIPCION_LARGA: row.descripcion_larga || row.descripcion || '',
             CANTIDAD:     row.cantidad  || 0,
             REFERENCIA:   row.referencia || '',
             TIPO:         row.tipo      || 'FULL',

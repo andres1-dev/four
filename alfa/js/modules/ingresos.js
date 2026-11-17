@@ -17,8 +17,10 @@
 const ingresosModule = (() => {
 
     // ── Configuración ─────────────────────────────────────────────────────────
+    // // HOJA PRINCIPAL (Código antiguo): 1O67ydfwQCnW-J-xDwzkghTFUMX9KF4tqizKLCJrz9LM
+    // // HOJA NUEVA (Backup): 1iXIv5e_CqI25ahuWd4-rfxDfOFnk5N7-8QUoyuW9Rtc
     const SPREADSHEET_ID = '1O67ydfwQCnW-J-xDwzkghTFUMX9KF4tqizKLCJrz9LM';
-    const SHEET_NAME     = 'Ingresos';
+    const SHEET_NAME     = 'ingresos';
     const SELECT_COLS    = 'A, B, C, D, H, I, J, L, M, V, W, Z';
 
     // Orden en que gviz devuelve las columnas del SELECT

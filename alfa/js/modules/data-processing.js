@@ -147,51 +147,95 @@ async function reprocessLastCsv() {
 async function processCSVData(rows) {
     Logger.info('data-processing', `Iniciando procesamiento de CSV. Traslados anulados: ${cancelledTransfers.size}, Usuarios activos: ${escanersMap.size}`);
 
-    // ── Pre-paso: extraer lotes únicos del CSV y cargar datos de ingresos bajo demanda ──
-    // Esto evita cargar los 10k+ registros de ingresos al inicio
-    const lotesEnCsv = new Set();
+    // ── Pre-paso: escanear el CSV completo y extraer SOLO los IDs necesarios ──
+    // Luego hacer fetch on-demand de colores, precios, historicas, data2 y sispro
+    // con exactamente esos IDs — sin traer catálogos completos.
+    const lotesEnCsv     = new Set();
+    const coloresEnCsv   = new Set();
+    const referenciasEnCsv = new Set();
+    const refprovsEnCsv  = new Set();
+
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
-        if (row.length >= 38) {
-            const op = (row[2] || '').trim();
-            if (op) lotesEnCsv.add(op);
-        }
+        if (row.length < 38) continue;
+
+        const tipo    = row[3] || '';
+        const bodega  = row[14] || '';
+        const usuario = row[1] || '';
+        if (!escanersMap.has(usuario) || tipo !== 'TR' || bodega === 'PR') continue;
+
+        const op          = (row[2]  || '').trim();
+        const codColor    = (row[12] || '').trim();
+        const referencia  = (row[0]  || '').trim();
+        // refprov se extrae del final de la descripción larga (col 21)
+        const descLarga   = (row[21] || '').trim();
+        const refprovMatch = descLarga.match(/(\d+)\s*$/);
+        const refprov      = refprovMatch ? refprovMatch[1] : referencia;
+
+        if (op)         lotesEnCsv.add(op);
+        if (codColor)   coloresEnCsv.add(codColor);
+        if (referencia) referenciasEnCsv.add(referencia);
+        // Para historicas necesitamos tanto la refprov extraída de la descripción
+        // como la referencia interna (col 0) — getReferenciaHistorica busca por ambas
+        if (refprov)    refprovsEnCsv.add(refprov);
+        if (referencia) refprovsEnCsv.add(referencia); // también buscar por ref interna
     }
+
     if (lotesEnCsv.size > 0) {
         const lotesArr = Array.from(lotesEnCsv);
 
-        // CSV siempre corresponde a Universo.
-        // Cambiar proveedor activo ANTES de cargar datos para que loadColoresData
-        // y loadHistoricasData usen el filtro correcto desde el inicio.
+        // CSV siempre corresponde a Universo — asegurar proveedor correcto
         const UNIVERSO_ID     = '900616124';
         const UNIVERSO_NOMBRE = 'TEXTILES Y CREACIONES EL UNIVERSO SAS';
         const actual = (typeof getProveedorActivo === 'function') ? getProveedorActivo() : null;
         const cambiandoProveedor = !actual || actual.id !== UNIVERSO_ID;
 
         if (cambiandoProveedor && typeof setProveedorActivo === 'function') {
-            // setProveedorActivo solo actualiza estado/UI sin disparar recargas,
-            // así las cargas con await de abajo ya usan el NIT de Universo.
             setProveedorActivo(UNIVERSO_ID, UNIVERSO_NOMBRE);
             Logger.info('data-processing', `🏢 Proveedor cambiado a Universo para CSV`);
         }
 
-        await loadData2Data(lotesArr);
-        await loadSisproData(lotesArr);
+        // Fetch estrictamente on-demand — solo los IDs que están en el archivo
+        const [, , coloresResult, preciosResult, historicasResult] = await Promise.all([
+            loadData2Data(lotesArr),
+            loadSisproData(lotesArr),
+            typeof loadColoresByIds === 'function'
+                ? loadColoresByIds(Array.from(coloresEnCsv), UNIVERSO_ID)
+                : Promise.resolve(new Map()),
+            typeof loadPreciosByRefs === 'function'
+                ? loadPreciosByRefs(Array.from(referenciasEnCsv))
+                : Promise.resolve(new Map()),
+            typeof loadHistoricasByRefprovs === 'function'
+                ? loadHistoricasByRefprovs(Array.from(refprovsEnCsv), UNIVERSO_ID)
+                : Promise.resolve(new Map())
+        ]);
 
-        // Si cambió el proveedor, recargar colores e historicas con await
-        // para garantizar que estén disponibles ANTES de validar el CSV.
+        // Actualizar mapas globales con SOLO los datos del archivo
+        if (coloresResult instanceof Map) {
+            window.coloresMap.clear();
+            coloresResult.forEach((v, k) => window.coloresMap.set(k, v));
+        }
+        if (preciosResult instanceof Map) {
+            window.preciosMap.clear();
+            preciosResult.forEach((v, k) => window.preciosMap.set(k, v));
+        }
+        if (historicasResult instanceof Map) {
+            window.historicasMap.clear();
+            historicasResult.forEach((v, k) => window.historicasMap.set(k, v));
+        }
+
         if (cambiandoProveedor) {
-            await Promise.all([
-                typeof loadColoresData    === 'function' ? loadColoresData()    : Promise.resolve(),
-                typeof loadHistoricasData === 'function' ? loadHistoricasData() : Promise.resolve(),
-            ]);
-            Logger.info('data-processing', `✅ Colores e históricos recargados para Universo`);
-            if (typeof showMessage          === 'function') showMessage(`Proveedor cambiado a ${UNIVERSO_NOMBRE}`, 'info', 2500);
+            Logger.info('data-processing', `✅ Datos cargados on-demand para Universo`);
+            if (typeof showMessage              === 'function') showMessage(`Proveedor: ${UNIVERSO_NOMBRE}`, 'info', 2500);
             if (typeof updateProveedorIndicator === 'function') updateProveedorIndicator();
             if (typeof updateDataStats          === 'function') updateDataStats();
         }
 
-        Logger.info('data-processing', `Datos cargados bajo demanda para ${lotesEnCsv.size} lotes del CSV`);
+        Logger.info('data-processing',
+            `On-demand CSV — Lotes:${lotesEnCsv.size} Colores:${coloresResult.size} ` +
+            `Precios:${preciosResult.size} Históricos:${historicasResult.size} ` +
+            `(refprovs consultadas: ${refprovsEnCsv.size})`
+        );
     }
     // ────────────────────────────────────────────────────────────────────────────────────
 
@@ -222,6 +266,52 @@ async function processCSVData(rows) {
     }
 
     const missingColors = new Set();
+
+    // ── Pre-validación de OPs y Parciales a nivel global de OP ──
+    // Calcula la sumatoria real de unidades y conjunto de traslados de cada OP en este CSV
+    const opTotalesEnCsv = new Map();
+    const opTrasladosEnCsv = new Map();
+    const opTotalGeneralEnCsv = new Map();
+
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (row.length < 38) continue;
+
+        const usuario = row[1] || '';
+        const bodega = row[14] || '';
+        const tipo = row[3] || '';
+        const usuarioValido = escanersMap.has(usuario);
+
+        if (!usuarioValido || tipo !== 'TR') continue;
+
+        const op = (row[2] || '').trim();
+        if (!op) continue;
+
+        const trasladoOriginal = row[7] || '';
+        const trasladoNum = extractTrasladoNumber(trasladoOriginal);
+
+        if (!opTrasladosEnCsv.has(op)) opTrasladosEnCsv.set(op, new Set());
+        if (trasladoNum) opTrasladosEnCsv.get(op).add(trasladoNum);
+
+        if (row[19] && !opTotalGeneralEnCsv.has(op)) {
+            opTotalGeneralEnCsv.set(op, (row[19] || '').toString().trim());
+        }
+
+        // Sumar solo filas que no son PR (las que realmente ingresan prendas)
+        if (bodega !== 'PR') {
+            const cant = parseFloat(row[9]) || 0;
+            opTotalesEnCsv.set(op, (opTotalesEnCsv.get(op) || 0) + cant);
+        }
+    }
+
+    // Pre-ejecutar validación de parciales por cada OP completa
+    const opValidaciones = new Map();
+    opTrasladosEnCsv.forEach((trasladosSet, op) => {
+        const totalGen = opTotalGeneralEnCsv.get(op) || '';
+        const totalCant = opTotalesEnCsv.get(op) || 0;
+        const validacion = validarEstadoParcial(op, Array.from(trasladosSet), totalGen, totalCant);
+        opValidaciones.set(op, validacion);
+    });
 
     // Second pass: process TR data and group duplicates - OPTIMIZADO
     for (let i = 0; i < rows.length; i++) {
@@ -310,12 +400,10 @@ async function processCSVData(rows) {
             // Cálculos directos (sin cache)
             const estado = validarEstado(op, formatDate(row[4]), (row[19] || '').toString().trim());
             
-            // NUEVA LÓGICA: Validar parciales usando columna S (JSON) de DATA2
-            const totalGeneral = row[19] || '';
-            const trasladoNum = extractTrasladoNumber(row[7] || '');
-            const validacionParcial = validarEstadoParcial(op, trasladoNum, totalGeneral, cantidad);
+            // Validación de repetidos y detección de parciales
+            const validacionParcial = opValidaciones.get(op) || validarEstadoParcial(op, extractTrasladoNumber(row[7] || ''), row[19] || '', cantidad);
             
-            // Si es rechazado, agregar a errores y continuar
+            // Si es rechazado (duplicado de traslado o lote completo), registrar y descartar
             if (validacionParcial.rechazar) {
                 Logger.warn('data-processing', `OP ${op} rechazada: ${validacionParcial.tipo} - ${validacionParcial.mensaje}`);
                 if (!opErrors.has(op)) {

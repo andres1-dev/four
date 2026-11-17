@@ -1,0 +1,128 @@
+/* ============================================
+   DISTRIBUTION - EMPRESAS (PUNTO DE VENTA)
+   ============================================ */
+
+.empresas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.empresa-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background-color: var(--editor) !important;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.empresa-item:hover {
+    border-color: var(--text-secondary);
+    background: var(--hover);
+}
+
+.empresa-item label {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    min-width: 80px;
+}
+
+/* Contenedor del grupo de input para empresas secundarias */
+.empresa-item .input-group {
+    display: flex;
+    align-items: stretch;
+    width: 90px;
+    height: 32px;
+}
+
+/* Estilo para los inputs de número en empresas secundarias */
+.empresa-item input[type="number"] {
+    width: 60px;
+    height: 100%;
+    padding: 0 8px;
+    font-size: 13px;
+    font-family: inherit;
+    text-align: center;
+    background-color: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px 0 0 4px; /* Estilo de tabla (4px) */
+    border-right: none;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.empresa-item input[type="number"]::-webkit-outer-spin-button,
+.empresa-item input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.empresa-item input[type="number"]:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.1); /* Estilo de tabla (2px) */
+    z-index: 1;
+}
+
+/* Estilo específico para el input principal (sin flechas) */
+.empresa-item .principal-input {
+    width: 100% !important;
+    border-radius: 4px !important;
+    border-right: 1px solid var(--border) !important;
+    background: var(--hover) !important;
+    font-weight: 600;
+    opacity: 0.9;
+    cursor: not-allowed;
+}
+
+/* Controles de número (flechas) para empresas secundarias */
+.empresa-item .number-controls {
+    display: flex;
+    flex-direction: column;
+    height: 32px;
+    width: 24px;
+    flex-shrink: 0;
+}
+
+.empresa-item .number-btn {
+    flex: 1;
+    width: 100%;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    background: var(--sidebar);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+
+.empresa-item .number-btn:first-child {
+    border-radius: 0 4px 0 0;
+    border-bottom: none;
+}
+
+.empresa-item .number-btn:last-child {
+    border-radius: 0 0 4px 0;
+}
+
+.empresa-item .number-btn:hover {
+    background: var(--hover);
+    color: var(--primary);
+}
+
+.empresa-item .number-btn .codicon {
+    font-size: 10px !important;
+    line-height: 1;
+}

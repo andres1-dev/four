@@ -144,6 +144,11 @@
                     <span>Gestores</span>
                 </button>
 
+                <button class="catalogo-item" onclick="showTalleresModal()" title="Plantas">
+                    <i class="codicon codicon-home"></i>
+                    <span>Plantas</span>
+                </button>
+
             </div>
 
             <div class="catalogo-section-title" style="margin-top: 16px;">Gestión</div>
@@ -347,7 +352,7 @@
                                         <i class="codicon codicon-symbol-property"></i>
                                         Referencia
                                     </label>
-                                    <input type="text" id="opRefReadonly" class="form-control" readonly>
+                                    <input type="text" id="opRefReadonly" class="form-control" placeholder="Ej: REF123" title="Referencia de la OP (editable si requiere corrección)">
                                 </div>
 
                                 <div class="form-group">
@@ -430,7 +435,18 @@
                                         <i class="codicon codicon-list-flat"></i>
                                         Línea
                                     </label>
-                                    <input type="text" id="opLineaEdit" class="form-control" placeholder="Ej: MODA">
+                                    <select id="opLineaEdit" class="form-control">
+                                        <option value="">Seleccione...</option>
+                                        <option value="ANGELES">ANGELES</option>
+                                        <option value="BASICO">BASICO</option>
+                                        <option value="BOGOTA">BOGOTA</option>
+                                        <option value="DEPORTIVO">DEPORTIVO</option>
+                                        <option value="ESPECIALES">ESPECIALES</option>
+                                        <option value="INTIMA">INTIMA</option>
+                                        <option value="INVERSIONES">INVERSIONES</option>
+                                        <option value="MODAFRESCA">MODAFRESCA</option>
+                                        <option value="URBANO">URBANO</option>
+                                    </select>
                                 </div>
                                 <div class="form-group">
                                     <label for="opTotalReadonly">
@@ -538,30 +554,40 @@
                                     </div>
                                 </div>
                                 <div class="form-group"
-                                    style="display: flex; flex-direction: column; justify-content: flex-end;">
+                                    style="display: flex; flex-direction: column; justify-content: flex-end; gap: 6px;">
                                     <label style="visibility: hidden;">Acciones</label>
-                                    <button class="btn-primary" onclick="generateJSONForOP()" id="generateJSONEditorBtn"
-                                        style="height: 34px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                        <i class="codicon codicon-code"></i>
-                                        Procesar OP
-                                    </button>
+                                    <div style="display: flex; gap: 8px;">
+
+                                        <button class="btn-primary" onclick="generateJSONForOP()" id="generateJSONEditorBtn"
+                                            style="height: 34px; flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                            <i class="codicon codicon-code"></i>
+                                            Procesar OP
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- RESUMEN DE TOTALES EN LA PARTE SUPERIOR -->
                         <!-- TABLA DE RESUMEN POR BODEGA -->
                         <div class="op-editor-table-container">
                             <table class="data-table" id="opEditorTable">
                                 <thead>
                                     <tr>
                                         <th colspan="6" style="padding: 0;">
-                                            <div class="json-header" style="cursor: default; border-radius: 0;">
+                                            <div class="json-header" id="opEditorTableHeader" style="cursor: default; border-radius: 0; transition: background 0.3s, border 0.3s, box-shadow 0.3s;">
                                                 <div style="display: flex; align-items: center; gap: 10px;">
-                                                    <i class="codicon codicon-list-tree" style="color: var(--primary);"></i>
+                                                    <i class="codicon codicon-list-tree" id="opEditorTableHeaderIcon" style="color: var(--primary);"></i>
                                                     <span style="font-weight: 600;">Bodegas</span>
                                                 </div>
                                                 <div class="panel-actions">
+                                                    <button id="btnConvertirRefVar" onclick="convertirOPaRefVar()" title="Esta OP tiene referencias mixtas — confirmar como REFVAR (Prendas Varias)" style="display:none; align-items:center; gap:5px; height:24px; padding:0 10px; font-size:12px; background:transparent; border:1px solid #b71c1c; color:#b71c1c; border-radius:4px; cursor:pointer; font-weight:600;">
+                                                        <i class="codicon codicon-layers"></i>
+                                                        <span>Hacer REFVAR</span>
+                                                    </button>
+                                                    <button class="btn-secondary" onclick="abrirModalNuevaExtension()" title="Agregar nueva extensión / fila (Talla, Color, Bodega, Cantidad)" style="display:flex; align-items:center; gap:5px; height:24px; padding:0 8px; font-size:12px;">
+                                                        <i class="codicon codicon-add"></i>
+                                                        <span>Nueva Extensión</span>
+                                                    </button>
                                                     <button class="btn-icon" onclick="expandirTodo()" title="Expandir todo">
                                                         <i class="codicon codicon-unfold"></i>
                                                     </button>
@@ -655,13 +681,22 @@
                                     <i class="codicon codicon-search"></i>
                                     Buscar documento
                                 </label>
-                                <div class="search-container">
+                                <div class="search-container" style="position:relative;display:flex;align-items:center;">
                                     <input type="number" id="recInput" class="form-control"
-                                        placeholder="Buscar por número de REC..." oninput="onRecInputChange()">
-                                    <button class="btn-icon"
-                                        onclick="document.getElementById('recInput').value=''; onRecInputChange(); document.getElementById('recInput').focus();"
-                                        title="Limpiar búsqueda">
-                                        <i class="codicon codicon-clear-all"></i>
+                                        placeholder="Número de REC..."
+                                        oninput="onRecInputChange()"
+                                        onkeydown="handleRecInputKeyDown(event)"
+                                        style="padding-right:4.5rem;">
+                                    <button id="searchRecBtn"
+                                        onclick="searchDistributionRec()"
+                                        title="Buscar REC"
+                                        style="position:absolute;right:2.2rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-secondary);display:flex;align-items:center;padding:0 0.3rem;font-size:1rem;">
+                                        <i class="codicon codicon-search"></i>
+                                    </button>
+                                    <button onclick="document.getElementById('recInput').value=''; onRecInputChange(); document.getElementById('recInput').focus();"
+                                        title="Limpiar"
+                                        style="position:absolute;right:0.4rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-secondary);display:flex;align-items:center;padding:0 0.3rem;font-size:1rem;">
+                                        <i class="codicon codicon-close"></i>
                                     </button>
                                 </div>
                             </div>

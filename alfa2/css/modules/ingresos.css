@@ -1,0 +1,233 @@
+/* ============================================
+   MÓDULO INGRESOS — Consulta de Google Sheets
+   ============================================ */
+
+/* ── Tarjetas de resumen ── */
+.ingresos-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+@media (max-width: 900px) {
+    .ingresos-cards { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 420px) {
+    .ingresos-cards { grid-template-columns: 1fr; }
+}
+
+.ingresos-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--editor);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.ingresos-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-dim);
+}
+
+.icard-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    background: rgba(128,128,128,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.icard-icon--primary {
+    background: var(--primary-dim);
+    color: var(--primary);
+}
+
+.icard-icon--success {
+    background: var(--success-dim);
+    color: var(--success);
+}
+
+.icard-icon--warning {
+    background: var(--warning-dim);
+    color: var(--warning);
+}
+
+/* Ángeles — violeta */
+.icard-icon--angeles {
+    background: rgba(139, 92, 246, 0.12);
+    color: #8b5cf6;
+}
+
+/* Universo — cian */
+.icard-icon--universo {
+    background: rgba(6, 182, 212, 0.12);
+    color: #06b6d4;
+}
+
+.icard-body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.icard-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.icard-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+}
+
+/* ── Filtro de fechas ── */
+.ingresos-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 14px;
+    background: var(--editor);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+}
+
+.ingresos-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex: 1;
+    min-width: 200px;
+}
+
+.ingresos-chip {
+    background: var(--sidebar);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    font-family: inherit;
+    padding: 5px 13px;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.ingresos-chip:hover {
+    color: var(--text);
+    background: var(--hover);
+}
+
+.ingresos-chip.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+.ingresos-dates {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* ── Buscador dentro del panel header ── */
+.ingresos-search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.ingresos-search-icon {
+    position: absolute;
+    left: 9px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    pointer-events: none;
+}
+
+/* ── Tabla ── */
+.ingresos-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.ingresos-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--sidebar);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+}
+
+.ingresos-table tbody td {
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+}
+
+.ingresos-table tbody tr:hover {
+    background: var(--hover);
+}
+
+.ingresos-empty {
+    text-align: center !important;
+    padding: 40px 16px !important;
+    color: var(--text-secondary) !important;
+    font-style: italic;
+}
+
+/* ── Footer de paginación ── */
+.ingresos-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--editor);
+    gap: 8px;
+}
+
+/* ── Punto de estado (dot) ── */
+.ingresos-status-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--text-secondary);
+    transition: background 0.3s;
+}
+
+.ingresos-status-dot.dot-ok     { background: var(--success); box-shadow: 0 0 6px var(--success); }
+.ingresos-status-dot.dot-loading { background: var(--warning); animation: ingresos-pulse 1s infinite; }
+.ingresos-status-dot.dot-error  { background: var(--error); }
+
+@keyframes ingresos-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+}
