@@ -1,0 +1,112 @@
+/* ============================================
+   EMPTY STATES & LOADING
+   ============================================ */
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--text-secondary);
+    gap: 8px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.empty-state .empty-icon {
+    font-size: 48px;
+    opacity: 0.3;
+    line-height: 1;
+    margin-bottom: 8px;
+}
+
+.empty-state h5 {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text);
+    margin: 0;
+    opacity: 0.9;
+    text-align: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.empty-state p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0 auto;
+    max-width: 400px;
+    line-height: 1.5;
+    opacity: 0.7;
+    text-align: center;
+    word-wrap: break-word;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Loading States */
+.loading-state,
+.distribution-loading {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+    gap: 20px;
+}
+
+.loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
+}
+
+.loading-spinner-large {
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--border);
+    border-top: 3px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.loading-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.loading-subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* ============================================
+   SUCCESS STATE
+   ============================================ */
+.success-state {
+    text-align: center;
+    padding: 40px 20px;
+    background: var(--editor);
+    border-radius: 6px;
+    border: 2px solid var(--success);
+}
+
+.success-state h3 {
+    color: var(--success);
+    margin-bottom: 16px;
+}
+
+.success-state p {
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.success-state .codicon {
+    font-size: 64px;
+    margin-bottom: 24px;
+    color: var(--success);
+}
