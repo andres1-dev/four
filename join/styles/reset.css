@@ -1,0 +1,27 @@
+/* ═══ RESET ═══════════════════════════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font:14px/1.5 var(--sans);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+
+button{
+  font-family:inherit;cursor:pointer;
+  border:1px solid var(--line2);background:var(--panel);color:var(--text);
+  border-radius:var(--radius-sm);padding:8px 14px;font-weight:600;font-size:13px;
+  transition:border-color 120ms,background 120ms,box-shadow 120ms;
+}
+button:hover{border-color:var(--muted);background:var(--panel2)}
+button.primary{
+  background:var(--accent);border-color:var(--accent);color:#fff;
+  box-shadow:var(--shadow);
+}
+button.primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+button:disabled{opacity:.4;cursor:not-allowed}
+
+textarea,input{font-family:inherit}
+input[type=file]{font-size:13px}

@@ -1,0 +1,34 @@
+/* ═══ LAYOUT ═════════════════════════════════════════════════════════════════ */
+.app{
+  max-width:1200px;margin:0 auto;
+  padding:clamp(12px,4vw,28px);
+  display:flex;flex-direction:column;gap:clamp(12px,2vw,20px);
+}
+
+/* ═══ HEADER ════════════════════════════════════════════════════════════════ */
+.app-header{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;
+}
+.app-header h1{font-size:clamp(18px,3.5vw,22px);font-weight:700;letter-spacing:-.02em}
+.app-header .sub{color:var(--muted);font-size:13px;margin-top:2px}
+.header-meta{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:12px}
+.header-meta strong{color:var(--text);font-weight:600}
+
+/* ═══ PANELS ════════════════════════════════════════════════════════════════ */
+.panel{
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius);padding:clamp(14px,2vw,20px);
+  box-shadow:var(--shadow);
+}
+.panel-title{font-size:14px;font-weight:600;margin-bottom:14px;color:var(--text)}
+
+/* ═══ TOP GRID ═══════════════════════════════════════════════════════════════ */
+.top-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,2vw,20px);
+}
+
+/* ═══ FOOTER ═════════════════════════════════════════════════════════════════ */
+.app-footer{
+  color:var(--muted);font-size:11px;text-align:center;padding:8px 0;
+}

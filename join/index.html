@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visor SQL · Parquet</title>
+
+<!-- Styles -->
+<link rel="stylesheet" href="styles/tokens.css">
+<link rel="stylesheet" href="styles/reset.css">
+<link rel="stylesheet" href="styles/layout.css">
+<link rel="stylesheet" href="styles/components.css">
+<link rel="stylesheet" href="styles/mobile.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ═══ HEADER ═══ -->
+  <header class="app-header">
+    <div>
+      <h1>Visor SQL · Parquet</h1>
+      <div class="sub">Consultas locales con DuckDB-WASM</div>
+    </div>
+    <div class="header-meta">
+      <span>Motor: <strong>DuckDB</strong></span>
+      <span>Procesamiento: <strong>En tu navegador</strong></span>
+    </div>
+  </header>
+
+  <!-- ═══ UPLOAD + SCHEMA ═══ -->
+  <section class="top-grid">
+    <div class="panel upload-panel">
+      <div class="panel-title">Archivo Parquet</div>
+      <label class="drop-zone" id="dropZone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <span class="drop-label">Arrastra un .parquet aquí<br><small>o toca para seleccionar</small></span>
+        <input id="fileInput" type="file" accept=".parquet">
+      </label>
+      <div id="loadStatus" class="status">Esperando archivo…</div>
+      <div id="fileMeta" class="file-meta"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Estructura de la tabla</div>
+      <div id="schema" class="schema-box">La estructura aparecerá al cargar el archivo.</div>
+    </div>
+  </section>
+
+  <!-- ═══ QUERIES ═══ -->
+  <section class="panel">
+    <div class="toolbar">
+      <div>
+        <div class="panel-title" style="margin:0">Consultas SQL</div>
+        <div class="toolbar-sub">Tabla principal: <b>datos</b> · Dimensiones de Sheets: <b>cat_COLORES</b>, <b>cat_GRUPO_SUBGRUPO</b>, <b>cat_TALLAS</b>, <b>cat_PROVEEDOR</b></div>
+      </div>
+      <div class="toolbar-actions">
+        <button id="exportCsvBtn" disabled title="Ejecuta el JOIN completo y descarga Parquet">⬇ Parquet enriquecido</button>
+        <button id="addBtn">＋ Nueva consulta</button>
+        <button id="runAllBtn" class="primary" disabled>Ejecutar todas</button>
+      </div>
+    </div>
+    <div id="queries"></div>
+  </section>
+
+  <!-- ═══ NO MATCH ═══ -->
+  <section class="panel">
+    <div class="toolbar">
+      <div>
+        <div class="panel-title" style="margin:0">NO MATCH — catálogo Sheets</div>
+        <div class="toolbar-sub">
+          Valores del parquet sin coincidencia en cada hoja. Completa las columnas
+          (sugerencias = valores únicos existentes, también acepta nuevos) y guarda en Sheets.
+        </div>
+      </div>
+      <button id="analyzeNoMatchBtn" class="primary" disabled>Analizar NO MATCH</button>
+    </div>
+    <div id="noMatch"></div>
+  </section>
+
+  <!-- ═══ ÁRBOL DE VENTAS ═══ -->
+  <section class="panel">
+    <div class="toolbar">
+      <div>
+        <div class="panel-title" style="margin:0">Árbol de ventas</div>
+        <div class="toolbar-sub">
+          Jerarquía interactiva desde el grupo empresarial: Empresa → Tipo → Género → Prenda → Tallaje → Color.
+          Cada nodo consolida el total de ventas de sus descendientes.
+        </div>
+      </div>
+      <button id="buildTreeBtn" class="primary" disabled>Construir árbol</button>
+    </div>
+    <div id="treePanel" class="tree-panel"></div>
+  </section>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer class="app-footer">
+    DuckDB se ejecuta en tu navegador. El archivo no se sube a ningún servidor.
+  </footer>
+
+</div>
+
+<!-- Entry point -->
+<script type="module" src="main.js"></script>
+</body>
+</html>
