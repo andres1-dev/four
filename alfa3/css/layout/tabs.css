@@ -1,0 +1,71 @@
+/* ============================================
+   TAB SYSTEM
+   ============================================ */
+
+.tab-bar {
+    display: flex;
+    background-color: var(--tab);
+    border-bottom: 1px solid var(--border);
+    height: 35px;
+}
+
+.tabs {
+    display: flex;
+    flex: 1;
+}
+
+.tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    background-color: var(--tab);
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-right: 1px solid var(--border);
+    font-size: 13px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.tab:hover {
+    background-color: var(--hover);
+    color: var(--text);
+}
+
+.tab.active {
+    background-color: var(--tab-active);
+    color: var(--text);
+}
+
+.tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--primary);
+}
+
+.tab-close {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 2px;
+    opacity: 0.7;
+}
+
+.tab-close:hover {
+    background-color: var(--hover);
+    opacity: 1;
+}
+
+.tab-actions {
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+}

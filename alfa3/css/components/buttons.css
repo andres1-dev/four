@@ -1,0 +1,126 @@
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+}
+
+.action-buttons .btn-primary,
+.action-buttons .btn-secondary,
+.upload-box .btn-primary {
+    min-width: 160px;
+    padding: 10px 20px;
+    font-size: 13px;
+    height: 44px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Buttons */
+.btn-primary,
+.btn-secondary,
+.btn-success,
+.btn-error,
+.btn-warning {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    line-height: 1;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    vertical-align: middle;
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #106ebe;
+    box-shadow: 0 4px 8px rgba(0, 120, 212, 0.3);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background-color: transparent;
+    border-color: var(--border);
+    color: var(--text);
+}
+
+.btn-secondary:hover {
+    background-color: var(--hover);
+    border-color: var(--text-secondary);
+}
+
+.btn-success {
+    background-color: var(--success);
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #0caa6c;
+    box-shadow: 0 4px 8px rgba(13, 188, 121, 0.3);
+    transform: translateY(-1px);
+}
+
+.btn-error {
+    background-color: var(--error);
+    color: white;
+}
+
+.btn-error:hover {
+    background-color: #d7373f;
+    box-shadow: 0 4px 8px rgba(244, 71, 71, 0.3);
+    transform: translateY(-1px);
+}
+
+.btn-warning {
+    background-color: var(--warning);
+    color: white;
+    border: 1px solid transparent;
+}
+
+.btn-warning:hover {
+    background-color: var(--warning-hover);
+    box-shadow: 0 4px 8px rgba(255, 140, 0, 0.3);
+    transform: translateY(-1px);
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon:hover {
+    background-color: var(--hover);
+    color: var(--text);
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+    height: auto;
+}

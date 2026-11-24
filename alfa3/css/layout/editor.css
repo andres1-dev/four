@@ -1,0 +1,78 @@
+/* ============================================
+   EDITOR CONTAINER
+   ============================================ */
+
+.editor-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--editor);
+}
+
+/* Modo pantalla completa — oculta activity bar y sidebar */
+body.editor-fullscreen .activity-bar,
+body.editor-fullscreen .sidebar {
+    display: none !important;
+}
+
+body.editor-fullscreen .editor-container {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    width: 100vw;
+    height: 100vh;
+}
+
+/* Tab Content */
+.tab-content {
+    flex: 1;
+    display: none;
+    overflow: auto;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Editor Sections */
+.editor-section {
+    padding: 32px;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.section-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.section-header h3 i {
+    font-size: 18px;
+    color: var(--primary);
+}
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.section-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}

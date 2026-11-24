@@ -1,0 +1,71 @@
+/* ============================================
+   STATUS BAR
+   ============================================ */
+
+.status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 8px;
+    height: 24px;
+    background-color: var(--primary);
+    border-top: none;
+}
+
+.status-left,
+.status-right {
+    display: flex;
+    align-items: center;
+    gap: 0;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: rgba(255,255,255,0.9);
+    font-size: 12px;
+    font-weight: 400;
+    padding: 0 8px;
+    height: 24px;
+    cursor: default;
+}
+
+.status-right .status-item {
+    opacity: 1;
+}
+
+.status-item:hover {
+    background: rgba(255,255,255,0.08);
+}
+
+.status-item i {
+    font-size: 11px;
+    color: rgba(255,255,255,0.9);
+}
+
+.status-icon {
+    font-size: 11px;
+}
+
+.status-timing {
+    opacity: 0 !important;
+    transition: opacity 0.3s ease !important;
+}
+
+.status-timing.timing-visible {
+    opacity: 1 !important;
+}
+
+.status-item-btn {
+    cursor: pointer !important;
+}
+
+.status-item-btn:hover {
+    background: rgba(255,255,255,0.15) !important;
+}
